@@ -66,8 +66,6 @@ Defines the types of JSON elements:
 
 ### `jes_context`
 
-
-
 ### `jes_element`
 
 Represents a JSON element in the tree.
@@ -102,3 +100,79 @@ struct jes_context* jes_init(void *buffer, uint32_t buffer_size);
 
 **Returns**  
 Pointer to context or `NULL` in case of failure.
+
+### `jes_load`
+
+Loads a JSON string and creates a tree of JSON elements.
+
+```c
+uint32_t jes_load(struct jes_context* ctx, const char *json_data, uint32_t json_length);
+```
+
+**Parameters**
+
+- `ctx` – Initialized JES context.
+
+- `json_data` – JSON data string.
+
+- `json_length` – Length of the JSON data.
+
+**Returns**  
+Status of the parsing process (see `jes_status`).
+
+### `jes_render`
+
+Renders a JSON tree into a string.
+
+```c
+uint32_t jes_render(struct jes_context *ctx, char *dst, uint32_t length, bool compact);
+```
+
+**Parameters**
+
+- `ctx` – Initialized JES context.
+
+- `dst` – Destination buffer.
+
+- `length` – Size of the destination buffer.
+
+- `compact` – If `true`, renders a compact JSON string; otherwise, formatted with indentation.
+
+**Returns**  
+Size of the JSON string or `0` if rendering failed. (use jes_get_status for the failure code)
+
+
+
+### `jes_evaluate`
+
+Evaluates the JSON tree structure and calculates the size of the rendered string.
+
+```c
+uint32_t jes_evaluate(struct jes_context *ctx, bool compact);
+```
+
+**Parameters**
+
+- `ctx` – Initialized JES context.
+
+- `compact` – If `true`, evaluates size of compact JSON string; otherwise, formatted JSON size.
+
+**Returns**  
+Size of JSON string or `0` if evaluation fails. (use jes_get_status for the failure code)
+
+### 
+
+### `jes_get_status`
+
+Gets the status of the last process.
+
+```c
+`jes_status jes_get_status(struct jes_context *ctx);
+```
+
+**Parameters**
+
+- `ctx` – Initialized JES context.
+
+**Returns**  
+Status of the last process stored in the context.
