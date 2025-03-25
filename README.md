@@ -101,6 +101,8 @@ struct jes_context* jes_init(void *buffer, uint32_t buffer_size);
 **Returns**  
 Pointer to context or `NULL` in case of failure.
 
+---
+
 ### `jes_load`
 
 Loads a JSON string and creates a tree of JSON elements.
@@ -118,7 +120,9 @@ uint32_t jes_load(struct jes_context* ctx, const char *json_data, uint32_t json_
 - `json_length` – Length of the JSON data.
 
 **Returns**  
-Status of the parsing process (see `jes_status`).
+Status of the parsing process (see `jes_status`)
+
+---
 
 ### `jes_render`
 
@@ -141,7 +145,7 @@ uint32_t jes_render(struct jes_context *ctx, char *dst, uint32_t length, bool co
 **Returns**  
 Size of the JSON string or `0` if rendering failed. (use jes_get_status for the failure code)
 
-
+---
 
 ### `jes_evaluate`
 
@@ -160,7 +164,7 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact);
 **Returns**  
 Size of JSON string or `0` if evaluation fails. (use jes_get_status for the failure code)
 
-### 
+--- 
 
 ### `jes_get_status`
 
@@ -176,3 +180,49 @@ Gets the status of the last process.
 
 **Returns**  
 Status of the last process stored in the context.
+
+---
+
+### `jes_get_root`
+
+Returns the root element of the JSON tree.
+
+```c
+struct jes_element* jes_get_root(struct jes_context *ctx);
+```
+
+Gets the root element of the JSON tree. (This should be the lowest level OBJECT)
+
+---
+
+### `jes_get_key`
+
+Returns a key element addressed by a parent KEY element and a sequence of key names.
+
+```c
+struct jes_element* jes_get_key(struct jes_context *ctx, struct jes_element *parent_key, const char *keys);
+```
+
+**Parameters
+
+- `ctx` – Initialized JES context.
+
+- `parent_key` – A KEY element to start search from or NULL to start the search from root
+
+- `keys` – NUL-terminated string containing several key names separated by a dot "."
+
+
+
+---
+
+
+
+
+
+### `jes_stringify_status`
+
+Converts a status code to a human-readable string.
+
+```c
+char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len);
+```
