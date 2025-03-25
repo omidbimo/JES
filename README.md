@@ -65,6 +65,7 @@ Defines the types of JSON elements:
 ### Structs
 
 ### `jes_context`
+An opaque structure that holds the internal state of the parser including JSON tree information, element pool managemnet and process status. 
 
 ### `jes_element`
 
@@ -96,7 +97,7 @@ struct jes_context* jes_init(void *buffer, uint32_t buffer_size);
 
 - `buffer` – The working buffer to hold the context and JSON tree nodes.
 
-- `buffer_size` – Size of the working bufferl.
+- `buffer_size` – Size of the working buffer.
 
 **Returns**  
 Pointer to context or `NULL` in case of failure.
