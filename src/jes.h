@@ -205,10 +205,13 @@ struct jes_element* jes_update_array_value(struct jes_context *ctx, struct jes_e
 struct jes_element* jes_add_element(struct jes_context *ctx, struct jes_element *parent, enum jes_type type, const char *value);
 
 #define JES_FOR_EACH(ctx_, elem_, type_) for(elem_ = (elem_->type == type_) ? jes_get_child(ctx_, elem_) : NULL; elem_ != NULL; elem_ = jes_get_sibling(ctx_, elem_))
-/* For loop to get all members of an array.
+/* For loop to iterate over array elements.
  * array_ and iter_ must be pointers of type jes_element.
  * iter_ must be initially NULL then in each iteration it will deliver an array member. */
 #define JES_ARRAY_FOR_EACH(ctx_, array_, iter_) for(iter_ = (array_->type == JES_ARRAY) ? jes_get_child(ctx_, array_) : NULL; iter_ != NULL; iter_ = jes_get_sibling(ctx_, iter_))
+/* For loop to to iterate over keys of an object.
+* array_ and iter_ must be pointers of type jes_element.
+* iter_ must be initially NULL then in each iteration it will deliver an array member. */
 #define JES_FOR_EACH_KEY(ctx_, object_, iter_) for(iter_ = (object_->type == JES_OBJECT) ? jes_get_child(ctx_, object_) : NULL; iter_ != NULL && iter_->type == JES_KEY; iter_ = jes_get_sibling(ctx_, iter_))
 
 #endif

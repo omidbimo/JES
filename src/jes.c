@@ -711,9 +711,9 @@ struct jes_context* jes_init(void *buffer, uint32_t buffer_size)
   ctx->offset = (uint32_t)-1;
   ctx->index = 0;
   ctx->pool = (struct jes_element*)(ctx + 1);
-  ctx->buffer_size = buffer_size - (uint32_t)(sizeof(struct jes_context));
-  ctx->capacity = (ctx->buffer_size / sizeof(struct jes_element)) < JES_INVALID_INDEX
-                 ? (jes_node_descriptor)(ctx->buffer_size / sizeof(struct jes_element))
+  ctx->pool_size = buffer_size - (uint32_t)(sizeof(struct jes_context));
+  ctx->capacity = (ctx->pool_size / sizeof(struct jes_element)) < JES_INVALID_INDEX
+                 ? (jes_node_descriptor)(ctx->pool_size / sizeof(struct jes_element))
                  : JES_INVALID_INDEX -1;
 
   ctx->iter = NULL;
