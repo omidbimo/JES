@@ -1,5 +1,3 @@
-# JES
-
 # JSON for Embedded Systems (JES)  
 **JES** is a lightweight JSON library designed specifically for embedded systems with strict resource constraints, such as limited stack size and no dynamic memory allocation. The goal is to make JES fully conform to the [RFC 8259 JSON standard](https://tools.ietf.org/html/rfc8259).
 
