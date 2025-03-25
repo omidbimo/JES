@@ -90,12 +90,12 @@ struct jes_context;
 /* Initialize a new JES context. The context will be allocated in the provided
  * working buffer.
  *
- * param [in] mem_pool a buffer to hold the context and JSON tree nodes
- * param [in] pool_size size of the mem_pool must be at least the size of context
+ * param [in] buffer a buffer to hold the context and JSON tree nodes
+ * param [in] buffer_size size of the mem_pool must be at least the size of context
  *
  * return pointer to context or NULL in case of a failure.
  */
-struct jes_context* jes_init(void *mem_pool, uint32_t pool_size);
+struct jes_context* jes_init(void *buffer, uint32_t buffer_size);
 
 /* Loads a string JSON and generates a tree of JSON elements.
  * param [in] ctx is an initialized context

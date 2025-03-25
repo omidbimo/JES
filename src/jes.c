@@ -694,13 +694,13 @@ static void jes_parser_add_value(struct jes_context *ctx, enum jes_type value_ty
   }
 }
 
-struct jes_context* jes_init(void *mem_pool, uint32_t pool_size)
+struct jes_context* jes_init(void *buffer, uint32_t buffer_size)
 {
-  if (pool_size < sizeof(struct jes_context)) {
+  if (buffer_size < sizeof(struct jes_context)) {
     return NULL;
   }
 
-  struct jes_context *ctx = mem_pool;
+  struct jes_context *ctx = buffer;
   memset(ctx, 0, sizeof(*ctx));
 
   ctx->status = JES_NO_ERROR;
@@ -711,9 +711,9 @@ struct jes_context* jes_init(void *mem_pool, uint32_t pool_size)
   ctx->offset = (uint32_t)-1;
   ctx->index = 0;
   ctx->pool = (struct jes_element*)(ctx + 1);
-  ctx->pool_size = pool_size - (uint32_t)(sizeof(struct jes_context));
-  ctx->capacity = (ctx->pool_size / sizeof(struct jes_element)) < JES_INVALID_INDEX
-                 ? (jes_node_descriptor)(ctx->pool_size / sizeof(struct jes_element))
+  ctx->buffer_size = buffer_size - (uint32_t)(sizeof(struct jes_context));
+  ctx->capacity = (ctx->buffer_size / sizeof(struct jes_element)) < JES_INVALID_INDEX
+                 ? (jes_node_descriptor)(ctx->buffer_size / sizeof(struct jes_element))
                  : JES_INVALID_INDEX -1;
 
   ctx->iter = NULL;
