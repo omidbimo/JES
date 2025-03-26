@@ -210,8 +210,8 @@ struct jes_element* jes_add_element(struct jes_context *ctx, struct jes_element 
  * iter_ must be initially NULL then in each iteration it will deliver an array member. */
 #define JES_ARRAY_FOR_EACH(ctx_, array_, iter_) for(iter_ = (array_->type == JES_ARRAY) ? jes_get_child(ctx_, array_) : NULL; iter_ != NULL; iter_ = jes_get_sibling(ctx_, iter_))
 /* For loop to to iterate over keys of an object.
-* array_ and iter_ must be pointers of type jes_element.
-* iter_ must be initially NULL then in each iteration it will deliver an array member. */
+ * object_ is a pointer to an object element to iterate its KEYs.
+ * iter_ must be initially NULL then in each iteration it will deliver a KEY member. */
 #define JES_FOR_EACH_KEY(ctx_, object_, iter_) for(iter_ = (object_->type == JES_OBJECT) ? jes_get_child(ctx_, object_) : NULL; iter_ != NULL && iter_->type == JES_KEY; iter_ = jes_get_sibling(ctx_, iter_))
 
 #endif

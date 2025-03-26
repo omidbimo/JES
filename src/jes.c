@@ -418,41 +418,43 @@ void jes_delete_element(struct jes_context *ctx, struct jes_element *element)
   jes_free(ctx, element);
 }
 
-const struct {
-  char symbol;
-  enum jes_token_type token_type;
-} jes_symbolic_token_mapping[] = {
-  {'\0', JES_TOKEN_EOF             },
-  {'{',  JES_TOKEN_OPENING_BRACE   },
-  {'}',  JES_TOKEN_CLOSING_BRACE   },
-  {'[',  JES_TOKEN_OPENING_BRACKET },
-  {']',  JES_TOKEN_CLOSING_BRACKET },
-  {':',  JES_TOKEN_COLON           },
-  {',',  JES_TOKEN_COMMA           },
-  };
-
 static inline bool jes_get_symbolic_token(struct jes_context *ctx,
-                                           char ch, struct jes_token *token)
+                                          char ch, struct jes_token *token)
 {
-  uint32_t idx;
-  for (idx = 0; idx < JES_ARRAY_LEN(jes_symbolic_token_mapping); idx++) {
-    if (ch == jes_symbolic_token_mapping[idx].symbol) {
-      UPDATE_TOKEN((*token), jes_symbolic_token_mapping[idx].token_type, ctx->offset, 1);
-      return true;
-    }
+  bool is_symbolic_token = true;
+
+  switch (ch) {
+    case '\0': UPDATE_TOKEN((*token), JES_TOKEN_EOF, ctx->offset, 1); break;
+    case '{': UPDATE_TOKEN((*token), JES_TOKEN_OPENING_BRACE, ctx->offset, 1); break;
+    case '}': UPDATE_TOKEN((*token), JES_TOKEN_CLOSING_BRACE, ctx->offset, 1); break;
+    case '[': UPDATE_TOKEN((*token), JES_TOKEN_OPENING_BRACKET, ctx->offset, 1); break;
+    case ']': UPDATE_TOKEN((*token), JES_TOKEN_CLOSING_BRACKET, ctx->offset, 1); break;
+    case ':': UPDATE_TOKEN((*token), JES_TOKEN_COLON, ctx->offset, 1); break;
+    case ',': UPDATE_TOKEN((*token), JES_TOKEN_COMMA, ctx->offset, 1); break;
+
+    default:
+      is_symbolic_token = false;
+      break;
   }
-  return false;
+
+  return is_symbolic_token;
 }
 
 static inline bool jes_is_symbolic_token(char ch)
 {
-  uint32_t idx;
-  for (idx = 0; idx < JES_ARRAY_LEN(jes_symbolic_token_mapping); idx++) {
-    if (ch == jes_symbolic_token_mapping[idx].symbol) {
-      return true;
-    }
+  bool is_symbolic_token = false;
+
+  if ((ch == '\0') ||
+      (ch == '{')  ||
+      (ch == '}')  ||
+      (ch == '[')  ||
+      (ch == ']')  ||
+      (ch == ':')  ||
+      (ch == ',')) {
+      is_symbolic_token = true;
   }
-  return false;
+
+  return is_symbolic_token;
 }
 
 static inline bool jes_get_number_token(struct jes_context *ctx,
@@ -527,9 +529,9 @@ static struct jes_token jes_get_token(struct jes_context *ctx)
 
       if (IS_DIGIT(ch)) {
         UPDATE_TOKEN(token, JES_TOKEN_NUMBER, ctx->offset, 1);
-        /* Unlike STRINGs, NUMBERs do not have dedicated symbols to indicate the
-           end of data. To avoid consuming non-NUMBER characters, take a look ahead
-           and stop the process in case of non-numeric symbols. */
+        /* Unlike STRINGs, there are symbols for NUMBERs to indicate the
+           end of number data. To avoid consuming non-NUMBER characters, take a look ahead
+           and stop the process if found of non-numeric symbols. */
         if (jes_is_symbolic_token(LOOK_AHEAD(ctx))) {
           break;
         }
