@@ -1002,6 +1002,7 @@ uint32_t jes_load(struct jes_context *ctx, const char *json_data, uint32_t json_
 
       default:
         assert(0);
+        ctx->status = JES_PARSING_FAILED;
         break;
     }
   } while (ctx->status == JES_NO_ERROR);
