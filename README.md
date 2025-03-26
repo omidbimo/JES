@@ -17,7 +17,7 @@ JES provides a simple and efficient API to:
 - ✅ **Concurrent document handling** – Supports parsing multiple JSON documents simultaneously by using a separate parser context and working buffer for each document.  
 - ✅ **High performance** – Operates directly on the input buffer without copying data, ensuring minimal processing overhead.  
 - ✅ **No external dependencies** – Fully self-contained, making it easy to integrate into embedded projects.  
-- ✅ **Configurable key handling** – Can be configured to support or overwrite duplicate keys.  
+- ✅ **Configurable key handling** – Can be configured at compile time to support or overwrite duplicate keys.  
 - ✅ **Flexible output formatting** – The output can be generated as a compact string or formatted with indentation for readability.
 
 ## 
