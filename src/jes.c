@@ -418,7 +418,7 @@ void jes_delete_element(struct jes_context *ctx, struct jes_element *element)
   jes_free(ctx, element);
 }
 
-static inline bool jes_get_symbolic_token(struct jes_context *ctx,
+static inline bool jes_get_delimiter_token(struct jes_context *ctx,
                                           char ch, struct jes_token *token)
 {
   bool is_symbolic_token = true;
@@ -440,7 +440,7 @@ static inline bool jes_get_symbolic_token(struct jes_context *ctx,
   return is_symbolic_token;
 }
 
-static inline bool jes_is_symbolic_token(char ch)
+static inline bool jes_is_delimiter_token(char ch)
 {
   bool is_symbolic_token = false;
 
@@ -457,32 +457,35 @@ static inline bool jes_is_symbolic_token(char ch)
   return is_symbolic_token;
 }
 
-static inline bool jes_get_number_token(struct jes_context *ctx,
-                                         char ch, struct jes_token *token)
+/* The token is already a NUMBER. Try to feed it with more symbols. */
+static inline bool jes_nurture_number_token(struct jes_context *ctx,
+                                            char ch, struct jes_token *token)
 {
-  bool tokenizing_completed = false;
+  bool end_of_number = false;
+  /* TODO: implementation is not robust against some sequences like: 1..2 */
   if (IS_DIGIT(ch)) {
     token->length++;
     ch = LOOK_AHEAD(ctx);
     if (!IS_DIGIT(ch) && (ch != '.')) { /* TODO: more symbols are acceptable in the middle of a number */
-      tokenizing_completed = true;
+      end_of_number = true;
     }
   }
   else if (ch == '.') {
     token->length++;
     if (!IS_DIGIT(LOOK_AHEAD(ctx))) {
       token->type = JES_TOKEN_INVALID;
-      tokenizing_completed = true;
+      end_of_number = true;
     }
   }
   else if (IS_SPACE(ch)) {
-    tokenizing_completed = true;
+    end_of_number = true;
   }
   else {
     token->type = JES_TOKEN_INVALID;
-    tokenizing_completed = true;
+    end_of_number = true;
   }
-  return tokenizing_completed;
+
+  return end_of_number;
 }
 
 static inline bool jes_get_specific_token(struct jes_context *ctx,
@@ -517,7 +520,7 @@ static struct jes_token jes_get_token(struct jes_context *ctx)
 
     if (!token.type) {
 
-      if (jes_get_symbolic_token(ctx, ch, &token)) {
+      if (jes_get_delimiter_token(ctx, ch, &token)) {
         break;
       }
 
@@ -532,7 +535,7 @@ static struct jes_token jes_get_token(struct jes_context *ctx)
         /* Unlike STRINGs, there are symbols for NUMBERs to indicate the
            end of number data. To avoid consuming non-NUMBER characters, take a look ahead
            and stop the process if found of non-numeric symbols. */
-        if (jes_is_symbolic_token(LOOK_AHEAD(ctx))) {
+        if (jes_is_delimiter_token(LOOK_AHEAD(ctx))) {
           break;
         }
         continue;
@@ -578,7 +581,8 @@ static struct jes_token jes_get_token(struct jes_context *ctx)
       continue;
     }
     else if (token.type == JES_TOKEN_NUMBER) {
-      if (jes_get_number_token(ctx, ch, &token)) {
+      if (jes_nurture_number_token(ctx, ch, &token)) {
+        /* There are no more symbols to consume as a number. Deliver the token. */
         break;
       }
       continue;
