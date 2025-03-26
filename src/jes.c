@@ -39,7 +39,9 @@
 #define JES_CONTEXT_COOKIE 0xABC09DEF
 #define JES_IS_INITIATED(ctx_) (ctx_->cookie == JES_CONTEXT_COOKIE)
 
-static char jes_status_str[][20] = {
+#define JES_HELPER_STR_LENGTH 20
+
+static char jes_status_str[][JES_HELPER_STR_LENGTH] = {
   "NO_ERR",
   "PARSING_FAILED",
   "RENDER_FAILED",
@@ -51,7 +53,7 @@ static char jes_status_str[][20] = {
   "ELEMENT_NOT_FOUND",
 };
 
-static char jes_token_type_str[][20] = {
+static char jes_token_type_str[][JES_HELPER_STR_LENGTH] = {
   "EOF",
   "OPENING_BRACE",
   "CLOSING_BRACE",
@@ -68,7 +70,7 @@ static char jes_token_type_str[][20] = {
   "INVALID",
 };
 
-static char jes_node_type_str[][20] = {
+static char jes_node_type_str[][JES_HELPER_STR_LENGTH] = {
   "NONE",
   "OBJECT",
   "KEY",
@@ -80,7 +82,7 @@ static char jes_node_type_str[][20] = {
   "NULL_VALUE",
 };
 
-static char jes_state_str[][20] = {
+static char jes_state_str[][JES_HELPER_STR_LENGTH] = {
   "EXPECT_OBJECT",
   "EXPECT_KEY",
   "EXPECT_COLON",
@@ -1797,7 +1799,7 @@ char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len)
     return "";
   }
 
-
+  /* TODO: provide more status */
   switch (ctx->status) {
     case JES_NO_ERROR:
       snprintf(msg, msg_len, "%s(#%d)", jes_status_str[ctx->status], ctx->status);
