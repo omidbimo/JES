@@ -1748,7 +1748,7 @@ struct jes_element* jes_update_array_value(struct jes_context *ctx, struct jes_e
     return NULL;
   }
 
-  if (!value || strnlen(value, JES_MAX_VALUE_LENGHT) == JES_MAX_VALUE_LENGHT) {
+  if (!value || strnlen(value, JES_MAX_VALUE_LENGTH) == JES_MAX_VALUE_LENGTH) {
     ctx->status = JES_INVALID_PARAMETER;
     return NULL;
   }

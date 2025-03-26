@@ -37,7 +37,7 @@ typedef uint32_t jes_node_descriptor;
 typedef uint16_t jes_node_descriptor;
 #endif
 
-#define JES_MAX_VALUE_LENGHT 0xFF
+#define JES_MAX_VALUE_LENGTH 0xFF
 
 typedef enum jes_status {
   JES_NO_ERROR = 0,
