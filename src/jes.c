@@ -67,7 +67,7 @@ static char jes_token_type_str[][JES_HELPER_STR_LENGTH] = {
   "FALSE",
   "NULL",
   "ESC",
-  "INVALID",
+  "INVALID_TOKEN",
 };
 
 static char jes_node_type_str[][JES_HELPER_STR_LENGTH] = {
@@ -464,7 +464,7 @@ static inline bool jes_nurture_number_token(struct jes_context *ctx,
                                             char ch, struct jes_token *token)
 {
   bool end_of_number = false;
-  /* TODO: implementation is not robust against some sequences like: 1..2 */
+
   if (IS_DIGIT(ch)) {
     token->length++;
     ch = LOOK_AHEAD(ctx);
@@ -994,6 +994,10 @@ uint32_t jes_load(struct jes_context *ctx, const char *json_data, uint32_t json_
 
       case JES_TOKEN_NUMBER:
         jes_parser_on_value(ctx, JES_VALUE_NUMBER);
+        break;
+
+      case JES_TOKEN_INVALID:
+        ctx->status = JES_PARSING_FAILED;
         break;
 
       default:
@@ -1819,6 +1823,18 @@ char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len)
                 jes_node_type_str[ctx->iter->type] );
       break;
 
+    case JES_PARSING_FAILED:
+      snprintf( msg, msg_len,
+                "%s(#%d): <%s> @[line:%d, pos:%d] (%.5s%.*s<<)",
+                jes_status_str[ctx->status],
+                ctx->status,
+                jes_token_type_str[ctx->token.type],
+                ctx->line_number,
+                ctx->offset,
+                ctx->token.offset >= 5 ? &ctx->json_data[ctx->token.offset - 5] : &ctx->json_data[0],
+                ctx->token.length,
+                &ctx->json_data[ctx->token.offset]);
+      break;
     case JES_UNEXPECTED_NODE:
       snprintf( msg, msg_len, "%s(#%d) - %s: \"%.*s\" @state: %s",
                 jes_status_str[ctx->status],
