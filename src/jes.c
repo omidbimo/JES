@@ -1694,7 +1694,10 @@ uint32_t jes_update_key_value(struct jes_context *ctx, struct jes_element *key, 
     return ctx->status;
   }
 
+  /* First delete the old value of the key if exists. */
   jes_delete_element(ctx, GET_CHILD(ctx, key));
+  /* It's possible that the key loses its value if the add_element fails.
+     The user should stop using the context or try to assign a value again.  */
   if (jes_add_element(ctx, key, type, value)) {
     result = JES_NO_ERROR;
   }

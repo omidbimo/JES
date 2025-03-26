@@ -179,6 +179,10 @@ struct jes_element* jes_add_key_after(struct jes_context *ctx, struct jes_elemen
 uint32_t jes_update_key(struct jes_context *ctx, struct jes_element *key, const char *keyword);
 /* Update key value giving its name or name a series of keys separated with a dot
  * note: The new value will not be copied and must be non-retentive for the life cycle of jes_context.
+   note: When updating a key value, the existing value elements associated with the key
+ *       will be deleted first. If adding the new value fails, the key may end up without a value.
+ *       In such a scenario, the JSON tree may become inconsistent, so the user should either retry
+ *       assigning a value to the key or stop using the context.
  * return a status code of type enum jes_status */
 uint32_t jes_update_key_value(struct jes_context *ctx, struct jes_element *key, enum jes_type type, const char *value);
 /* Update the key value to a JES_OBJECT element */
