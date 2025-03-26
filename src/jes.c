@@ -1488,13 +1488,14 @@ struct jes_element* jes_get_array_value(struct jes_context *ctx, struct jes_elem
       }
     }
 
-    if (index >= 0) {
+    if ((index >= 0) && (index < array_count)) {
       iter = HAS_CHILD(array) ? &ctx->pool[array->first_child] : NULL;
       for (; iter && index > 0; index--) {
         iter = HAS_SIBLING(iter) ? &ctx->pool[iter->sibling] : NULL;
       }
     }
   }
+
   return iter;
 }
 
