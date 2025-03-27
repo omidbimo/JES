@@ -30,11 +30,11 @@
 #define HAS_SIBLING(node_ptr) (node_ptr->sibling < JES_INVALID_INDEX)
 #define HAS_CHILD(node_ptr) (node_ptr->first_child < JES_INVALID_INDEX)
 
-#define GET_PARENT(ctx_, node_ptr) (HAS_PARENT(node_ptr) ? &ctx_->pool[node_ptr->parent] : NULL)
-#define GET_SIBLING(ctx_, node_ptr) (HAS_SIBLING(node_ptr) ? &ctx_->pool[node_ptr->sibling] : NULL)
-#define GET_CHILD(ctx_, node_ptr) (HAS_CHILD(node_ptr) ? &ctx_->pool[node_ptr->first_child] : NULL)
+#define GET_PARENT(ctx_, node_ptr) (HAS_PARENT(node_ptr) ? &ctx_->node_pool[node_ptr->parent] : NULL)
+#define GET_SIBLING(ctx_, node_ptr) (HAS_SIBLING(node_ptr) ? &ctx_->node_pool[node_ptr->sibling] : NULL)
+#define GET_CHILD(ctx_, node_ptr) (HAS_CHILD(node_ptr) ? &ctx_->node_pool[node_ptr->first_child] : NULL)
 
-#define PARENT_TYPE(ctx_, node_ptr) (HAS_PARENT(node_ptr) ? ctx_->pool[node_ptr->parent].type : JES_UNKNOWN)
+#define PARENT_TYPE(ctx_, node_ptr) (HAS_PARENT(node_ptr) ? ctx_->node_pool[node_ptr->parent].type : JES_UNKNOWN)
 
 #define JES_CONTEXT_COOKIE 0xABC09DEF
 #define JES_IS_INITIATED(ctx_) (ctx_->cookie == JES_CONTEXT_COOKIE)
@@ -148,10 +148,10 @@ struct jes_context {
   uint32_t  line_number;
   /* Part of the buffer given by the user at the time of the context initialization.
    * The buffer will be used to allocate the context structure at first. Then
-   * the remaining will be used as a pool of nodes (max. 65535 nodes).
-   * Actually the pool member points to the memory after context. */
-   struct jes_element *pool;
-  /* Pool size in bytes. It is limited to 32-bit value which is more than what
+   * the remaining will be used as a node_pool of nodes (max. 65535 nodes).
+   * Actually the node_pool member points to the memory after context. */
+   struct jes_element *node_pool;
+  /* node_pool size in bytes. It is limited to 32-bit value which is more than what
    * most of embedded systems can provide. */
   uint32_t pool_size;
   /* Number of nodes that can be allocated on the given buffer. The value will
@@ -224,7 +224,7 @@ static struct jes_element* jes_allocate(struct jes_context *ctx)
     }
     else {
       assert(ctx->index < ctx->capacity);
-      new_element = &ctx->pool[ctx->index];
+      new_element = &ctx->node_pool[ctx->index];
       ctx->index++;
     }
     /* Setting node descriptors to their default values. */
@@ -242,8 +242,8 @@ static void jes_free(struct jes_context *ctx, struct jes_element *element)
 {
   struct jes_free_node *free_node = (struct jes_free_node*)element;
 
-  assert(element >= ctx->pool);
-  assert(element < (ctx->pool + ctx->capacity));
+  assert(element >= ctx->node_pool);
+  assert(element < (ctx->node_pool + ctx->capacity));
   assert(ctx->node_count > 0);
 
   if (ctx->node_count > 0) {
@@ -263,9 +263,9 @@ static bool jes_validate_element(struct jes_context *ctx, struct jes_element *el
   assert(ctx);
   assert(element);
 
-  if ((element >= ctx->pool) &&
-      ((((void*)element - (void*)ctx->pool) % sizeof(*element)) == 0) &&
-      ((element >= ctx->pool) < ctx->capacity)) {
+  if ((element >= ctx->node_pool) &&
+      ((((void*)element - (void*)ctx->node_pool) % sizeof(*element)) == 0) &&
+      ((element >= ctx->node_pool) < ctx->capacity)) {
     return true;
   }
 
@@ -276,7 +276,7 @@ struct jes_element* jes_get_parent(struct jes_context *ctx, struct jes_element *
 {
   if (ctx && element && jes_validate_element(ctx, element)) {
     if (HAS_PARENT(element)) {
-      return &ctx->pool[element->parent];
+      return &ctx->node_pool[element->parent];
     }
   }
 
@@ -287,7 +287,7 @@ struct jes_element* jes_get_sibling(struct jes_context *ctx, struct jes_element 
 {
   if (ctx && element && jes_validate_element(ctx, element)) {
     if (HAS_SIBLING(element)) {
-      return &ctx->pool[element->sibling];
+      return &ctx->node_pool[element->sibling];
     }
   }
 
@@ -298,7 +298,7 @@ struct jes_element* jes_get_child(struct jes_context *ctx, struct jes_element *e
 {
   if (ctx && element && jes_validate_element(ctx, element)) {
     if (HAS_CHILD(element)) {
-      return &ctx->pool[element->first_child];
+      return &ctx->node_pool[element->first_child];
     }
   }
 
@@ -312,7 +312,7 @@ static struct jes_element* jes_get_parent_bytype(struct jes_context *ctx,
   struct jes_element *parent = NULL;
   if (ctx && element && jes_validate_element(ctx, element)) {
     while (element && HAS_PARENT(element)) {
-      element = &ctx->pool[element->parent];
+      element = &ctx->node_pool[element->parent];
       if (element->type == type) {
         parent = element;
         break;
@@ -329,7 +329,7 @@ static struct jes_element* jes_get_structure_parent_node(struct jes_context *ctx
   struct jes_element *parent = NULL;
   if (ctx && element && jes_validate_element(ctx, element)) {
     while (element && HAS_PARENT(element)) {
-      element = &ctx->pool[element->parent];
+      element = &ctx->node_pool[element->parent];
       if ((element->type == JES_OBJECT) || (element->type == JES_ARRAY)) {
         parent = element;
         break;
@@ -354,16 +354,16 @@ static struct jes_element* jes_append_element(struct jes_context *ctx,
     new_element->value = value;
 
     if (parent) {
-      new_element->parent = (jes_node_descriptor)(parent - ctx->pool); /* parent's index */
+      new_element->parent = (jes_node_descriptor)(parent - ctx->node_pool); /* parent's index */
 
       if (HAS_CHILD(parent)) {
-        struct jes_element *last = &ctx->pool[parent->last_child];
-        last->sibling = (jes_node_descriptor)(new_element - ctx->pool); /* new_element's index */
+        struct jes_element *last = &ctx->node_pool[parent->last_child];
+        last->sibling = (jes_node_descriptor)(new_element - ctx->node_pool); /* new_element's index */
       }
       else {
-        parent->first_child = (jes_node_descriptor)(new_element - ctx->pool); /* new_element's index */
+        parent->first_child = (jes_node_descriptor)(new_element - ctx->node_pool); /* new_element's index */
       }
-      parent->last_child = (jes_node_descriptor)(new_element - ctx->pool); /* new_element's index */
+      parent->last_child = (jes_node_descriptor)(new_element - ctx->node_pool); /* new_element's index */
     }
     else {
       assert(!ctx->root);
@@ -384,7 +384,7 @@ void jes_delete_element(struct jes_context *ctx, struct jes_element *element)
 
   while (true) {
     while (HAS_CHILD(iter)) {
-      iter = &ctx->pool[iter->first_child];
+      iter = &ctx->node_pool[iter->first_child];
     }
 
     if (iter == element) {
@@ -392,27 +392,27 @@ void jes_delete_element(struct jes_context *ctx, struct jes_element *element)
     }
 
     if (HAS_PARENT(iter)) {
-      ctx->pool[iter->parent].first_child = iter->sibling;
+      ctx->node_pool[iter->parent].first_child = iter->sibling;
     }
 
     jes_free(ctx, iter);
-    iter = &ctx->pool[iter->parent];
+    iter = &ctx->node_pool[iter->parent];
   }
   /* All sub-elements are deleted. To delete the element parent and sibling links need to be maintained. */
   iter = GET_PARENT(ctx, element);
   if (iter) {
-    if (&ctx->pool[iter->first_child] == element) {
+    if (&ctx->node_pool[iter->first_child] == element) {
       iter->first_child = element->sibling;
     }
     else {
       /* Element is not the first child of it's parent. Need to iterate all children to reach element and maintain the linkage.*/
-      iter = &ctx->pool[iter->first_child];
+      iter = &ctx->node_pool[iter->first_child];
       while(iter) {
-        if (&ctx->pool[iter->sibling] == element) {
+        if (&ctx->node_pool[iter->sibling] == element) {
           iter->sibling = element->sibling;
           break;
         }
-        iter = &ctx->pool[iter->sibling];
+        iter = &ctx->node_pool[iter->sibling];
       }
     }
   }
@@ -630,7 +630,7 @@ static struct jes_element *jes_find_duplicate_key(struct jes_context *ctx,
     return NULL;
   }
 
-  iter = HAS_CHILD(object) ? &ctx->pool[object->first_child] : NULL;
+  iter = HAS_CHILD(object) ? &ctx->node_pool[object->first_child] : NULL;
   while(iter) {
     assert(iter->type == JES_KEY);
     if ((iter->length == key_token->length) &&
@@ -638,7 +638,7 @@ static struct jes_element *jes_find_duplicate_key(struct jes_context *ctx,
       duplicate = iter;
       break;
     }
-    iter = HAS_SIBLING(object) ? &ctx->pool[object->sibling] : NULL;
+    iter = HAS_SIBLING(object) ? &ctx->node_pool[object->sibling] : NULL;
   }
   return duplicate;
 }
@@ -650,7 +650,7 @@ static void jes_parser_add_object(struct jes_context *ctx)
   new_node = jes_append_element(ctx, ctx->iter, JES_OBJECT, ctx->token.length, &ctx->json_data[ctx->token.offset]);
   if (new_node) {
     ctx->iter = new_node;
-    JES_LOG_NODE("\n    + ", ctx->iter - ctx->pool, ctx->iter->type, ctx->iter->length, ctx->iter->value,
+    JES_LOG_NODE("\n    + ", ctx->iter - ctx->node_pool, ctx->iter->type, ctx->iter->length, ctx->iter->value,
                   ctx->iter->parent, ctx->iter->sibling, ctx->iter->first_child, "");
   }
 }
@@ -674,7 +674,7 @@ static void jes_parser_add_key(struct jes_context *ctx)
   }
   if (new_node) {
     ctx->iter = new_node;
-    JES_LOG_NODE("\n    + ", ctx->iter - ctx->pool, ctx->iter->type, ctx->iter->length, ctx->iter->value,
+    JES_LOG_NODE("\n    + ", ctx->iter - ctx->node_pool, ctx->iter->type, ctx->iter->length, ctx->iter->value,
                   ctx->iter->parent, ctx->iter->sibling, ctx->iter->first_child, "");
   }
 }
@@ -685,7 +685,7 @@ static void jes_parser_add_array(struct jes_context *ctx)
   new_node = jes_append_element(ctx, ctx->iter, JES_ARRAY, ctx->token.length, &ctx->json_data[ctx->token.offset]);
   if (new_node) {
     ctx->iter = new_node;
-    JES_LOG_NODE("\n    + ", ctx->iter - ctx->pool, ctx->iter->type, ctx->iter->length, ctx->iter->value,
+    JES_LOG_NODE("\n    + ", ctx->iter - ctx->node_pool, ctx->iter->type, ctx->iter->length, ctx->iter->value,
                   ctx->iter->parent, ctx->iter->sibling, ctx->iter->first_child, "");
   }
 }
@@ -697,7 +697,7 @@ static void jes_parser_add_value(struct jes_context *ctx, enum jes_type value_ty
 
   if (new_node) {
     ctx->iter = new_node;
-    JES_LOG_NODE("\n    + ", ctx->iter - ctx->pool, ctx->iter->type, ctx->iter->length, ctx->iter->value,
+    JES_LOG_NODE("\n    + ", ctx->iter - ctx->node_pool, ctx->iter->type, ctx->iter->length, ctx->iter->value,
                   ctx->iter->parent, ctx->iter->sibling, ctx->iter->first_child, "");
   }
 }
@@ -718,7 +718,7 @@ struct jes_context* jes_init(void *buffer, uint32_t buffer_size)
   ctx->json_size = 0;
   ctx->offset = (uint32_t)-1;
   ctx->index = 0;
-  ctx->pool = (struct jes_element*)(ctx + 1);
+  ctx->node_pool = (struct jes_element*)(ctx + 1);
   ctx->pool_size = buffer_size - (uint32_t)(sizeof(struct jes_context));
   ctx->capacity = (ctx->pool_size / sizeof(struct jes_element)) < JES_INVALID_INDEX
                  ? (jes_node_descriptor)(ctx->pool_size / sizeof(struct jes_element))
@@ -1033,7 +1033,7 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
   ctx->status = JES_NO_ERROR;
 
   do {
-    JES_LOG_NODE("\n   ", ctx->iter - ctx->pool, ctx->iter->type,ctx->iter->length, ctx->iter->value,
+    JES_LOG_NODE("\n   ", ctx->iter - ctx->node_pool, ctx->iter->type,ctx->iter->length, ctx->iter->value,
                   ctx->iter->parent, ctx->iter->sibling, ctx->iter->first_child, "");
 
     switch (ctx->iter->type) {
@@ -1496,9 +1496,9 @@ struct jes_element* jes_get_array_value(struct jes_context *ctx, struct jes_elem
     }
 
     if ((index >= 0) && (index < array_count)) {
-      iter = HAS_CHILD(array) ? &ctx->pool[array->first_child] : NULL;
+      iter = HAS_CHILD(array) ? &ctx->node_pool[array->first_child] : NULL;
       for (; iter && index > 0; index--) {
-        iter = HAS_SIBLING(iter) ? &ctx->pool[iter->sibling] : NULL;
+        iter = HAS_SIBLING(iter) ? &ctx->node_pool[iter->sibling] : NULL;
       }
     }
   }
@@ -1531,12 +1531,12 @@ struct jes_element* jes_add_element(struct jes_context *ctx, struct jes_element 
       return NULL;
     }
     new_element = jes_append_element(ctx, parent, type, strlen(value), value);
-    JES_LOG_NODE("\n    + ", (jes_node_descriptor)(new_element - ctx->pool), new_element->type, new_element->length, new_element->value,
+    JES_LOG_NODE("\n    + ", (jes_node_descriptor)(new_element - ctx->node_pool), new_element->type, new_element->length, new_element->value,
                   new_element->parent, new_element->sibling, new_element->first_child, "");
   }
   else {
     new_element = jes_append_element(ctx, parent, type, 0, NULL);
-    JES_LOG_NODE("\n    + ", (jes_node_descriptor)(new_element - ctx->pool), new_element->type, new_element->length, new_element->value,
+    JES_LOG_NODE("\n    + ", (jes_node_descriptor)(new_element - ctx->node_pool), new_element->type, new_element->length, new_element->value,
                   new_element->parent, new_element->sibling, new_element->first_child, "");
   }
 
@@ -1605,18 +1605,18 @@ struct jes_element* jes_add_key_before(struct jes_context *ctx, struct jes_eleme
         if (temp == NULL) {
           /* Key was the first element in the object group */
           new_key->sibling = parent->first_child;
-          parent->first_child = (jes_node_descriptor)(new_key - ctx->pool); /* new_key's index */
+          parent->first_child = (jes_node_descriptor)(new_key - ctx->node_pool); /* new_key's index */
         }
         else {
           new_key->sibling = temp->sibling;
-          temp->sibling = (jes_node_descriptor)(new_key - ctx->pool); /* new_key's index */
+          temp->sibling = (jes_node_descriptor)(new_key - ctx->node_pool); /* new_key's index */
 
         }
         new_key->parent = key->parent;
         new_key->type = JES_KEY;
         new_key->length = keyword_len;
         new_key->value = keyword;
-        JES_LOG_NODE("\n    + ", (jes_node_descriptor)(new_key - ctx->pool), new_key->type, new_key->length, new_key->value,
+        JES_LOG_NODE("\n    + ", (jes_node_descriptor)(new_key - ctx->node_pool), new_key->type, new_key->length, new_key->value,
                       new_key->parent, new_key->sibling, new_key->first_child, "");
         break;
       }
@@ -1655,16 +1655,16 @@ struct jes_element* jes_add_key_after(struct jes_context *ctx, struct jes_elemen
   if (new_key) {
     if (!HAS_SIBLING(key)) {
       /* Key was the last element in the object group */
-      parent->last_child = (jes_node_descriptor)(new_key - ctx->pool); /* new_key's index */
+      parent->last_child = (jes_node_descriptor)(new_key - ctx->node_pool); /* new_key's index */
     }
 
     new_key->sibling = key->sibling;
-    key->sibling = (jes_node_descriptor)(new_key - ctx->pool); /* new_key's index */
+    key->sibling = (jes_node_descriptor)(new_key - ctx->node_pool); /* new_key's index */
     new_key->parent = key->parent;
     new_key->type = JES_KEY;
     new_key->length = keyword_len;
     new_key->value = keyword;
-    JES_LOG_NODE("\n    + ", (jes_node_descriptor)(new_key - ctx->pool), new_key->type, new_key->length, new_key->value,
+    JES_LOG_NODE("\n    + ", (jes_node_descriptor)(new_key - ctx->node_pool), new_key->type, new_key->length, new_key->value,
                   new_key->parent, new_key->sibling, new_key->first_child, "");
   }
 
