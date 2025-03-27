@@ -147,12 +147,10 @@ struct jes_context {
   uint32_t  offset;
   uint32_t  line_number;
   /* Part of the buffer given by the user at the time of the context initialization.
-   * The buffer will be used to allocate the context structure at first. Then
-   * the remaining will be used as a node_pool of nodes (max. 65535 nodes).
-   * Actually the node_pool member points to the memory after context. */
+   * The buffer will be used to allocate the context structure at first.
+   * The remaining memory will be used as a pool of nodes (max. 65535 nodes). */
    struct jes_element *node_pool;
-  /* node_pool size in bytes. It is limited to 32-bit value which is more than what
-   * most of embedded systems can provide. */
+  /* node_pool size in bytes. (buffer size - context size) */
   uint32_t pool_size;
   /* Number of nodes that can be allocated on the given buffer. The value will
      be limited to 65535 in case of 16-bit node descriptors. */
@@ -1418,6 +1416,7 @@ struct jes_element* jes_get_key(struct jes_context *ctx, struct jes_element *par
 
   if (parent_key != NULL) {
     if (!jes_validate_element(ctx, parent_key) && (parent_key->type != JES_KEY)) {
+      ctx->status = JES_INVALID_PARAMETER;
       return NULL;
     }
     iter = GET_CHILD(ctx, parent_key);
@@ -1447,11 +1446,17 @@ struct jes_element* jes_get_key(struct jes_context *ctx, struct jes_element *par
       iter = GET_SIBLING(ctx, iter);
     }
 
-    if (*keys == '\0') {
-      target_key = iter;
-      break;
+    if (iter) {
+      if (*keys == '\0') {
+        target_key = iter;
+        break;
+      }
+      iter = GET_CHILD(ctx, iter);
     }
-    iter = GET_CHILD(ctx, iter);
+  }
+
+  if (!target_key) {
+    ctx->status = JES_ELEMENT_NOT_FOUND;
   }
 
   return target_key;
