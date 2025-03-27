@@ -1410,12 +1410,17 @@ struct jes_element* jes_get_key(struct jes_context *ctx, struct jes_element *par
   const char *key;
   char *dot;
 
-  if (!ctx || !JES_IS_INITIATED(ctx) || !keys) {
+  if (!ctx || !JES_IS_INITIATED(ctx)) {
+    return NULL;
+  }
+
+  if (!keys) {
+    ctx->status = JES_INVALID_PARAMETER;
     return NULL;
   }
 
   if (parent_key != NULL) {
-    if (!jes_validate_element(ctx, parent_key) && (parent_key->type != JES_KEY)) {
+    if (!jes_validate_element(ctx, parent_key) || (parent_key->type != JES_KEY)) {
       ctx->status = JES_INVALID_PARAMETER;
       return NULL;
     }
