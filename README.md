@@ -65,6 +65,7 @@ Defines the types of JSON elements:
 ### Structs
 
 ### `jes_context`
+
 An opaque structure that holds the internal state of the parser including JSON tree information, element pool managemnet and process status. 
 
 ### `jes_element`
@@ -212,13 +213,7 @@ struct jes_element* jes_get_key(struct jes_context *ctx, struct jes_element *par
 
 - `keys` – NUL-terminated string containing several key names separated by a dot "."
 
-
-
 ---
-
-
-
-
 
 ### `jes_stringify_status`
 
@@ -226,4 +221,39 @@ Converts a status code to a human-readable string.
 
 ```c
 char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len);
+```
+
+---
+
+## Example
+
+```c
+#include "jes.h"
+...
+uint8_t work_buffer[0xFFFF];
+const char json_str[] = "{\"key\": \"value\"}";
+struct jes_context *doc;
+struct jes_element *key = NULL;
+struct jes_element *value = NULL;
+jes_status err;
+
+doc = jes_init(work_buffer, sizeof(work_buffer));
+if (!doc) {
+    /* Error handling */
+}
+
+err = jes_load(doc, json_str, sizeof(json_str));
+if (err != JES_NO_ERROR) {
+    /* Error handling */
+}
+
+key = jes_get_key(doc, NULL, "key");
+if (key) {
+    value = jes_get_key_value(doc, key);
+    if (value) {
+        /* Process value */
+    }
+}
+
+
 ```
