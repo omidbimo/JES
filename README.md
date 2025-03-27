@@ -254,6 +254,22 @@ if (key) {
         /* Process value */
     }
 }
+```
 
+## Logging
 
+A debug build of JES also contains logging for Tokenizer, Allocator and Serializer.
+
+```dos
+JES - parsing demo.json...
+ JES.Token: [Pos:     0, Len:   1] OPENING_BRACE    "{"
+    + JES.Node: [0] "{" <OBJECT>,    parent:[-1], right:[-1], child:[-1]
+ JES.Token: [Pos:     8, Len:   0] STRING           ""
+    + JES.Node: [1] "" <KEY>,    parent:[0], right:[-1], child:[-1]
+ JES.Token: [Pos:     9, Len:   1] COLON            ":"
+ JES.Token: [Pos:    11, Len:   4] NULL             "null"
+    + JES.Node: [2] "null" <NULL_VALUE>,    parent:[1], right:[-1], child:[-1]
+ JES.Token: [Pos:    15, Len:   1] COMMA            ","
+ JES.Token: [Pos:    23, Len:   2] STRING           "ID"
+    + JES.Node: [3] "ID" <KEY>,    parent:[0], right:[-1], child:[-1]
 ```
