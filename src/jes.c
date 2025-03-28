@@ -461,31 +461,31 @@ static inline bool jes_is_delimiter_token(char ch)
 static inline bool jes_nurture_number_token(struct jes_context *ctx,
                                             char ch, struct jes_token *token)
 {
-  bool end_of_number = false;
+  bool end_of_token = false;
 
   if (IS_DIGIT(ch)) {
     token->length++;
     ch = LOOK_AHEAD(ctx);
     if (!IS_DIGIT(ch) && (ch != '.')) { /* TODO: more symbols are acceptable in the middle of a number */
-      end_of_number = true;
+      end_of_token = true;
     }
   }
   else if (ch == '.') {
     token->length++;
     if (!IS_DIGIT(LOOK_AHEAD(ctx))) {
       token->type = JES_TOKEN_INVALID;
-      end_of_number = true;
+      end_of_token = true;
     }
   }
   else if (IS_SPACE(ch)) {
-    end_of_number = true;
+    end_of_token = true;
   }
   else {
     token->type = JES_TOKEN_INVALID;
-    end_of_number = true;
+    end_of_token = true;
   }
 
-  return end_of_number;
+  return end_of_token;
 }
 
 static inline bool jes_get_specific_token(struct jes_context *ctx,
@@ -1728,7 +1728,7 @@ uint32_t jes_update_key_value(struct jes_context *ctx, struct jes_element *key, 
 
 uint32_t jes_update_key_value_to_object(struct jes_context *ctx, struct jes_element *key)
 {
-  return jes_update_key_value(ctx, key, JES_ARRAY, "");
+  return jes_update_key_value(ctx, key, JES_OBJECT, "");
 }
 
 uint32_t jes_update_key_value_to_array(struct jes_context *ctx, struct jes_element *key)
