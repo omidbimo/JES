@@ -110,6 +110,29 @@ int main(void)
 
   jes_update_key_value_to_false(doc, key);
 
+  key = jes_add_key(doc, NULL, "Team");
+  jes_update_key_value_to_object(doc, key);
+  key = jes_add_key(doc, key, "name");
+  if (0 != jes_update_key_value(doc, key, JES_VALUE_STRING, "Trantor FC")) {
+    printf("\n Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
+    return 0;
+  }
+
+  key = jes_get_key(doc, NULL, "Team");
+  key = jes_add_key(doc, key, "members");
+  jes_update_key_value_to_array(doc, key);
+  array = jes_get_key_value(doc, key);
+  printf("\n%s", jes_stringify_element(array, err_msg, sizeof(err_msg)));
+  if (0 != jes_add_array_value(doc, array, -1, JES_VALUE_STRING, "ALEX")){
+    printf("\n Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
+    return 0;
+  }
+
+  jes_add_array_value(doc, array, -1, JES_VALUE_STRING, "BEN");
+  jes_add_array_value(doc, array, -1, JES_VALUE_STRING, "Clive");
+  jes_add_array_value(doc, array, -1, JES_VALUE_STRING, "Edd");
+  jes_add_array_value(doc, array, -2, JES_VALUE_STRING, "Dave");
+  jes_update_array_value(doc, array, -2, JES_VALUE_STRING, "David");
 
   /* Rendering the JSON elements into a string (not NUL-terminated) */
   printf("\nSerilize JSON tree using a compact format...");
@@ -121,6 +144,7 @@ int main(void)
     printf("\n%.*s", out_size, output);
   }
 
+#if 0
   printf("\nSerilize JSON tree with indention...");
   out_size = jes_render(doc, output, sizeof(output), false);
   if (out_size == 0) {
@@ -129,6 +153,7 @@ int main(void)
   else {
     printf("\n%.*s", out_size, output);
   }
+#endif
   return 0;
 
 }
