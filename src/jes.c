@@ -51,6 +51,7 @@ static char jes_status_str[][JES_HELPER_STR_LENGTH] = {
   "UNEXPECTED_EOF",
   "INVALID_PARAMETER",
   "ELEMENT_NOT_FOUND",
+  "INVALID_CONTEXT",
 };
 
 static char jes_token_type_str[][JES_HELPER_STR_LENGTH] = {
@@ -1762,23 +1763,23 @@ uint32_t jes_update_key_value_to_null(struct jes_context *ctx, struct jes_elemen
   return jes_update_key_value(ctx, key, JES_VALUE_NULL, "null");
 }
 
-struct jes_element* jes_update_array_value(struct jes_context *ctx, struct jes_element *array, int32_t index, enum jes_type type, const char *value)
+uint32_t jes_update_array_value(struct jes_context *ctx, struct jes_element *array, int32_t index, enum jes_type type, const char *value)
 {
   struct jes_element *value_element = NULL;
   int32_t array_size;
 
-  if (!ctx || JES_IS_INITIATED(ctx)) {
-    return NULL;
+  if (!ctx || !JES_IS_INITIATED(ctx)) {
+    return JES_INVALID_CONTEXT;
   }
 
-  if (!array || !jes_validate_element(ctx, array) || (array->type == JES_ARRAY)) {
+  if (!array || !jes_validate_element(ctx, array) || (array->type != JES_ARRAY)) {
     ctx->status = JES_INVALID_PARAMETER;
-    return NULL;
+    return ctx->status;
   }
 
   if (!value || strnlen(value, JES_MAX_VALUE_LENGTH) == JES_MAX_VALUE_LENGTH) {
     ctx->status = JES_INVALID_PARAMETER;
-    return NULL;
+    return ctx->status;
   }
 
   array_size = jes_get_array_size(ctx, array);
@@ -1786,9 +1787,9 @@ struct jes_element* jes_update_array_value(struct jes_context *ctx, struct jes_e
     index = array_size + index;
   }
 
-  if (index >= array_size) {
+  if (index > array_size) {
     ctx->status = JES_INVALID_PARAMETER;
-    return NULL;
+    return ctx->status;
   }
 
   JES_ARRAY_FOR_EACH(ctx, array, value_element) {
@@ -1805,8 +1806,12 @@ struct jes_element* jes_update_array_value(struct jes_context *ctx, struct jes_e
     value_element->length = (uint16_t)strlen(value);
     value_element->value = value;
   }
+  else {
+    /* Create a new element */
+    jes_add_element(ctx, array, type, value);
+  }
 
-  return value_element;
+  return ctx->status;
 }
 
 size_t jes_get_node_count(struct jes_context *ctx)

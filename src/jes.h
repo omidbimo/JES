@@ -49,6 +49,7 @@ typedef enum jes_status {
   JES_UNEXPECTED_EOF,
   JES_INVALID_PARAMETER,
   JES_ELEMENT_NOT_FOUND,
+  JES_INVALID_CONTEXT,
 } jes_status;
 
 enum jes_type {
@@ -123,21 +124,25 @@ uint32_t jes_load(struct jes_context* ctx, const char *json_data, uint32_t json_
  */
 uint32_t jes_render(struct jes_context *ctx, char *dst, uint32_t length, bool compact);
 
-/* Evaluates a tree of JSON elements to check if the structure is correct. Additionally
- * calculates the size of the rendered JSON.
- * param [in] ctx the jes context containing a JSON tree.
- * param [in] compact if true, the function will calculate the length of compact JSON
+/* Evaluates a tree of JSON elements to check if the structure is valid. It also
+ * additionally calculates the size of the rendered JSON.
+ * param [in] ctx: an Initialized jes context containing a JSON tree.
+ * param [in] compact: if true, the function will calculate the length of a compact JSON string
  *            If false, the length of formatted JSON with two spaces indention will be returned.
  *
  * return the required buffer size to render the JSON into string. If zero,
-          there might be failures in the tree. Check ctx->status.
+          there might be failures in the tree. use jes_get_status or jes_stringify_status.
  */
 uint32_t jes_evaluate(struct jes_context *ctx, bool compact);
-/* */
+/* Get the status of latest process
+ * param [in] ctx: an Initialized jes context
+ */
 jes_status jes_get_status(struct jes_context *ctx);
-/* */
+/* Get a textual overview of the latest failure
+*/
 char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len);
-/* */
+/* Get a textual type of a JES element
+*/
 char* jes_stringify_element(struct jes_element *element, char *msg, size_t msg_len);
 
 
@@ -203,7 +208,7 @@ struct jes_element* jes_get_array_value(struct jes_context *ctx, struct jes_elem
 /* Update array value giving its array element and an index.
  * note: The new value will not be copied and must be non-retentive for the life time of jes_context.
  * return a status code of type enum jes_status */
-struct jes_element* jes_update_array_value(struct jes_context *ctx, struct jes_element *array, int32_t index, enum jes_type type, const char *value);
+uint32_t jes_update_array_value(struct jes_context *ctx, struct jes_element *array, int32_t index, enum jes_type type, const char *value);
 
 /* Add an element to another element. */
 struct jes_element* jes_add_element(struct jes_context *ctx, struct jes_element *parent, enum jes_type type, const char *value);
