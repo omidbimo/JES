@@ -11,8 +11,10 @@
 int main(void)
 {
   uint32_t idx;
+
   struct jes_context *doc = NULL;
-  struct jes_context *dummy_ctx;
+  char a[4] = {0};
+  struct jes_context *dummy_ctx = (struct jes_context *)a;
   size_t out_size;
   jes_status err;
   char err_msg[250] = {'\0'};
@@ -25,7 +27,9 @@ int main(void)
   struct jes_element *value = NULL;
   struct jes_element dummy;
 
-  const char json_str[] = "{\"key\": \"value\"}";
+  const char json_str[] = "{\"key1\": \"value1\"}";
+
+  printf("\nTests for jes_get_key()\n");
 
   doc = jes_init(work_buffer, sizeof(work_buffer));
   if (!doc) {
@@ -146,14 +150,40 @@ int main(void)
     return -1;
   }
 
-  key = jes_get_key(doc, NULL, "key");
+  key = jes_get_key(doc, NULL, "key1");
   if (key == NULL) {
     printf("\n Error: %d - %s", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)));
     return -1;
   }
 
+  if (JES_NO_ERROR != jes_update_key_value_to_object(doc, key)) {
+    printf("\n    %s", jes_stringify_status(doc, err_msg, sizeof(err_msg)));
+    return -1;
+  }
 
-  printf("\nTest Finished");
+
+  for (idx = 0; idx < 10; idx++) {
+    char keyword[10][10];
+    snprintf(keyword[idx], sizeof(keyword[idx]), "key%d", idx+2);
+    printf("\n%s", keyword);
+    key = jes_add_key(doc, key, keyword[idx]);
+    if (key == NULL) {
+      printf("\n    %s", jes_stringify_status(doc, err_msg, sizeof(err_msg)));
+      //printf("\n Error: %d - %s", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)));
+      return -1;
+    }
+  }
+
+  /* Rendering the JSON elements into a string (not NUL-terminated) */
+  printf("\nSerilize JSON tree using a compact format...");
+  out_size = jes_render(doc, output, sizeof(output), true);
+  if (out_size == 0) {
+    printf("\n Render Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
+  }
+  else {
+    printf("\n%.*s", out_size, output);
+  }
+  printf("\nTest finished successfully.");
   return 0;
 
 
