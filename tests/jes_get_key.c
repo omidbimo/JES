@@ -20,7 +20,7 @@ int main(void)
   char err_msg[250] = {'\0'};
   uint8_t work_buffer[BUFFER_SIZE];
   char output[0xFFFF];
-
+  char keywords[10][10];
   struct jes_element *it = NULL;
   struct jes_element *array = NULL;
   struct jes_element *key = NULL;
@@ -163,10 +163,9 @@ int main(void)
 
 
   for (idx = 0; idx < 10; idx++) {
-    char keyword[10][10];
-    snprintf(keyword[idx], sizeof(keyword[idx]), "key%d", idx+2);
-    printf("\n%s", keyword);
-    key = jes_add_key(doc, key, keyword[idx]);
+    snprintf(keywords[idx], sizeof(keywords[idx]), "key%d", idx+2);
+
+    key = jes_add_key(doc, key, keywords[idx]);
     if (key == NULL) {
       printf("\n    %s", jes_stringify_status(doc, err_msg, sizeof(err_msg)));
       //printf("\n Error: %d - %s", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)));
