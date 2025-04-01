@@ -1563,12 +1563,14 @@ struct jes_element* jes_add_key(struct jes_context *ctx, struct jes_element *par
 
   if (parent_key != NULL) {
     /* The key must be added to an existing key and must be embedded in an OBJECT */
-     struct jes_element *object = GET_CHILD(ctx, parent_key);
+    struct jes_element *object = GET_CHILD(ctx, parent_key);
     if (object == NULL) {
       object = jes_add_element(ctx, parent_key, JES_OBJECT, "");
     }
-
-    assert(object->type == JES_OBJECT);
+    else if (object->type != JES_OBJECT) {
+      ctx->status = JES_UNEXPECTED_NODE;
+      return NULL;
+    }
     new_key = jes_add_element(ctx, object, JES_KEY, keyword);
   }
   else {
