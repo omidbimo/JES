@@ -86,7 +86,7 @@ static char jes_state_str[][JES_HELPER_STR_LENGTH] = {
   "EXPECT_OBJECT",
   "EXPECT_KEY",
   "EXPECT_COLON",
-  "EXPECT_VALUE",
+  "EXPECT_KEY_VALUE",
   "HAVE_KEY_VALUE",
   "EXPECT_ARRAY_VALUE",
   "HAVE_ARRAY_VALUE",
@@ -96,8 +96,8 @@ enum jes_state {
   JES_EXPECT_OBJECT = 0,
   JES_EXPECT_KEY,
   JES_EXPECT_COLON,
-  JES_EXPECT_VALUE,
-  JES_HAVE_VALUE,
+  JES_EXPECT_KEY_VALUE,
+  JES_HAVE_KEY_VALUE,
   JES_EXPECT_ARRAY_VALUE,
   JES_HAVE_ARRAY_VALUE,
 };
@@ -737,7 +737,7 @@ struct jes_context* jes_init(void *buffer, uint32_t buffer_size)
 static inline void jes_parser_on_opening_brace(struct jes_context *ctx)
 {
   if ((ctx->state != JES_EXPECT_OBJECT) &&
-      (ctx->state != JES_EXPECT_VALUE)  &&
+      (ctx->state != JES_EXPECT_KEY_VALUE)  &&
       (ctx->state != JES_EXPECT_ARRAY_VALUE)) {
     ctx->status = JES_UNEXPECTED_TOKEN;
     ctx->ext_status = ctx->state;
@@ -751,7 +751,7 @@ static inline void jes_parser_on_opening_brace(struct jes_context *ctx)
 static inline void jes_parser_on_closing_brace(struct jes_context *ctx)
 {
   if ((ctx->state != JES_EXPECT_KEY) &&
-      (ctx->state != JES_HAVE_VALUE)) {
+      (ctx->state != JES_HAVE_KEY_VALUE)) {
     ctx->status = JES_UNEXPECTED_TOKEN;
     ctx->ext_status = ctx->state;
     return;
@@ -783,7 +783,7 @@ static inline void jes_parser_on_closing_brace(struct jes_context *ctx)
       ctx->state = JES_HAVE_ARRAY_VALUE;
     }
     else if (ctx->iter->type == JES_OBJECT) {
-      ctx->state = JES_HAVE_VALUE;
+      ctx->state = JES_HAVE_KEY_VALUE;
     }
     else {
       assert(0);
@@ -793,7 +793,7 @@ static inline void jes_parser_on_closing_brace(struct jes_context *ctx)
 
 static inline void jes_parser_on_opening_bracket(struct jes_context *ctx)
 {
-  if ((ctx->state != JES_EXPECT_VALUE) &&
+  if ((ctx->state != JES_EXPECT_KEY_VALUE) &&
       (ctx->state != JES_EXPECT_ARRAY_VALUE)) {
     ctx->status = JES_UNEXPECTED_TOKEN;
     ctx->ext_status = ctx->state;
@@ -846,7 +846,7 @@ static inline void jes_parser_on_closing_bracket(struct jes_context *ctx)
     ctx->state = JES_HAVE_ARRAY_VALUE;
   }
   else if (ctx->iter->type == JES_OBJECT) {
-    ctx->state = JES_HAVE_VALUE;
+    ctx->state = JES_HAVE_KEY_VALUE;
   }
   else {
     assert(0);
@@ -856,7 +856,7 @@ static inline void jes_parser_on_closing_bracket(struct jes_context *ctx)
 static inline void jes_parser_on_colon(struct jes_context *ctx)
 {
   if (ctx->state == JES_EXPECT_COLON) {
-    ctx->state = JES_EXPECT_VALUE;
+    ctx->state = JES_EXPECT_KEY_VALUE;
   }
   else {
     ctx->status = JES_UNEXPECTED_TOKEN;
@@ -867,7 +867,7 @@ static inline void jes_parser_on_colon(struct jes_context *ctx)
 
 static inline void jes_parser_on_comma(struct jes_context *ctx)
 {
-  if (ctx->state == JES_HAVE_VALUE) {
+  if (ctx->state == JES_HAVE_KEY_VALUE) {
     ctx->state = JES_EXPECT_KEY;
   }
   else if (ctx->state == JES_HAVE_ARRAY_VALUE) {
@@ -902,9 +902,9 @@ static inline void jes_parser_on_string(struct jes_context *ctx)
     jes_parser_add_key(ctx);
     ctx->state = JES_EXPECT_COLON;
   }
-  else if (ctx->state == JES_EXPECT_VALUE) {
+  else if (ctx->state == JES_EXPECT_KEY_VALUE) {
     jes_parser_add_value(ctx, JES_VALUE_STRING);
-    ctx->state = JES_HAVE_VALUE;
+    ctx->state = JES_HAVE_KEY_VALUE;
 
   }
   else if (ctx->state == JES_EXPECT_ARRAY_VALUE) {
@@ -920,8 +920,8 @@ static inline void jes_parser_on_string(struct jes_context *ctx)
 
 static inline void jes_parser_on_value(struct jes_context *ctx, enum jes_type value_type)
 {
-  if (ctx->state == JES_EXPECT_VALUE) {
-    ctx->state = JES_HAVE_VALUE;
+  if (ctx->state == JES_EXPECT_KEY_VALUE) {
+    ctx->state = JES_HAVE_KEY_VALUE;
   }
   else if (ctx->state == JES_EXPECT_ARRAY_VALUE) {
     ctx->state = JES_HAVE_ARRAY_VALUE;
@@ -1038,7 +1038,7 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
 
       case JES_OBJECT:
         if ((ctx->state == JES_EXPECT_OBJECT) ||
-            (ctx->state == JES_EXPECT_VALUE)  ||
+            (ctx->state == JES_EXPECT_KEY_VALUE)  ||
             (ctx->state == JES_EXPECT_ARRAY_VALUE)) {
           ctx->state = JES_EXPECT_KEY;
         }
@@ -1059,7 +1059,7 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
 
       case JES_KEY:
         if (ctx->state == JES_EXPECT_KEY) {
-          ctx->state = JES_EXPECT_VALUE;
+          ctx->state = JES_EXPECT_KEY_VALUE;
         }
         else {
           ctx->status = JES_UNEXPECTED_ELEMENT;
@@ -1074,7 +1074,7 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
         break;
 
       case JES_ARRAY:
-        if ((ctx->state == JES_EXPECT_VALUE) || (ctx->state == JES_EXPECT_ARRAY_VALUE)) {
+        if ((ctx->state == JES_EXPECT_KEY_VALUE) || (ctx->state == JES_EXPECT_ARRAY_VALUE)) {
           ctx->state = JES_EXPECT_ARRAY_VALUE;
         }
         else {
@@ -1093,8 +1093,8 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
         break;
 
       case JES_VALUE_STRING:
-        if (ctx->state == JES_EXPECT_VALUE) {
-          ctx->state = JES_HAVE_VALUE;
+        if (ctx->state == JES_EXPECT_KEY_VALUE) {
+          ctx->state = JES_HAVE_KEY_VALUE;
         }
         else if (ctx->state == JES_EXPECT_ARRAY_VALUE) {
           ctx->state = JES_HAVE_ARRAY_VALUE;
@@ -1117,8 +1117,8 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
       case JES_VALUE_TRUE:
       case JES_VALUE_FALSE:
       case JES_VALUE_NULL:
-        if (ctx->state == JES_EXPECT_VALUE) {
-          ctx->state = JES_HAVE_VALUE;
+        if (ctx->state == JES_EXPECT_KEY_VALUE) {
+          ctx->state = JES_HAVE_KEY_VALUE;
         }
         else if (ctx->state == JES_EXPECT_ARRAY_VALUE) {
           ctx->state = JES_HAVE_ARRAY_VALUE;
@@ -1180,10 +1180,13 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
     }
 
     /* Node doesn't have any children or siblings. Iterate backward to the parent. */
-    while ((ctx->iter = jes_get_parent(ctx, ctx->iter))) {
+    if (ctx->iter->type == JES_KEY) {
+      break;
+    }
 
+    while ((ctx->iter = jes_get_parent(ctx, ctx->iter))) {
       if (ctx->iter->type == JES_KEY) {
-        ctx->state = JES_HAVE_VALUE;
+        ctx->state = JES_HAVE_KEY_VALUE;
       }
       /* If the parent is an object or array, forge a closing delimiter. */
       else if (ctx->iter->type == JES_OBJECT) {
@@ -1200,7 +1203,7 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
         }
         json_len += sizeof("]") - 1;
       }
-      else if ((ctx->iter->type == JES_KEY) && (ctx->state != JES_HAVE_VALUE)) {
+      else if ((ctx->iter->type == JES_KEY) && (ctx->state != JES_HAVE_KEY_VALUE)) {
         ctx->status = JES_UNEXPECTED_ELEMENT;
         return 0;
       }
@@ -1227,7 +1230,13 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
 
   } while (ctx->iter && (ctx->iter != ctx->root));
 
-  ctx->iter = ctx->root;
+  if (ctx->state == JES_EXPECT_KEY_VALUE) {
+    ctx->status = JES_RENDER_FAILED;
+    json_len = 0;
+  }
+  else {
+    ctx->iter = ctx->root;
+  }
   return json_len;
 }
 
@@ -1857,7 +1866,15 @@ char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len)
                 ctx->iter->value,
                 jes_state_str[ctx->state]);
       break;
-
+    case JES_RENDER_FAILED:
+      snprintf( msg, msg_len, "%s(#%d) - %s: \"%.*s\" @state: %s",
+                jes_status_str[ctx->status],
+                ctx->status,
+                jes_node_type_str[ctx->iter->type],
+                ctx->iter->length,
+                ctx->iter->value,
+                jes_state_str[ctx->state]);
+      break;
     default:
       snprintf(msg, msg_len, "%s(#%d)", jes_status_str[ctx->status], ctx->status);
       break;
