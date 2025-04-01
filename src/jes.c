@@ -47,7 +47,7 @@ static char jes_status_str[][JES_HELPER_STR_LENGTH] = {
   "RENDER_FAILED",
   "OUT_OF_MEMORY",
   "UNEXPECTED_TOKEN",
-  "UNEXPECTED_NODE",
+  "UNEXPECTED_ELEMENT",
   "UNEXPECTED_EOF",
   "INVALID_PARAMETER",
   "ELEMENT_NOT_FOUND",
@@ -1043,7 +1043,7 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
           ctx->state = JES_EXPECT_KEY;
         }
         else {
-          ctx->status = JES_UNEXPECTED_NODE;
+          ctx->status = JES_UNEXPECTED_ELEMENT;
           return 0;
         }
 
@@ -1062,7 +1062,7 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
           ctx->state = JES_EXPECT_VALUE;
         }
         else {
-          ctx->status = JES_UNEXPECTED_NODE;
+          ctx->status = JES_UNEXPECTED_ELEMENT;
           return 0;
         }
 
@@ -1078,7 +1078,7 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
           ctx->state = JES_EXPECT_ARRAY_VALUE;
         }
         else {
-          ctx->status = JES_UNEXPECTED_NODE;
+          ctx->status = JES_UNEXPECTED_ELEMENT;
           return 0;
         }
 
@@ -1100,7 +1100,7 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
           ctx->state = JES_HAVE_ARRAY_VALUE;
         }
         else {
-          ctx->status = JES_UNEXPECTED_NODE;
+          ctx->status = JES_UNEXPECTED_ELEMENT;
           return 0;
         }
 
@@ -1124,7 +1124,7 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
           ctx->state = JES_HAVE_ARRAY_VALUE;
         }
         else {
-          ctx->status = JES_UNEXPECTED_NODE;
+          ctx->status = JES_UNEXPECTED_ELEMENT;
            return 0;
         }
 
@@ -1170,7 +1170,7 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
 
       if ((ctx->iter->type == JES_KEY) &&
           ((ctx->state != JES_EXPECT_ARRAY_VALUE) || (ctx->state != JES_HAVE_ARRAY_VALUE))) {
-        ctx->status = JES_UNEXPECTED_NODE;
+        ctx->status = JES_UNEXPECTED_ELEMENT;
         return 0;
       }
       json_len += sizeof(",") - 1;
@@ -1201,7 +1201,7 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
         json_len += sizeof("]") - 1;
       }
       else if ((ctx->iter->type == JES_KEY) && (ctx->state != JES_HAVE_VALUE)) {
-        ctx->status = JES_UNEXPECTED_NODE;
+        ctx->status = JES_UNEXPECTED_ELEMENT;
         return 0;
       }
 
@@ -1218,7 +1218,7 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
           ctx->state = JES_EXPECT_ARRAY_VALUE;
         }
         else {
-          ctx->status = JES_UNEXPECTED_NODE;
+          ctx->status = JES_UNEXPECTED_ELEMENT;
           return 0;
         }
         break;
@@ -1325,7 +1325,7 @@ uint32_t jes_render(struct jes_context *ctx, char *buffer, uint32_t length, bool
     }
     else {
       assert(0);
-      ctx->status = JES_UNEXPECTED_NODE;
+      ctx->status = JES_UNEXPECTED_ELEMENT;
       break;
     }
 
@@ -1568,7 +1568,7 @@ struct jes_element* jes_add_key(struct jes_context *ctx, struct jes_element *par
       object = jes_add_element(ctx, parent_key, JES_OBJECT, "");
     }
     else if (object->type != JES_OBJECT) {
-      ctx->status = JES_UNEXPECTED_NODE;
+      ctx->status = JES_UNEXPECTED_ELEMENT;
       return NULL;
     }
     new_key = jes_add_element(ctx, object, JES_KEY, keyword);
@@ -1848,7 +1848,7 @@ char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len)
                 ctx->token.length,
                 &ctx->json_data[ctx->token.offset]);
       break;
-    case JES_UNEXPECTED_NODE:
+    case JES_UNEXPECTED_ELEMENT:
       snprintf( msg, msg_len, "%s(#%d) - %s: \"%.*s\" @state: %s",
                 jes_status_str[ctx->status],
                 ctx->status,
