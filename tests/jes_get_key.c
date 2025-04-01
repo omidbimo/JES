@@ -173,11 +173,12 @@ int main(void)
     }
   }
 
+  jes_update_key_value_to_null(doc, key);
   /* Rendering the JSON elements into a string (not NUL-terminated) */
   printf("\nSerilize JSON tree using a compact format...");
   out_size = jes_render(doc, output, sizeof(output), true);
   if (out_size == 0) {
-    printf("\n Render Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
+    printf("\n    %s", jes_stringify_status(doc, err_msg, sizeof(err_msg)));
   }
   else {
     printf("\n%.*s", out_size, output);
