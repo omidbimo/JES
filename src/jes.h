@@ -209,6 +209,7 @@ struct jes_element* jes_get_array_value(struct jes_context *ctx, struct jes_elem
  * note: The new value will not be copied and must be non-retentive for the life time of jes_context.
  * return a status code of type enum jes_status */
 uint32_t jes_update_array_value(struct jes_context *ctx, struct jes_element *array, int32_t index, enum jes_type type, const char *value);
+uint32_t jes_add_array_value(struct jes_context *ctx, struct jes_element *array, int32_t index, enum jes_type type, const char *value);
 
 /* Add an element to another element. */
 struct jes_element* jes_add_element(struct jes_context *ctx, struct jes_element *parent, enum jes_type type, const char *value);

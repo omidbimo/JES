@@ -1814,6 +1814,69 @@ uint32_t jes_update_array_value(struct jes_context *ctx, struct jes_element *arr
   return ctx->status;
 }
 
+uint32_t jes_add_array_value(struct jes_context *ctx, struct jes_element *array, int32_t index, enum jes_type type, const char *value)
+{
+  struct jes_element *anchor_element = NULL;
+  struct jes_element *new_element = NULL;
+  int32_t array_size;
+
+  if (!ctx || !JES_IS_INITIATED(ctx)) {
+    return JES_INVALID_CONTEXT;
+  }
+
+  if (!array || !jes_validate_element(ctx, array) || (array->type != JES_ARRAY)) {
+    ctx->status = JES_INVALID_PARAMETER;
+    return ctx->status;
+  }
+
+  if (!value || strnlen(value, JES_MAX_VALUE_LENGTH) == JES_MAX_VALUE_LENGTH) {
+    ctx->status = JES_INVALID_PARAMETER;
+    return ctx->status;
+  }
+
+  array_size = jes_get_array_size(ctx, array);
+  if (index < 0) { /* converting negative index to an index from the end of array. */
+    index = array_size + index;
+  }
+
+  if (index > array_size) {
+    ctx->status = JES_INVALID_PARAMETER;
+    return ctx->status;
+  }
+
+  JES_ARRAY_FOR_EACH(ctx, array, anchor_element) {
+    if (index-- == 0) {
+      break;
+    }
+  }
+
+  new_element = jes_allocate(ctx);
+  if (new_element) {
+    if (!anchor_element) {
+      /* anchor_element was the last element in the object group */
+      array->first_child = (jes_node_descriptor)(new_element - ctx->node_pool); /* new_element's index */
+      array->last_child = (jes_node_descriptor)(new_element - ctx->node_pool); /* new_element's index */
+
+    }
+    else {
+      if (!HAS_SIBLING(anchor_element)) {
+        array->last_child = (jes_node_descriptor)(new_element - ctx->node_pool); /* new_element's index */
+      }
+      new_element->sibling = anchor_element->sibling;
+      anchor_element->sibling = (jes_node_descriptor)(new_element - ctx->node_pool); /* new_element's index */
+    }
+
+    new_element->parent = (jes_node_descriptor)(array - ctx->node_pool); /* array's index */
+    new_element->type = type;
+    new_element->length = (uint16_t)strlen(value);
+    new_element->value = value;
+    JES_LOG_NODE("\n    + ", (jes_node_descriptor)(new_element - ctx->node_pool), new_element->type, new_element->length, new_element->value,
+                  new_element->parent, new_element->sibling, new_element->first_child, "");
+  }
+
+  return ctx->status;
+}
+
 size_t jes_get_node_count(struct jes_context *ctx)
 {
   return ctx->node_count;
