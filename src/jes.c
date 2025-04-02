@@ -1877,6 +1877,11 @@ uint32_t jes_add_array_value(struct jes_context *ctx, struct jes_element *array,
   return ctx->status;
 }
 
+uint32_t jes_append_array_value(struct jes_context *ctx, struct jes_element *array, enum jes_type type, const char *value)
+{
+  return jes_add_array_value(ctx, array, -1, type, value);
+}
+
 size_t jes_get_node_count(struct jes_context *ctx)
 {
   return ctx->node_count;

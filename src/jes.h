@@ -210,6 +210,7 @@ struct jes_element* jes_get_array_value(struct jes_context *ctx, struct jes_elem
  * return a status code of type enum jes_status */
 uint32_t jes_update_array_value(struct jes_context *ctx, struct jes_element *array, int32_t index, enum jes_type type, const char *value);
 uint32_t jes_add_array_value(struct jes_context *ctx, struct jes_element *array, int32_t index, enum jes_type type, const char *value);
+uint32_t jes_append_array_value(struct jes_context *ctx, struct jes_element *array, enum jes_type type, const char *value);
 
 /* Add an element to another element. */
 struct jes_element* jes_add_element(struct jes_context *ctx, struct jes_element *parent, enum jes_type type, const char *value);
