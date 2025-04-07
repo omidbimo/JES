@@ -72,7 +72,7 @@ int main(void)
 
   key = jes_add_key(doc, NULL, "Trainer");
   key = jes_add_key(doc, key, "Last Name");
-  if (0 != jes_update_key_value(doc, key, JES_VALUE_STRING, "Kiboshi")) {
+  if (NULL == jes_update_key_value(doc, key, JES_VALUE_STRING, "Kiboshi")) {
     printf("\n Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
     return 0;
   }
@@ -82,28 +82,28 @@ int main(void)
     key = jes_add_key(doc, key, "Age");
   }
 
-  if (0 != jes_update_key_value(doc, key, JES_VALUE_NUMBER, "46")) {
+  if (NULL == jes_update_key_value(doc, key, JES_VALUE_NUMBER, "46")) {
     printf("\n Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
     return 0;
   }
 
   key = jes_get_key(doc, NULL, "Trainer.Last Name");
   key = jes_add_key_before(doc, key, "First Name");
-  if (0 != jes_update_key_value(doc, key, JES_VALUE_STRING, "Steve")) {
+  if (NULL == jes_update_key_value(doc, key, JES_VALUE_STRING, "Steve")) {
     printf("\n Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
     return 0;
   }
 
   key = jes_get_key(doc, NULL, "Trainer.Last Name");
   key = jes_add_key_after(doc, key, "Gender");
-  if (0 != jes_update_key_value(doc, key, JES_VALUE_STRING, "Male")) {
+  if (NULL == jes_update_key_value(doc, key, JES_VALUE_STRING, "Male")) {
     printf("\n Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
     return 0;
   }
 
   key = jes_get_key(doc, NULL, "Trainer");
   key = jes_add_key(doc, key, "Profi");
-  if (0 != jes_update_key_value(doc, key, JES_VALUE_TRUE, "true")) {
+  if (NULL == jes_update_key_value(doc, key, JES_VALUE_TRUE, "true")) {
     printf("\n Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
     return 0;
   }
@@ -113,26 +113,60 @@ int main(void)
   key = jes_add_key(doc, NULL, "Team");
   jes_update_key_value_to_object(doc, key);
   key = jes_add_key(doc, key, "name");
-  if (0 != jes_update_key_value(doc, key, JES_VALUE_STRING, "Trantor FC")) {
+  if (NULL == jes_update_key_value(doc, key, JES_VALUE_STRING, "Trantor FC")) {
     printf("\n Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
     return 0;
   }
 
   key = jes_get_key(doc, NULL, "Team");
   key = jes_add_key(doc, key, "members");
-  jes_update_key_value_to_array(doc, key);
-  array = jes_get_key_value(doc, key);
-  printf("\n%s", jes_stringify_element(array, err_msg, sizeof(err_msg)));
-  if (0 != jes_add_array_value(doc, array, -1, JES_VALUE_STRING, "ALEX")){
-    printf("\n Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
+  array = jes_update_key_value_to_array(doc, key);
+  if (array == NULL) {
+    printf("\n 0Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
     return 0;
   }
 
-  jes_add_array_value(doc, array, -1, JES_VALUE_STRING, "BEN");
-  jes_add_array_value(doc, array, -1, JES_VALUE_STRING, "Clive");
-  jes_add_array_value(doc, array, -1, JES_VALUE_STRING, "Edd");
-  jes_add_array_value(doc, array, -2, JES_VALUE_STRING, "Dave");
-  jes_update_array_value(doc, array, -2, JES_VALUE_STRING, "David");
+  if (NULL == jes_add_array_value(doc, array, -1, JES_VALUE_STRING, "Alex")) {
+    printf("\n 1Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
+    return 0;
+  }
+
+    if (NULL == jes_add_array_value(doc, array, 0, JES_VALUE_STRING, "Ben")) {
+    printf("\n 3Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
+    return 0;
+  }
+
+  if (NULL == jes_add_array_value(doc, array, 1, JES_VALUE_STRING, "Clive")) {
+    printf("\n 3Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
+    return 0;
+  }
+
+  if (NULL == jes_add_array_value(doc, array, -1, JES_VALUE_STRING, "Edd")) {
+    printf("\n 3Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
+    return 0;
+  }
+
+  if (NULL == jes_add_array_value(doc, array, -2, JES_VALUE_STRING, "Dave")) {
+    printf("\n 3Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
+    return 0;
+  }
+
+  if (NULL == jes_append_array_value(doc, array, JES_VALUE_STRING, "Gustav")) {
+    printf("\n 3Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
+    return 0;
+  }
+
+  if (NULL == jes_add_array_value(doc, array, 1000, JES_VALUE_STRING, "Henry")) {
+    printf("\n 3Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
+    return 0;
+  }
+
+  if (NULL == jes_add_array_value(doc, array, -1000, JES_VALUE_STRING, "Niels")) {
+    printf("\n 3Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
+    return 0;
+  }
+
+  jes_update_array_value(doc, array, -4, JES_VALUE_STRING, "Albert");
 
   /* Rendering the JSON elements into a string (not NUL-terminated) */
   printf("\nSerilize JSON tree using a compact format...");

@@ -156,7 +156,7 @@ int main(void)
     return -1;
   }
 
-  if (JES_NO_ERROR != jes_update_key_value_to_object(doc, key)) {
+  if (NULL == jes_update_key_value_to_object(doc, key)) {
     printf("\n    %s", jes_stringify_status(doc, err_msg, sizeof(err_msg)));
     return -1;
   }
