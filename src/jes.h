@@ -50,6 +50,7 @@ typedef enum jes_status {
   JES_INVALID_PARAMETER,
   JES_ELEMENT_NOT_FOUND,
   JES_INVALID_CONTEXT,
+  JES_BROKEN_TREE,
 } jes_status;
 
 enum jes_type {
@@ -64,8 +65,7 @@ enum jes_type {
   JES_VALUE_NULL,
 };
 
-/* JES element contains TLV info plus additional members to track its position in the
-   JSON tree. */
+/* JES element contains JSON data in the form of Type/Length/Value */
 struct jes_element {
   /* Type of element. See jes_type */
   uint16_t type;
@@ -73,17 +73,6 @@ struct jes_element {
   uint16_t length;
   /* Value of element */
   const char *value;
-  /* Index of the parent node. Each node holds the index of its parent. */
-  jes_node_descriptor parent;
-  /* Index */
-  jes_node_descriptor sibling;
-  /* Each parent keeps only the index of its first child. The remaining child nodes
-     will be tracked using the right member of the first child. */
-  jes_node_descriptor first_child;
-  /* The data member is a TLV (Type, Length, Value) which value is pointer to the
-     actual value of the node. See jes.h */
-  /* Index */
-  jes_node_descriptor last_child;
 };
 
 struct jes_context;
@@ -147,7 +136,7 @@ char* jes_stringify_element(struct jes_element *element, char *msg, size_t msg_l
 
 
 /* Deletes an element, containing all of its sub-elements. */
-void jes_delete_element(struct jes_context *ctx, struct jes_element *element);
+uint32_t jes_delete_element(struct jes_context *ctx, struct jes_element *element);
 
 size_t jes_get_node_count(struct jes_context *ctx);
 /* Delivers the root element of the JSOn tree.
@@ -189,17 +178,17 @@ uint32_t jes_update_key(struct jes_context *ctx, struct jes_element *key, const 
  *       In such a scenario, the JSON tree may become inconsistent, so the user should either retry
  *       assigning a value to the key or stop using the context.
  * return a status code of type enum jes_status */
-uint32_t jes_update_key_value(struct jes_context *ctx, struct jes_element *key, enum jes_type type, const char *value);
+struct jes_element* jes_update_key_value(struct jes_context *ctx, struct jes_element *key, enum jes_type type, const char *value);
 /* Update the key value to a JES_OBJECT element */
-uint32_t jes_update_key_value_to_object(struct jes_context *ctx, struct jes_element *key);
+struct jes_element* jes_update_key_value_to_object(struct jes_context *ctx, struct jes_element *key);
 /* Update the key value to a JES_ARRAY element */
-uint32_t jes_update_key_value_to_array(struct jes_context *ctx, struct jes_element *key);
+struct jes_element* jes_update_key_value_to_array(struct jes_context *ctx, struct jes_element *key);
 /* Update the key value to a JES_TRUE element */
-uint32_t jes_update_key_value_to_true(struct jes_context *ctx, struct jes_element *key);
+struct jes_element* jes_update_key_value_to_true(struct jes_context *ctx, struct jes_element *key);
 /* Update the key value to a JES_FALSE element */
-uint32_t jes_update_key_value_to_false(struct jes_context *ctx, struct jes_element *key);
+struct jes_element* jes_update_key_value_to_false(struct jes_context *ctx, struct jes_element *key);
 /* Update the key value to a JES_NULL element */
-uint32_t jes_update_key_value_to_null(struct jes_context *ctx, struct jes_element *key);
+struct jes_element* jes_update_key_value_to_null(struct jes_context *ctx, struct jes_element *key);
 
 /* Get the number elements within an JES_ARRAY element */
 uint16_t jes_get_array_size(struct jes_context *ctx, struct jes_element *array);
@@ -208,9 +197,9 @@ struct jes_element* jes_get_array_value(struct jes_context *ctx, struct jes_elem
 /* Update array value giving its array element and an index.
  * note: The new value will not be copied and must be non-retentive for the life time of jes_context.
  * return a status code of type enum jes_status */
-uint32_t jes_update_array_value(struct jes_context *ctx, struct jes_element *array, int32_t index, enum jes_type type, const char *value);
-uint32_t jes_add_array_value(struct jes_context *ctx, struct jes_element *array, int32_t index, enum jes_type type, const char *value);
-uint32_t jes_append_array_value(struct jes_context *ctx, struct jes_element *array, enum jes_type type, const char *value);
+struct jes_element* jes_update_array_value(struct jes_context *ctx, struct jes_element *array, int32_t index, enum jes_type type, const char *value);
+struct jes_element* jes_add_array_value(struct jes_context *ctx, struct jes_element *array, int32_t index, enum jes_type type, const char *value);
+struct jes_element* jes_append_array_value(struct jes_context *ctx, struct jes_element *array, enum jes_type type, const char *value);
 
 /* Add an element to another element. */
 struct jes_element* jes_add_element(struct jes_context *ctx, struct jes_element *parent, enum jes_type type, const char *value);
