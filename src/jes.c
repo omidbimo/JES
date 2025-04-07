@@ -25,18 +25,20 @@
 
 #define HAS_PARENT(node_ptr) ((node_ptr)->parent < JES_INVALID_INDEX)
 #define HAS_SIBLING(node_ptr) ((node_ptr)->sibling < JES_INVALID_INDEX)
-#define HAS_CHILD(node_ptr) ((node_ptr)->first_child < JES_INVALID_INDEX)
+#define HAS_FIRST_CHILD(node_ptr) ((node_ptr)->first_child < JES_INVALID_INDEX)
 #define HAS_LAST_CHILD(node_ptr) ((node_ptr)->last_child < JES_INVALID_INDEX)
-
-#define UNSAFE_GET_PARENT(ctx_, node_ptr) (&ctx_->node_pool[(node_ptr)->parent])
-#define UNSAFE_GET_SIBLING(ctx_, node_ptr) (&ctx_->node_pool[(node_ptr)->sibling])
-#define UNSAFE_GET_CHILD(ctx_, node_ptr) (&ctx_->node_pool[(node_ptr)->first_child])
-#define UNSAFE_GET_LAST_CHILD(ctx_, node_ptr) (&ctx_->node_pool[(node_ptr)->last_child])
 
 #define GET_PARENT(ctx_, node_ptr) (HAS_PARENT(node_ptr) ? &ctx_->node_pool[(node_ptr)->parent] : NULL)
 #define GET_SIBLING(ctx_, node_ptr) (HAS_SIBLING(node_ptr) ? &ctx_->node_pool[(node_ptr)->sibling] : NULL)
-#define GET_CHILD(ctx_, node_ptr) (HAS_CHILD(node_ptr) ? &ctx_->node_pool[(node_ptr)->first_child] : NULL)
-#define GET_LAST_CHILD(ctx_, node_ptr) (HAS_CHILD(node_ptr) ? &ctx_->node_pool[(node_ptr)->last_child] : NULL)
+#define GET_FIRST_CHILD(ctx_, node_ptr) (HAS_FIRST_CHILD(node_ptr) ? &ctx_->node_pool[(node_ptr)->first_child] : NULL)
+#define GET_LAST_CHILD(ctx_, node_ptr) (HAS_FIRST_CHILD(node_ptr) ? &ctx_->node_pool[(node_ptr)->last_child] : NULL)
+/* Unsafe getters do not check the nodes against NULL pointers. They must be used only when a valid pointer is assured */
+#define UNSAFE_GET_PARENT(ctx_, node_ptr) (&ctx_->node_pool[(node_ptr)->parent])
+#define UNSAFE_GET_SIBLING(ctx_, node_ptr) (&ctx_->node_pool[(node_ptr)->sibling])
+#define UNSAFE_GET_FIRST_CHILD(ctx_, node_ptr) (&ctx_->node_pool[(node_ptr)->first_child])
+#define UNSAFE_GET_LAST_CHILD(ctx_, node_ptr) (&ctx_->node_pool[(node_ptr)->last_child])
+
+
 
 #define PARENT_TYPE(ctx_, node_ptr) (HAS_PARENT(node_ptr) ? ctx_->node_pool[(node_ptr)->parent].json_tlv.type : JES_UNKNOWN)
 
@@ -348,7 +350,7 @@ static struct jes_node* jes_append_node(struct jes_context *ctx, struct jes_node
     if (parent) {
       new_node->parent = JES_GET_NODE_INDEX(ctx, parent);
 
-      if (HAS_CHILD(parent)) {
+      if (HAS_FIRST_CHILD(parent)) {
         struct jes_node *last = &ctx->node_pool[parent->last_child];
         last->sibling = JES_GET_NODE_INDEX(ctx, new_node);
       }
@@ -381,7 +383,7 @@ static void jes_delete_node(struct jes_context *ctx, struct jes_node *node)
 
   while (true) {
     /* Reaching the last child */
-    while (HAS_CHILD(iter)) { iter = UNSAFE_GET_CHILD(ctx, iter); }
+    while (HAS_FIRST_CHILD(iter)) { iter = UNSAFE_GET_FIRST_CHILD(ctx, iter); }
     assert(iter != NULL);
     /* Do not delete the node yet */
     if (iter == node) {
@@ -400,12 +402,12 @@ static void jes_delete_node(struct jes_context *ctx, struct jes_node *node)
   iter = GET_PARENT(ctx, node);
   if (iter) {
     /* The node has parent. re-link if node is parent's first child */
-    if (UNSAFE_GET_CHILD(ctx, iter) == node) {
+    if (UNSAFE_GET_FIRST_CHILD(ctx, iter) == node) {
       iter->first_child = node->sibling;
     }
     else {
       /* Node is not parent's first child. Iterate all children from the first child to reach the node and restore the links. */
-      for (iter = UNSAFE_GET_CHILD(ctx, iter); iter != NULL; iter = UNSAFE_GET_SIBLING(ctx, iter)) {
+      for (iter = UNSAFE_GET_FIRST_CHILD(ctx, iter); iter != NULL; iter = UNSAFE_GET_SIBLING(ctx, iter)) {
         /* If node is iter's next sibling, update iter's sibling then the node is ready to be freed. */
         if (UNSAFE_GET_SIBLING(ctx, iter) == node) {
           iter->sibling = node->sibling;
@@ -626,7 +628,7 @@ static struct jes_node *jes_find_duplicate_key_node(struct jes_context *ctx,
 
   assert(parent_object->json_tlv.type == JES_OBJECT);
 
-  iter = GET_CHILD(ctx, parent_object);
+  iter = GET_FIRST_CHILD(ctx, parent_object);
 
   while(iter) {
     assert(iter->json_tlv.type == JES_KEY);
@@ -664,7 +666,7 @@ static struct jes_node* jes_add_key_node(struct jes_context *ctx, struct jes_nod
   struct jes_node *node = jes_find_duplicate_key_node(ctx, parent, keyword_length, keyword);
   if (node) {
     /* Re-use the duplicate node after deleting its value */
-    jes_delete_node(ctx, GET_CHILD(ctx, node));
+    jes_delete_node(ctx, GET_FIRST_CHILD(ctx, node));
     new_node = node;
   }
   else
@@ -770,7 +772,7 @@ static inline void jes_parser_on_closing_brace(struct jes_context *ctx)
    the parent node. */
   if ((ctx->iter->json_tlv.type == JES_OBJECT) && (ctx->state == JES_EXPECT_KEY)) {
     /* An object in EXPECT_KEY state, can only be an empty object and must have no values */
-    if (HAS_CHILD(ctx->iter)) {
+    if (HAS_FIRST_CHILD(ctx->iter)) {
       ctx->status = JES_UNEXPECTED_TOKEN;
       ctx->ext_status = ctx->state;
       return;
@@ -832,7 +834,7 @@ static inline void jes_parser_on_closing_bracket(struct jes_context *ctx)
   */
   if ((ctx->iter->json_tlv.type == JES_ARRAY) && (ctx->state == JES_EXPECT_ARRAY_VALUE)) {
     /* An array in expecting state, can only be an empty and must have no values */
-    if (HAS_CHILD(ctx->iter)) {
+    if (HAS_FIRST_CHILD(ctx->iter)) {
       ctx->status = JES_UNEXPECTED_TOKEN;
       ctx->ext_status = ctx->state;
       return;
@@ -896,7 +898,7 @@ static inline void jes_parser_on_comma(struct jes_context *ctx)
   */
 
   if ((ctx->iter->json_tlv.type == JES_OBJECT) || (ctx->iter->json_tlv.type == JES_ARRAY)) {
-    if (!HAS_CHILD(ctx->iter)) {
+    if (!HAS_FIRST_CHILD(ctx->iter)) {
       ctx->status = JES_UNEXPECTED_TOKEN;
       ctx->ext_status = ctx->state;
     }
@@ -1157,8 +1159,8 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
     }
 
     /* Iterate this branch down to the last child */
-    if (HAS_CHILD(ctx->iter)) {
-      ctx->iter = GET_CHILD(ctx, ctx->iter);
+    if (HAS_FIRST_CHILD(ctx->iter)) {
+      ctx->iter = GET_FIRST_CHILD(ctx, ctx->iter);
       continue;
     }
 
@@ -1352,8 +1354,8 @@ uint32_t jes_render(struct jes_context *ctx, char *buffer, uint32_t length, bool
     }
 
     /* Iterate this branch down to the last child */
-    if (HAS_CHILD(iter)) {
-      iter = GET_CHILD(ctx, iter);
+    if (HAS_FIRST_CHILD(iter)) {
+      iter = GET_FIRST_CHILD(ctx, iter);
       continue;
     }
 
@@ -1454,7 +1456,7 @@ struct jes_element* jes_get_child(struct jes_context *ctx, struct jes_element *e
 {
   if (ctx && element && jes_validate_node(ctx, (struct jes_node*)element)) {
     struct jes_node *node = (struct jes_node*)element;
-    node = GET_CHILD(ctx, node);
+    node = GET_FIRST_CHILD(ctx, node);
     if (node) {
       return &node->json_tlv;
     }
@@ -1516,7 +1518,7 @@ struct jes_element* jes_get_key(struct jes_context *ctx, struct jes_element *par
       ctx->status = JES_INVALID_PARAMETER;
       return NULL;
     }
-    iter = GET_CHILD(ctx, (struct jes_node*)parent_key);
+    iter = GET_FIRST_CHILD(ctx, (struct jes_node*)parent_key);
   }
   else {
     iter = ctx->root;
@@ -1539,7 +1541,7 @@ struct jes_element* jes_get_key(struct jes_context *ctx, struct jes_element *par
       keys = keys + key_len;
     }
 
-    iter = GET_CHILD(ctx, iter);
+    iter = GET_FIRST_CHILD(ctx, iter);
 
     while ((iter) && (iter->json_tlv.type == JES_KEY)) {
       if ((iter->json_tlv.length == key_len) && (0 == memcmp(iter->json_tlv.value, key, key_len))) {
@@ -1553,7 +1555,7 @@ struct jes_element* jes_get_key(struct jes_context *ctx, struct jes_element *par
         target_key = iter;
         break;
       }
-      iter = GET_CHILD(ctx, iter);
+      iter = GET_FIRST_CHILD(ctx, iter);
     }
   }
 
@@ -1578,7 +1580,7 @@ struct jes_element* jes_get_key_value(struct jes_context *ctx, struct jes_elemen
     return NULL;
   }
 
-  node = GET_CHILD(ctx, (struct jes_node*)key);
+  node = GET_FIRST_CHILD(ctx, (struct jes_node*)key);
   return (struct jes_element*)node;
 }
 
@@ -1596,7 +1598,7 @@ uint16_t jes_get_array_size(struct jes_context *ctx, struct jes_element *array)
     return 0;
   }
 
-  iter = GET_CHILD(ctx, (struct jes_node*)array);
+  iter = GET_FIRST_CHILD(ctx, (struct jes_node*)array);
   if (iter) {
     for (array_size = 0; iter != NULL; array_size++) {
       iter = GET_SIBLING(ctx, iter);
@@ -1626,7 +1628,7 @@ struct jes_element* jes_get_array_value(struct jes_context *ctx, struct jes_elem
     return NULL;
   }
 
-  iter = GET_CHILD(ctx, (struct jes_node*)array);
+  iter = GET_FIRST_CHILD(ctx, (struct jes_node*)array);
   for (; iter && index > 0; index--) {
     iter = GET_SIBLING(ctx, iter);
   }
@@ -1711,7 +1713,7 @@ struct jes_element* jes_add_key(struct jes_context *ctx, struct jes_element *par
       return NULL;
     }
     /* The key must be added to an existing key and must be embedded in an OBJECT */
-    object = GET_CHILD(ctx, (struct jes_node*)parent_key);
+    object = GET_FIRST_CHILD(ctx, (struct jes_node*)parent_key);
     if (object == NULL) {
       object = jes_append_node(ctx, (struct jes_node*)parent_key, JES_OBJECT, 1, "{");
     }
@@ -1769,7 +1771,7 @@ struct jes_element* jes_add_key_before(struct jes_context *ctx, struct jes_eleme
   new_node = jes_allocate(ctx);
 
   if (new_node) {
-    for (iter = GET_CHILD(ctx, parent); iter != NULL; iter = GET_SIBLING(ctx, iter)) {
+    for (iter = GET_FIRST_CHILD(ctx, parent); iter != NULL; iter = GET_SIBLING(ctx, iter)) {
       assert(iter->json_tlv.type == JES_KEY);
       if (iter == key_node) {
         if (temp == NULL) {
@@ -1940,7 +1942,7 @@ struct jes_element* jes_update_array_value(struct jes_context *ctx, struct jes_e
     return NULL;
   }
 
-  for(target_node = GET_CHILD(ctx, (struct jes_node*)array); target_node != NULL; target_node = GET_SIBLING(ctx, target_node)) {
+  for(target_node = GET_FIRST_CHILD(ctx, (struct jes_node*)array); target_node != NULL; target_node = GET_SIBLING(ctx, target_node)) {
     if (index-- == 0) {
       break;
     }
@@ -1949,7 +1951,7 @@ struct jes_element* jes_update_array_value(struct jes_context *ctx, struct jes_e
   if (target_node) {
     /* We'll not delete the target_node to keep the original array order. Just update its JSON TLV.
      * The rest of the branch however must be removed. */
-    jes_delete_node(ctx, GET_CHILD(ctx, target_node));
+    jes_delete_node(ctx, GET_FIRST_CHILD(ctx, target_node));
     target_node->json_tlv.type = type;
     target_node->json_tlv.length = value_length;
     target_node->json_tlv.value = value;
@@ -2045,7 +2047,7 @@ struct jes_element* jes_add_array_value(struct jes_context *ctx, struct jes_elem
     return NULL;
   }
 
-  for (anchor_node = GET_CHILD(ctx, (struct jes_node*)array); anchor_node != NULL; anchor_node = GET_SIBLING(ctx, anchor_node)) {
+  for (anchor_node = GET_FIRST_CHILD(ctx, (struct jes_node*)array); anchor_node != NULL; anchor_node = GET_SIBLING(ctx, anchor_node)) {
     if (index == 0) {
       break;
     }
