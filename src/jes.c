@@ -11,7 +11,6 @@
   #define JES_INVALID_INDEX 0xFFFF
 #endif
 
-#define JES_ARRAY_LEN(arr) (sizeof(arr)/sizeof(arr[0]))
 #define UPDATE_TOKEN(tok, type_, offset_, size_) \
   tok.type = type_; \
   tok.offset = offset_; \
@@ -29,6 +28,11 @@
 #define HAS_CHILD(node_ptr) ((node_ptr)->first_child < JES_INVALID_INDEX)
 #define HAS_LAST_CHILD(node_ptr) ((node_ptr)->last_child < JES_INVALID_INDEX)
 
+#define UNSAFE_GET_PARENT(ctx_, node_ptr) (&ctx_->node_pool[(node_ptr)->parent])
+#define UNSAFE_GET_SIBLING(ctx_, node_ptr) (&ctx_->node_pool[(node_ptr)->sibling])
+#define UNSAFE_GET_CHILD(ctx_, node_ptr) (&ctx_->node_pool[(node_ptr)->first_child])
+#define UNSAFE_GET_LAST_CHILD(ctx_, node_ptr) (&ctx_->node_pool[(node_ptr)->last_child])
+
 #define GET_PARENT(ctx_, node_ptr) (HAS_PARENT(node_ptr) ? &ctx_->node_pool[(node_ptr)->parent] : NULL)
 #define GET_SIBLING(ctx_, node_ptr) (HAS_SIBLING(node_ptr) ? &ctx_->node_pool[(node_ptr)->sibling] : NULL)
 #define GET_CHILD(ctx_, node_ptr) (HAS_CHILD(node_ptr) ? &ctx_->node_pool[(node_ptr)->first_child] : NULL)
@@ -40,6 +44,8 @@
 
 #define JES_CONTEXT_COOKIE 0xABC09DEF
 #define JES_IS_INITIATED(ctx_) (ctx_->cookie == JES_CONTEXT_COOKIE)
+
+#ifndef NDEBUG
 
 #define JES_HELPER_STR_LENGTH 20
 
@@ -95,6 +101,37 @@ static char jes_state_str[][JES_HELPER_STR_LENGTH] = {
   "EXPECT_ARRAY_VALUE",
   "HAVE_ARRAY_VALUE",
 };
+
+static inline void jes_log_token(uint16_t token_type,
+                                  uint32_t token_pos,
+                                  uint32_t token_len,
+                                  const uint8_t *token_value)
+{
+  printf("\n JES.Token: [Pos: %5d, Len: %3d] %-16s \"%.*s\"",
+          token_pos, token_len, jes_token_type_str[token_type],
+          token_len, token_value);
+}
+
+static inline void jes_log_node( const char *pre_msg,
+                                  int16_t node_id,
+                                  uint32_t node_type,
+                                  uint32_t node_length,
+                                  const char *node_value,
+                                  int16_t parent_id,
+                                  int16_t right_id,
+                                  int16_t child_id,
+                                  const char *post_msg)
+{
+  printf("%sJES.Node: [%d] \"%.*s\" <%s>,    parent:[%d], right:[%d], child:[%d]%s",
+    pre_msg, node_id, node_length, node_value, jes_node_type_str[node_type], parent_id, right_id, child_id, post_msg);
+}
+
+  #define JES_LOG_TOKEN jes_log_token
+  #define JES_LOG_NODE  jes_log_node
+#else
+  #define JES_LOG_TOKEN(...)
+  #define JES_LOG_NODE(...)
+#endif
 
 enum jes_state {
   JES_EXPECT_OBJECT = 0,
@@ -188,41 +225,7 @@ struct jes_context {
   struct jes_free_node *free;
 };
 
-static inline void jes_log_token(uint16_t token_type,
-                                  uint32_t token_pos,
-                                  uint32_t token_len,
-                                  const uint8_t *token_value)
-{
-  printf("\n JES.Token: [Pos: %5d, Len: %3d] %-16s \"%.*s\"",
-          token_pos, token_len, jes_token_type_str[token_type],
-          token_len, token_value);
-}
 
-static inline void jes_log_node( const char *pre_msg,
-                                  int16_t node_id,
-                                  uint32_t node_type,
-                                  uint32_t node_length,
-                                  const char *node_value,
-                                  int16_t parent_id,
-                                  int16_t right_id,
-                                  int16_t child_id,
-                                  const char *post_msg)
-{
-  printf("%sJES.Node: [%d] \"%.*s\" <%s>,    parent:[%d], right:[%d], child:[%d]%s",
-    pre_msg, node_id, node_length, node_value, jes_node_type_str[node_type], parent_id, right_id, child_id, post_msg);
-}
-
-#ifndef NDEBUG
-  #define JES_LOG_TOKEN jes_log_token
-  #define JES_LOG_NODE  jes_log_node
-  #define JES_LOG_MSG   jes_log_msg
-  #define JES_STRINGIFY_ERROR  jes_get_status_info
-#else
-  #define JES_LOG_TOKEN(...)
-  #define JES_LOG_NODE(...)
-  #define JES_LOG_MSG(...)
-  #define JES_STRINGIFY_ERROR(...) ""
-#endif
 
 #ifndef JES_ALLOW_DUPLICATE_KEYS
 static struct jes_element *jes_find_duplicate_key_node(struct jes_context *ctx,
@@ -367,6 +370,7 @@ static struct jes_node* jes_append_node(struct jes_context *ctx, struct jes_node
   return new_node;
 }
 
+/* To delete a node and its whole branch */
 static void jes_delete_node(struct jes_context *ctx, struct jes_node *node)
 {
   struct jes_node *iter = node;
@@ -375,112 +379,43 @@ static void jes_delete_node(struct jes_context *ctx, struct jes_node *node)
     return;
   }
 
-  /* TODO: Improve*/
   while (true) {
-    //for (iter =
-    while (HAS_CHILD(iter)) { iter = GET_CHILD(ctx, iter); }
-
+    /* Reaching the last child */
+    while (HAS_CHILD(iter)) { iter = UNSAFE_GET_CHILD(ctx, iter); }
+    assert(iter != NULL);
+    /* Do not delete the node yet */
     if (iter == node) {
       break;
     }
 
-    if (HAS_PARENT(iter)) {
-      ctx->node_pool[iter->parent].first_child = iter->sibling;
-    }
+    /* Set the parent first child link to node's possible sibling. So we don't lost the branch. */
+    assert(HAS_PARENT(iter));
+    UNSAFE_GET_PARENT(ctx, iter)->first_child = iter->sibling;
 
     jes_free(ctx, iter);
-    iter = &ctx->node_pool[iter->parent];
+    iter = UNSAFE_GET_PARENT(ctx, iter);
   }
 
   /* All sub-elements are deleted. To delete the node itself, all parent and sibling links need to be maintained. */
   iter = GET_PARENT(ctx, node);
   if (iter) {
-    if (&ctx->node_pool[iter->first_child] == node) {
+    /* The node has parent. re-link if node is parent's first child */
+    if (UNSAFE_GET_CHILD(ctx, iter) == node) {
       iter->first_child = node->sibling;
     }
     else {
-      /* Node is not the first child of it's parent. Need to iterate all children to reach node and maintain the linkage.*/
-      iter = &ctx->node_pool[iter->first_child];
-      while(iter) {
-        if (&ctx->node_pool[iter->sibling] == node) {
+      /* Node is not parent's first child. Iterate all children from the first child to reach the node and restore the links. */
+      for (iter = UNSAFE_GET_CHILD(ctx, iter); iter != NULL; iter = UNSAFE_GET_SIBLING(ctx, iter)) {
+        /* If node is iter's next sibling, update iter's sibling then the node is ready to be freed. */
+        if (UNSAFE_GET_SIBLING(ctx, iter) == node) {
           iter->sibling = node->sibling;
           break;
         }
-        iter = &ctx->node_pool[iter->sibling];
       }
     }
   }
 
   jes_free(ctx, node);
-}
-
-struct jes_element* jes_get_parent(struct jes_context *ctx, struct jes_element *element)
-{
-  if (ctx && element && jes_validate_node(ctx, (struct jes_node*)element)) {
-    struct jes_node *node = (struct jes_node*)element;
-    node = GET_PARENT(ctx, node);
-    if (node) {
-      return &node->json_tlv;
-    }
-  }
-
-  return NULL;
-}
-
-struct jes_element* jes_get_sibling(struct jes_context *ctx, struct jes_element *element)
-{
-  if (ctx && element && jes_validate_node(ctx, (struct jes_node*)element)) {
-    struct jes_node *node = (struct jes_node*)element;
-    node = GET_SIBLING(ctx, node);
-    if (node) {
-      return &node->json_tlv;
-    }
-  }
-
-  return NULL;
-}
-
-struct jes_element* jes_get_child(struct jes_context *ctx, struct jes_element *element)
-{
-  if (ctx && element && jes_validate_node(ctx, (struct jes_node*)element)) {
-    struct jes_node *node = (struct jes_node*)element;
-    node = GET_CHILD(ctx, node);
-    if (node) {
-      return &node->json_tlv;
-    }
-  }
-
-  return NULL;
-}
-
-enum jes_type jes_get_parent_type(struct jes_context *ctx, struct jes_element *element)
-{
-  struct jes_element *parent = jes_get_parent(ctx, element);
-  if (parent) {
-    return parent->type;
-  }
-
-  return JES_UNKNOWN;
-}
-
-uint32_t jes_delete_element(struct jes_context *ctx, struct jes_element *element)
-{
-  if ((ctx == NULL) || !JES_IS_INITIATED(ctx)) {
-    return JES_INVALID_CONTEXT;
-  }
-
-  if (element == NULL) {
-    return JES_NO_ERROR;
-  }
-
-  if (!jes_validate_node(ctx, (struct jes_node*)element)) {
-    ctx->status = JES_INVALID_PARAMETER;
-    return ctx->status;
-  }
-
-  ctx->status = JES_NO_ERROR;
-  jes_delete_node(ctx, (struct jes_node*)element);
-  return ctx->status;
 }
 
 static inline bool jes_get_delimiter_token(struct jes_context *ctx,
@@ -1489,6 +1424,75 @@ struct jes_element* jes_get_root(struct jes_context *ctx)
   return NULL;
 }
 
+struct jes_element* jes_get_parent(struct jes_context *ctx, struct jes_element *element)
+{
+  if (ctx && element && jes_validate_node(ctx, (struct jes_node*)element)) {
+    struct jes_node *node = (struct jes_node*)element;
+    node = GET_PARENT(ctx, node);
+    if (node) {
+      return &node->json_tlv;
+    }
+  }
+
+  return NULL;
+}
+
+struct jes_element* jes_get_sibling(struct jes_context *ctx, struct jes_element *element)
+{
+  if (ctx && element && jes_validate_node(ctx, (struct jes_node*)element)) {
+    struct jes_node *node = (struct jes_node*)element;
+    node = GET_SIBLING(ctx, node);
+    if (node) {
+      return &node->json_tlv;
+    }
+  }
+
+  return NULL;
+}
+
+struct jes_element* jes_get_child(struct jes_context *ctx, struct jes_element *element)
+{
+  if (ctx && element && jes_validate_node(ctx, (struct jes_node*)element)) {
+    struct jes_node *node = (struct jes_node*)element;
+    node = GET_CHILD(ctx, node);
+    if (node) {
+      return &node->json_tlv;
+    }
+  }
+
+  return NULL;
+}
+
+enum jes_type jes_get_parent_type(struct jes_context *ctx, struct jes_element *element)
+{
+  struct jes_element *parent = jes_get_parent(ctx, element);
+  if (parent) {
+    return parent->type;
+  }
+
+  return JES_UNKNOWN;
+}
+
+uint32_t jes_delete_element(struct jes_context *ctx, struct jes_element *element)
+{
+  if ((ctx == NULL) || !JES_IS_INITIATED(ctx)) {
+    return JES_INVALID_CONTEXT;
+  }
+
+  if (element == NULL) {
+    return JES_NO_ERROR;
+  }
+
+  if (!jes_validate_node(ctx, (struct jes_node*)element)) {
+    ctx->status = JES_INVALID_PARAMETER;
+    return ctx->status;
+  }
+
+  ctx->status = JES_NO_ERROR;
+  jes_delete_node(ctx, (struct jes_node*)element);
+  return ctx->status;
+}
+
 struct jes_element* jes_get_key(struct jes_context *ctx, struct jes_element *parent_key, const char *keys)
 {
   struct jes_node *target_key = NULL;
@@ -2095,8 +2099,10 @@ jes_status jes_get_status(struct jes_context *ctx)
   return ctx->status;
 }
 
+
 char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len)
 {
+ #ifndef NDEBUG
   if ((ctx == NULL) || (msg == NULL) || (msg_len == 0)) {
     return "";
   }
@@ -2155,10 +2161,16 @@ char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len)
       snprintf(msg, msg_len, "%s(#%d)", jes_status_str[ctx->status], ctx->status);
       break;
   }
+#endif
   return msg;
 }
 
 char* jes_stringify_element(struct jes_element *element, char *msg, size_t msg_len) {
+#ifndef NDEBUG
+  if ((element == NULL) || (msg == NULL) || (msg_len == 0)) {
+    return "";
+  }
   snprintf(msg, msg_len, "%s(%d)", jes_node_type_str[element->type], element->type);
+#endif
   return msg;
 }

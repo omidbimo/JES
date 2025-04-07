@@ -75,6 +75,7 @@ struct jes_element {
   const char *value;
 };
 
+
 struct jes_context;
 
 /* Initialize a new JES context. The context will be allocated in the provided
@@ -133,7 +134,6 @@ char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len);
 /* Get a textual type of a JES element
 */
 char* jes_stringify_element(struct jes_element *element, char *msg, size_t msg_len);
-
 
 /* Deletes an element, containing all of its sub-elements. */
 uint32_t jes_delete_element(struct jes_context *ctx, struct jes_element *element);
