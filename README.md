@@ -258,7 +258,7 @@ if (key) {
 
 ## Logging
 
-A debug build of JES also contains logging for Tokenizer, Allocator and Serializer.
+A debug build of JES also produces log outputs for Tokenizer, Allocator and Serializer.
 
 ```dos
 JES - parsing demo.json...
