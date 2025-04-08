@@ -4,6 +4,8 @@
 #include <ctype.h>
 #include <assert.h>
 #include "jes.h"
+#include "jes_private.h"
+#include "jes_logger.h"
 
 #ifdef JES_USE_32BIT_NODE_DESCRIPTOR
   #define JES_INVALID_INDEX 0xFFFFFFFF
@@ -38,8 +40,6 @@
 #define UNSAFE_GET_FIRST_CHILD(ctx_, node_ptr) (&ctx_->node_pool[(node_ptr)->first_child])
 #define UNSAFE_GET_LAST_CHILD(ctx_, node_ptr) (&ctx_->node_pool[(node_ptr)->last_child])
 
-
-
 #define PARENT_TYPE(ctx_, node_ptr) (HAS_PARENT(node_ptr) ? ctx_->node_pool[(node_ptr)->parent].json_tlv.type : JES_UNKNOWN)
 
 #define JES_GET_NODE_INDEX(ctx_, node_) ((jes_node_descriptor)((node_) - ctx_->node_pool))
@@ -48,192 +48,11 @@
 #define JES_IS_INITIATED(ctx_) (ctx_->cookie == JES_CONTEXT_COOKIE)
 
 #ifndef NDEBUG
-
-#define JES_HELPER_STR_LENGTH 20
-
-static char jes_status_str[][JES_HELPER_STR_LENGTH] = {
-  "NO_ERR",
-  "PARSING_FAILED",
-  "RENDER_FAILED",
-  "OUT_OF_MEMORY",
-  "UNEXPECTED_TOKEN",
-  "UNEXPECTED_ELEMENT",
-  "UNEXPECTED_EOF",
-  "INVALID_PARAMETER",
-  "ELEMENT_NOT_FOUND",
-  "INVALID_CONTEXT",
-  "BROKEN_TREE",
-};
-
-static char jes_token_type_str[][JES_HELPER_STR_LENGTH] = {
-  "EOF",
-  "OPENING_BRACE",
-  "CLOSING_BRACE",
-  "OPENING_BRACKET",
-  "CLOSING_BRACKET",
-  "COLON",
-  "COMMA",
-  "STRING",
-  "NUMBER",
-  "TRUE",
-  "FALSE",
-  "NULL",
-  "ESC",
-  "INVALID_TOKEN",
-};
-
-static char jes_node_type_str[][JES_HELPER_STR_LENGTH] = {
-  "NONE",
-  "OBJECT",
-  "KEY",
-  "ARRAY",
-  "STRING_VALUE",
-  "NUMBER_VALUE",
-  "TRUE_VALUE",
-  "FALSE_VALUE",
-  "NULL_VALUE",
-};
-
-static char jes_state_str[][JES_HELPER_STR_LENGTH] = {
-  "EXPECT_OBJECT",
-  "EXPECT_KEY",
-  "EXPECT_COLON",
-  "EXPECT_KEY_VALUE",
-  "HAVE_KEY_VALUE",
-  "EXPECT_ARRAY_VALUE",
-  "HAVE_ARRAY_VALUE",
-};
-
-static inline void jes_log_token(uint16_t token_type,
-                                  uint32_t token_pos,
-                                  uint32_t token_len,
-                                  const uint8_t *token_value)
-{
-  printf("\n JES.Token: [Pos: %5d, Len: %3d] %-16s \"%.*s\"",
-          token_pos, token_len, jes_token_type_str[token_type],
-          token_len, token_value);
-}
-
-static inline void jes_log_node( const char *pre_msg,
-                                  int16_t node_id,
-                                  uint32_t node_type,
-                                  uint32_t node_length,
-                                  const char *node_value,
-                                  int16_t parent_id,
-                                  int16_t right_id,
-                                  int16_t child_id,
-                                  const char *post_msg)
-{
-  printf("%sJES.Node: [%d] \"%.*s\" <%s>,    parent:[%d], right:[%d], child:[%d]%s",
-    pre_msg, node_id, node_length, node_value, jes_node_type_str[node_type], parent_id, right_id, child_id, post_msg);
-}
-
   #define JES_LOG_TOKEN jes_log_token
   #define JES_LOG_NODE  jes_log_node
 #else
   #define JES_LOG_TOKEN(...)
   #define JES_LOG_NODE(...)
-#endif
-
-enum jes_state {
-  JES_EXPECT_OBJECT = 0,
-  JES_EXPECT_KEY,
-  JES_EXPECT_COLON,
-  JES_EXPECT_KEY_VALUE,
-  JES_HAVE_KEY_VALUE,
-  JES_EXPECT_ARRAY_VALUE,
-  JES_HAVE_ARRAY_VALUE,
-};
-
-enum jes_token_type {
-  JES_TOKEN_EOF = 0,
-  JES_TOKEN_OPENING_BRACE,   /* { */
-  JES_TOKEN_CLOSING_BRACE,   /* } */
-  JES_TOKEN_OPENING_BRACKET, /* [ */
-  JES_TOKEN_CLOSING_BRACKET, /* ] */
-  JES_TOKEN_COLON,
-  JES_TOKEN_COMMA,
-  JES_TOKEN_STRING,
-  JES_TOKEN_NUMBER,
-  JES_TOKEN_TRUE,
-  JES_TOKEN_FALSE,
-  JES_TOKEN_NULL,
-  JES_TOKEN_ESC,
-  JES_TOKEN_INVALID,
-};
-
-struct jes_token {
-  enum jes_token_type type;
-  uint16_t length;
-  uint32_t offset;
-};
-
-struct jes_node {
-  /* Element containing TLV JSON data */
-  struct jes_element json_tlv;
-  /* Index of the parent node. Each node holds the index of its parent. */
-  jes_node_descriptor parent;
-  /* Index */
-  jes_node_descriptor sibling;
-  /* Each parent keeps only the index of its first child. The remaining child nodes
-     will be tracked using the right member of the first child. */
-  jes_node_descriptor first_child;
-  /* The data member is a TLV (Type, Length, Value) which value is pointer to the
-     actual value of the node. See jes.h */
-  /* Index */
-  jes_node_descriptor last_child;
-};
-
-struct jes_free_node {
-  struct jes_free_node *next;
-};
-
-struct jes_context {
-  /* If the cookie value 0xABC09DEF is confirmed, the structure will be considered as initialized */
-  uint32_t cookie;
-  uint32_t status;
-  /* Extended status code. In some cases provides more detailed information about the status. */
-  uint32_t ext_status;
-  /*  */
-  enum jes_state state;
-  /* Number of nodes in the current JSON */
-  uint32_t node_count;
-  /* JSON data to be parsed */
-  const char *json_data;
-  /* Length of JSON data in bytes. */
-  uint32_t  json_size;
-  /* Offset of the next symbol in the input JSON data Tokenizer is going to consume. */
-  uint32_t  offset;
-  uint32_t  line_number;
-  /* Part of the buffer given by the user at the time of the context initialization.
-   * The buffer will be used to allocate the context structure at first.
-   * The remaining memory will be used as a pool of nodes (max. 65535 nodes). */
-   struct jes_node *node_pool;
-  /* node_pool size in bytes. (buffer size - context size) */
-  uint32_t pool_size;
-  /* Number of nodes that can be allocated on the given buffer. The value will
-     be limited to 65535 in case of 16-bit node descriptors. */
-  uint32_t capacity;
-  /* Index of the last allocated node */
-  jes_node_descriptor index;
-  /* Holds the last token delivered by tokenizer. */
-  struct jes_token token;
-  /* Internal node iterator */
-  struct jes_node *iter;
-  /* Holds the main object node */
-  struct jes_node *root;
-  /* Singly Linked list of freed nodes. This way the deleted nodes can be recycled
-     by the allocator. */
-  struct jes_free_node *free;
-};
-
-
-
-#ifndef JES_ALLOW_DUPLICATE_KEYS
-static struct jes_element *jes_find_duplicate_key_node(struct jes_context *ctx,
-                                                       struct jes_node *parent_object,
-                                                       uint16_t keyword_length,
-                                                       const char *keyword);
 #endif
 
 static struct jes_node* jes_allocate(struct jes_context *ctx)
@@ -954,9 +773,6 @@ uint32_t jes_load(struct jes_context *ctx, const char *json_data, uint32_t json_
   ctx->json_size = json_length;
 
   do {
-#if 0
-    printf("\n    state: %s", jes_state_str[ctx->state]);
-#endif
     ctx->token = jes_get_token(ctx);
 
     switch (ctx->token.type) {
@@ -2099,80 +1915,4 @@ size_t jes_get_node_count(struct jes_context *ctx)
 jes_status jes_get_status(struct jes_context *ctx)
 {
   return ctx->status;
-}
-
-
-char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len)
-{
- #ifndef NDEBUG
-  if ((ctx == NULL) || (msg == NULL) || (msg_len == 0)) {
-    return "";
-  }
-
-  /* TODO: provide more status */
-  switch (ctx->status) {
-    case JES_NO_ERROR:
-      snprintf(msg, msg_len, "%s(#%d)", jes_status_str[ctx->status], ctx->status);
-      break;
-    case JES_UNEXPECTED_TOKEN:
-      snprintf( msg, msg_len,
-                "%s(#%d): <%s> @[line:%d, pos:%d] (%.20s%.*s<<) state:<%s> after <%s> element",
-                jes_status_str[ctx->status],
-                ctx->status,
-                jes_token_type_str[ctx->token.type],
-                ctx->line_number,
-                ctx->offset,
-                ctx->token.offset >= 20 ? &ctx->json_data[ctx->token.offset - 20] : &ctx->json_data[0],
-                ctx->token.length,
-                &ctx->json_data[ctx->token.offset],
-                jes_state_str[ctx->ext_status],
-                jes_node_type_str[ctx->iter->json_tlv.type] );
-      break;
-
-    case JES_PARSING_FAILED:
-      snprintf( msg, msg_len,
-                "%s(#%d): <%s> @[line:%d, pos:%d] (%.5s%.*s<<)",
-                jes_status_str[ctx->status],
-                ctx->status,
-                jes_token_type_str[ctx->token.type],
-                ctx->line_number,
-                ctx->offset,
-                ctx->token.offset >= 5 ? &ctx->json_data[ctx->token.offset - 5] : &ctx->json_data[0],
-                ctx->token.length,
-                &ctx->json_data[ctx->token.offset]);
-      break;
-    case JES_UNEXPECTED_ELEMENT:
-      snprintf( msg, msg_len, "%s(#%d) - %s: \"%.*s\" @state: %s",
-                jes_status_str[ctx->status],
-                ctx->status,
-                jes_node_type_str[ctx->iter->json_tlv.type],
-                ctx->iter->json_tlv.length,
-                ctx->iter->json_tlv.value,
-                jes_state_str[ctx->state]);
-      break;
-    case JES_RENDER_FAILED:
-      snprintf( msg, msg_len, "%s(#%d) - %s: \"%.*s\" @state: %s",
-                jes_status_str[ctx->status],
-                ctx->status,
-                jes_node_type_str[ctx->iter->json_tlv.type],
-                ctx->iter->json_tlv.length,
-                ctx->iter->json_tlv.value,
-                jes_state_str[ctx->state]);
-      break;
-    default:
-      snprintf(msg, msg_len, "%s(#%d)", jes_status_str[ctx->status], ctx->status);
-      break;
-  }
-#endif
-  return msg;
-}
-
-char* jes_stringify_element(struct jes_element *element, char *msg, size_t msg_len) {
-#ifndef NDEBUG
-  if ((element == NULL) || (msg == NULL) || (msg_len == 0)) {
-    return "";
-  }
-  snprintf(msg, msg_len, "%s(%d)", jes_node_type_str[element->type], element->type);
-#endif
-  return msg;
 }

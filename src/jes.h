@@ -3,20 +3,6 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#if 0
-#ifndef NDEBUG
-  #include "jes_logging.h"
-  #define JES_LOG_TOKEN jes_log_token
-  #define JES_LOG_NODE  jes_log_node
-  #define JES_LOG_MSG   jes_log_msg
-  #define JES_STRINGIFY_ERROR  jes_get_status_info
-#else
-  #define JES_LOG_TOKEN(...)
-  #define JES_LOG_NODE(...)
-  #define JES_LOG_MSG(...)
-  #define JES_STRINGIFY_ERROR(...) ""
-#endif
-#endif
 
 /* Comment or undef to enable searching for duplicate keys and overwriting
  * their values.
@@ -24,18 +10,11 @@
  * parsing performance when processing large documents. If key duplication is
  * not a big deal in your implementation, then relax the parser.
  */
-#define JES_ALLOW_DUPLICATE_KEYS
+//#define JES_ALLOW_DUPLICATE_KEYS
 
+/* Un-comment to enable 32-bit node descriptors to be able to parse very large JSON files.
+ * For the standard use-cases with 16-bit node descriptors, the parser can address up to 32767 nodes. */
 //#define JES_USE_32BIT_NODE_DESCRIPTOR
-#ifdef JES_USE_32BIT_NODE_DESCRIPTOR
-/* A 32bit node descriptor limits the total number of nodes to 4294967295.
-   Note that 0xFFFFFFFF is used as an invalid node index. */
-typedef uint32_t jes_node_descriptor;
-#else
-/* A 16bit node descriptor limits the total number of nodes to 65535.
-   Note that 0xFFFF is used as an invalid node index. */
-typedef uint16_t jes_node_descriptor;
-#endif
 
 #define JES_MAX_VALUE_LENGTH 0xFF
 
@@ -128,12 +107,6 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact);
  * param [in] ctx: an Initialized jes context
  */
 jes_status jes_get_status(struct jes_context *ctx);
-/* Get a textual overview of the latest failure
-*/
-char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len);
-/* Get a textual type of a JES element
-*/
-char* jes_stringify_element(struct jes_element *element, char *msg, size_t msg_len);
 
 /* Deletes an element, containing all of its sub-elements. */
 uint32_t jes_delete_element(struct jes_context *ctx, struct jes_element *element);

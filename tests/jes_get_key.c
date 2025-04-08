@@ -4,7 +4,9 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdint.h>
-#include "..\\src\\jes.h"
+#include "..\src\jes.h"
+#include "..\src\jes_logger.h"
+
 
 #define BUFFER_SIZE 0xFFF
 

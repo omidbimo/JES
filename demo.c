@@ -4,11 +4,10 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdint.h>
-#include "src\\jes.h"
+#include "src\jes.h"
+#include "src\jes_logger.h"
 
 #define POOL_SIZE 0xFFFF
-
-
 
 #define JES_ARRAY_LEN(arr) (sizeof(arr)/sizeof(arr[0]))
 int main(void)
@@ -122,72 +121,71 @@ int main(void)
   key = jes_add_key(doc, key, "members");
   array = jes_update_key_value_to_array(doc, key);
   if (array == NULL) {
-    printf("\n 0Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
+    printf("\n Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
     return 0;
   }
 
   if (NULL == jes_add_array_value(doc, array, -1, JES_VALUE_STRING, "Alex")) {
-    printf("\n 1Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
+    printf("\n Error: %d - %s", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
     return 0;
   }
 
     if (NULL == jes_add_array_value(doc, array, 0, JES_VALUE_STRING, "Ben")) {
-    printf("\n 3Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
+    printf("\n Error: %d - %s", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
     return 0;
   }
 
   if (NULL == jes_add_array_value(doc, array, 1, JES_VALUE_STRING, "Clive")) {
-    printf("\n 3Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
+    printf("\n Error: %d - %s", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
     return 0;
   }
 
   if (NULL == jes_add_array_value(doc, array, -1, JES_VALUE_STRING, "Edd")) {
-    printf("\n 3Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
+    printf("\n Error: %d - %s", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
     return 0;
   }
 
   if (NULL == jes_add_array_value(doc, array, -2, JES_VALUE_STRING, "Dave")) {
-    printf("\n 3Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
+    printf("\n Error: %d - %s", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
     return 0;
   }
 
   if (NULL == jes_append_array_value(doc, array, JES_VALUE_STRING, "Gustav")) {
-    printf("\n 3Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
+    printf("\n Error: %d - %s", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
     return 0;
   }
 
   if (NULL == jes_add_array_value(doc, array, 1000, JES_VALUE_STRING, "Henry")) {
-    printf("\n 3Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
+    printf("\n Error: %d - %s", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
     return 0;
   }
 
   if (NULL == jes_add_array_value(doc, array, -1000, JES_VALUE_STRING, "Niels")) {
-    printf("\n 3Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
+    printf("\n Error: %d - %s", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
     return 0;
   }
 
   jes_update_array_value(doc, array, -4, JES_VALUE_STRING, "Albert");
 
   /* Rendering the JSON elements into a string (not NUL-terminated) */
-  printf("\nSerilize JSON tree using a compact format...");
+  printf("\nSerilize JSON tree using a compact format...\n\n");
   out_size = jes_render(doc, output, sizeof(output), true);
   if (out_size == 0) {
     printf("\n Render Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
   }
   else {
-    printf("\n%.*s", out_size, output);
+    printf("\n %.*s\n\n", out_size, output);
   }
 
-#if 0
-  printf("\nSerilize JSON tree with indention...");
+  printf("\nSerilize JSON tree with indention...\n\n");
   out_size = jes_render(doc, output, sizeof(output), false);
   if (out_size == 0) {
     printf("\n Render Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
   }
   else {
-    printf("\n%.*s", out_size, output);
+    printf("\n%.*s\n\n", out_size, output);
   }
-#endif
+
   return 0;
 
 }
