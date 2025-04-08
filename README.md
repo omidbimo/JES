@@ -147,13 +147,27 @@ uint32_t jes_render(struct jes_context *ctx, char *dst, uint32_t length, bool co
 **Returns**  
 Size of the JSON string or `0` if rendering failed. (use jes_get_status for the failure code)
 
-Compact JSON output:
+Compact JSON output:  
 
-![](C:\Users\okompani\Documents\EDITT_EXTENDED_CONFIG_EISV3.8.4.0\compact.PNG)
+```dos
+{"key1":["value1","value2",null]}
+```
+
+
 
 Formatted JSON output:
 
-![](C:\Users\okompani\Documents\EDITT_EXTENDED_CONFIG_EISV3.8.4.0\formatted.PNG)
+{
+{
+  "key1": [
+    "value1",
+    "value2",
+    null
+  ]
+}
+}
+
+
 
 ---
 
