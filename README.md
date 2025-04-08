@@ -149,15 +149,13 @@ Size of the JSON string or `0` if rendering failed. (use jes_get_status for the 
 
 Compact JSON output:  
 
-```dos
+```json
 {"key1":["value1","value2",null]}
 ```
 
-
-
 Formatted JSON output:
 
-{
+```json
 {
   "key1": [
     "value1",
@@ -165,9 +163,7 @@ Formatted JSON output:
     null
   ]
 }
-}
-
-
+```
 
 ---
 
