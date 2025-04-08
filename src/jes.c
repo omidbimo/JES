@@ -766,11 +766,12 @@ static inline void jes_parser_on_value(struct jes_context *ctx, enum jes_type va
   jes_parser_add_value(ctx, value_type);
 }
 
-uint32_t jes_load(struct jes_context *ctx, const char *json_data, uint32_t json_length)
+struct jes_element* jes_load(struct jes_context *ctx, const char *json_data, uint32_t json_length)
 {
   ctx->state = JES_EXPECT_OBJECT;
   ctx->json_data = json_data;
   ctx->json_size = json_length;
+  ctx->status = JES_NO_ERROR;
 
   do {
     ctx->token = jes_get_token(ctx);
@@ -778,7 +779,6 @@ uint32_t jes_load(struct jes_context *ctx, const char *json_data, uint32_t json_
     switch (ctx->token.type) {
 
       case JES_TOKEN_EOF:
-        return ctx->status;
         break;
 
       case JES_TOKEN_OPENING_BRACE:
@@ -834,9 +834,10 @@ uint32_t jes_load(struct jes_context *ctx, const char *json_data, uint32_t json_
         ctx->status = JES_PARSING_FAILED;
         break;
     }
-  } while (ctx->status == JES_NO_ERROR);
+  } while ((ctx->status == JES_NO_ERROR) && (ctx->token.type != JES_TOKEN_EOF));
 
-  if (ctx->status == 0) {
+  /* TODO: test this part */
+  if (ctx->status == JES_NO_ERROR) {
     if (ctx->token.type != JES_TOKEN_EOF) {
       ctx->status = JES_UNEXPECTED_TOKEN;
     }
@@ -845,7 +846,7 @@ uint32_t jes_load(struct jes_context *ctx, const char *json_data, uint32_t json_
     }
   }
 
-  return ctx->status;
+  return ctx->status == JES_NO_ERROR ? (struct jes_element*)ctx->root : NULL;
 }
 
 uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
@@ -1907,7 +1908,7 @@ struct jes_element* jes_add_array_value(struct jes_context *ctx, struct jes_elem
   return (struct jes_element*)new_node;
 }
 
-size_t jes_get_node_count(struct jes_context *ctx)
+size_t jes_get_element_count(struct jes_context *ctx)
 {
   return ctx->node_count;
 }

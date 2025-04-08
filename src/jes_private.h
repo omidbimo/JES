@@ -51,18 +51,18 @@ struct jes_token {
 };
 
 struct jes_node {
-  /* Element containing TLV JSON data */
+  /* Element containing TLV JSON data.
+   * This should be the first member of the node structure. */
   struct jes_element json_tlv;
   /* Index of the parent node. Each node holds the index of its parent. */
   jes_node_descriptor parent;
-  /* Index */
+  /* Index of sibling node. Siblings are always on the right of nodes.
+   * That means reaching a specific sibling, requires iterations from left side
+   * to the right side of the branch. */
   jes_node_descriptor sibling;
-  /* Each parent keeps only the index of its first child. The remaining child nodes
-     will be tracked using the right member of the first child. */
+  /* Each parent keeps only the index of its first child and its last child.
+   * The remaining child nodes can be reached using the sibling indices. */
   jes_node_descriptor first_child;
-  /* The data member is a TLV (Type, Length, Value) which value is pointer to the
-     actual value of the node. See jes.h */
-  /* Index */
   jes_node_descriptor last_child;
 };
 

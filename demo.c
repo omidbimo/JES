@@ -9,19 +9,25 @@
 
 #define POOL_SIZE 0xFFFF
 
-#define JES_ARRAY_LEN(arr) (sizeof(arr)/sizeof(arr[0]))
 int main(void)
 {
-  struct jes_context *doc;
+
   FILE *fp;
   size_t out_size;
-  jes_status err;
-  struct jes_element *element;
-  struct jes_element *root;
+
   char err_msg[250] = {'\0'};
   uint8_t working_buffer[POOL_SIZE];
   char file_data[0xFFFF];
   char output[0xFFFF];
+
+  jes_status err;
+  struct jes_element *element;
+  struct jes_element *root;
+  struct jes_context *doc;
+  struct jes_element *it = NULL;
+  struct jes_element *array = NULL;
+  struct jes_element *key = NULL;
+  struct jes_element *value = NULL;
 
   fp = fopen("demo.json", "rb");
 
@@ -41,19 +47,16 @@ int main(void)
   }
 
   printf("\nJES - parsing demo.json...");
-  if (0 != (err = jes_load(doc, file_data, sizeof(file_data))))
+  if ((root = jes_load(doc, file_data, sizeof(file_data))) == NULL)
   {
     printf("\n    %s", jes_stringify_status(doc, err_msg, sizeof(err_msg)));
     return -1;
   }
 
   printf("\n    Size of JSON data: %lld bytes", strnlen(file_data, sizeof(file_data)));
-  printf("\n    node count: %d", jes_get_node_count(doc));
+  printf("\n    element count: %d", jes_get_element_count(doc));
 
-  struct jes_element *it = NULL;
-  struct jes_element *array = NULL;
-  struct jes_element *key = NULL;
-  struct jes_element *value = NULL;
+
 
   key = jes_get_key(doc, NULL, "key0.key1.key2.key3.key4");
   if (key) { printf("\nFound Key: name: %.*s", key->length, key->value);}
@@ -185,6 +188,8 @@ int main(void)
   else {
     printf("\n%.*s\n\n", out_size, output);
   }
+
+  printf("\n    element count: %d", jes_get_element_count(doc));
 
   return 0;
 
