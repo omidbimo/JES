@@ -145,7 +145,7 @@ enum jes_type jes_get_parent_type(struct jes_context *ctx, struct jes_element *e
  *       as an example: given the keys equal to key1.key2.key3, the key1 will be searched among the
  *       parent values. The the key2 will be searched among the key2 values. and finally key3
  *       will be searched among the key2 values and will be delivered as the result of the search.
- *       This helps to speedup complicated searches since
+ *       This helps to speedup complicated searches:
  *        - The interface provides parent caching so the search shouldn't always start from the root
  *        - The interface provides multiple keying so a deep search can be performed in just one call.
  *
@@ -158,14 +158,15 @@ struct jes_element* jes_get_key_value(struct jes_context *ctx, struct jes_elemen
 
 /* Append a key to the value of an existing key.
  * param [in] ctx
- * param [in] parent_key is the key which a new key will be appended to its value
+ * param [in] parent can be a KEY or an OBJECT element.
+              If parent is a KEY, then an OBJECT will be created and assigned as
+              its value and the new KEY will be added to this OBJECT element.
  * param [in] keyword: The name of the new key
  * return: The new KEY element or NULL in case of a failure
  *
- * Note: the value of parent_key must be of type OBJECT or be empty. In case the parent has no value yet,
- *       an OBJECT element will be created automatically.
+ * Note: If the parent is a KEY, its value should be of type OBJECT or be empty.
  */
-struct jes_element* jes_add_key(struct jes_context *ctx, struct jes_element *parent_key, const char *keyword);
+struct jes_element* jes_add_key(struct jes_context *ctx, struct jes_element *parent, const char *keyword);
 
 /* Insert a key before an existing key */
 struct jes_element* jes_add_key_before(struct jes_context *ctx, struct jes_element *key, const char *keyword);

@@ -1312,7 +1312,7 @@ uint32_t jes_delete_element(struct jes_context *ctx, struct jes_element *element
   return ctx->status;
 }
 
-struct jes_element* jes_get_key(struct jes_context *ctx, struct jes_element *parent_key, const char *keys)
+struct jes_element* jes_get_key(struct jes_context *ctx, struct jes_element *parent, const char *keys)
 {
   struct jes_node *target_key = NULL;
   struct jes_node *iter = NULL;
@@ -1320,25 +1320,25 @@ struct jes_element* jes_get_key(struct jes_context *ctx, struct jes_element *par
   const char *key;
   char *dot;
 
-
   if (!ctx || !JES_IS_INITIATED(ctx)) {
     return NULL;
   }
 
-  if (!keys) {
+  if ((parent == NULL) || (!jes_validate_node(ctx, (struct jes_node*)parent)) || (keys == NULL)) {
     ctx->status = JES_INVALID_PARAMETER;
     return NULL;
   }
 
-  if (parent_key != NULL) {
-    if (!jes_validate_node(ctx, (struct jes_node*)parent_key) || (parent_key->type != JES_KEY)) {
-      ctx->status = JES_INVALID_PARAMETER;
-      return NULL;
-    }
-    iter = GET_FIRST_CHILD(ctx, (struct jes_node*)parent_key);
+  if ((parent->type != JES_OBJECT) && (parent->type != JES_KEY)) {
+    ctx->status = JES_INVALID_PARAMETER;
+    return NULL;
+  }
+
+  if (parent->type == JES_KEY) {
+    iter = GET_FIRST_CHILD(ctx, (struct jes_node*)parent);
   }
   else {
-    iter = ctx->root;
+    iter = (struct jes_node*)parent;
   }
 
   if (iter->json_tlv.type != JES_OBJECT) {
@@ -1392,7 +1392,7 @@ struct jes_element* jes_get_key_value(struct jes_context *ctx, struct jes_elemen
     return NULL;
   }
 
-  if (!jes_validate_node(ctx, (struct jes_node*)key) || (key->type != JES_KEY)) {
+  if ((key == NULL) || (!jes_validate_node(ctx, (struct jes_node*)key)) || (key->type != JES_KEY)) {
     ctx->status = JES_INVALID_PARAMETER;
     return NULL;
   }
@@ -1410,7 +1410,7 @@ uint16_t jes_get_array_size(struct jes_context *ctx, struct jes_element *array)
     return 0;
   }
 
-  if (!jes_validate_node(ctx, (struct jes_node*)array) || (array->type != JES_ARRAY)) {
+  if ((array == NULL) || (!jes_validate_node(ctx, (struct jes_node*)array)) || (array->type != JES_ARRAY)) {
     ctx->status = JES_INVALID_PARAMETER;
     return 0;
   }
@@ -1428,6 +1428,7 @@ uint16_t jes_get_array_size(struct jes_context *ctx, struct jes_element *array)
 struct jes_element* jes_get_array_value(struct jes_context *ctx, struct jes_element *array, int32_t index)
 {
   struct jes_node *iter = NULL;
+  /* Skip checking ctx and array only when calling jes_get_array_size */
   uint16_t array_size = jes_get_array_size(ctx, array);
 
   if (ctx->status != JES_NO_ERROR) {
@@ -1466,21 +1467,21 @@ struct jes_element* jes_add_element(struct jes_context *ctx, struct jes_element 
   struct jes_node *new_node = NULL;
   uint32_t value_length = 0;
 
-  if (!ctx) {
+  if ((ctx == NULL) || !JES_IS_INITIATED(ctx)) {
+    return NULL;
+  }
+
+  if ((parent == NULL) && (ctx->root != NULL)) {
+    /* JSON is not empty. Invalid request. */
     ctx->status = JES_INVALID_PARAMETER;
     return NULL;
   }
 
-  if (!parent && ctx->root) { /* JSON is not empty. Invalid request. */
+  if ((parent != NULL) && (!jes_validate_node(ctx, (struct jes_node*)parent))) {
     ctx->status = JES_INVALID_PARAMETER;
     return NULL;
   }
-
-  if (parent && !jes_validate_node(ctx, (struct jes_node*)parent)) {
-    ctx->status = JES_INVALID_PARAMETER;
-    return NULL;
-  }
-
+  /* TODO: review */
   if (value) {
     value_length = strnlen(value, JES_MAX_VALUE_LENGTH);
     if (value_length == JES_MAX_VALUE_LENGTH) {
@@ -1502,10 +1503,10 @@ struct jes_element* jes_add_element(struct jes_context *ctx, struct jes_element 
   return new_element;
 }
 
-struct jes_element* jes_add_key(struct jes_context *ctx, struct jes_element *parent_key, const char *keyword)
+struct jes_element* jes_add_key(struct jes_context *ctx, struct jes_element *parent, const char *keyword)
 {
   struct jes_element *new_key = NULL;
-  struct jes_node *object = ctx->root;
+  struct jes_node *object = NULL;
   struct jes_node *new_node = NULL;
   uint16_t keyword_length = 0;
 
@@ -1513,7 +1514,12 @@ struct jes_element* jes_add_key(struct jes_context *ctx, struct jes_element *par
     return NULL;
   }
 
-  if (!keyword) {
+  if ((parent == NULL) || (!jes_validate_node(ctx, (struct jes_node*)parent)) || (keyword == NULL)) {
+    ctx->status = JES_INVALID_PARAMETER;
+    return NULL;
+  }
+
+  if ((parent->type != JES_OBJECT) && (parent->type != JES_KEY)) {
     ctx->status = JES_INVALID_PARAMETER;
     return NULL;
   }
@@ -1524,26 +1530,20 @@ struct jes_element* jes_add_key(struct jes_context *ctx, struct jes_element *par
     return NULL;
   }
 
-  if (parent_key != NULL) {
-    if (!jes_validate_node(ctx, (struct jes_node*)parent_key)) {
-      ctx->status = JES_INVALID_PARAMETER;
-      return NULL;
-    }
+  if (parent->type == JES_KEY) {
     /* The key must be added to an existing key and must be embedded in an OBJECT */
-    object = GET_FIRST_CHILD(ctx, (struct jes_node*)parent_key);
+    object = GET_FIRST_CHILD(ctx, (struct jes_node*)parent);
     if (object == NULL) {
-      object = jes_append_node(ctx, (struct jes_node*)parent_key, JES_OBJECT, 1, "{");
+      object = jes_append_node(ctx, (struct jes_node*)parent, JES_OBJECT, 1, "{");
     }
     else if (object->json_tlv.type != JES_OBJECT) {
+      /* We should not land here */
       ctx->status = JES_UNEXPECTED_ELEMENT;
       return NULL;
     }
   }
-  else { /* No parent key is introduced. start from root object */
-    if (ctx->root == NULL) {
-      /* Tree root is empty. Create the first OBJECT node. */
-      object = jes_append_node(ctx, ctx->root, JES_OBJECT, 1, "{");
-    }
+  else { /* parent is an OBJECT */
+    object = (struct jes_node*)parent;
   }
 
   new_node = jes_append_node(ctx, object, JES_KEY, keyword_length, keyword);
