@@ -17,7 +17,7 @@
  * For the standard use-cases with 16-bit node descriptors, the parser can address up to 32767 nodes. */
 //#define JES_USE_32BIT_NODE_DESCRIPTOR
 
-#define JES_MAX_VALUE_LENGTH 0xFF
+#define JES_MAX_VALUE_LENGTH 0xFFFF
 
 typedef enum jes_status {
   JES_NO_ERROR = 0,
