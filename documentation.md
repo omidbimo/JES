@@ -1,0 +1,267 @@
+Enums
+
+### `jes_status`
+
+Defines the possible status codes for JES operations:
+
+| Status Code             | Description                                     |
+| ----------------------- | ----------------------------------------------- |
+| `JES_NO_ERROR`          | No error occurred.                              |
+| `JES_PARSING_FAILED`    | Parsing of JSON data failed.                    |
+| `JES_RENDER_FAILED`     | Rendering of JSON tree failed.                  |
+| `JES_OUT_OF_MEMORY`     | Insufficient memory for operation.              |
+| `JES_UNEXPECTED_TOKEN`  | Encountered an unexpected token during parsing. |
+| `JES_UNEXPECTED_NODE`   | Encountered an unexpected node in the tree.     |
+| `JES_UNEXPECTED_EOF`    | Unexpected end of JSON data.                    |
+| `JES_INVALID_PARAMETER` | Invalid parameter passed to function.           |
+| `JES_ELEMENT_NOT_FOUND` | Requested JSON element not found.               |
+
+---
+
+### `jes_type`
+
+Defines the types of JSON elements:
+
+| Type               | Description            |
+| ------------------ | ---------------------- |
+| `JES_UNKNOWN`      | Unknown element type.  |
+| `JES_OBJECT`       | JSON object.           |
+| `JES_KEY`          | JSON key.              |
+| `JES_ARRAY`        | JSON array.            |
+| `JES_VALUE_STRING` | String value.          |
+| `JES_VALUE_NUMBER` | Numeric value.         |
+| `JES_VALUE_TRUE`   | Boolean `true` value.  |
+| `JES_VALUE_FALSE`  | Boolean `false` value. |
+| `JES_VALUE_NULL`   | Null value.            |
+
+---
+
+### Structs
+
+### `jes_context`
+
+An opaque structure that holds the internal state of the parser including JSON tree information, element pool managemnet and process status.
+
+### `jes_element`
+
+Represents a JSON element in the tree.
+
+| Field         | Type                  | Description                       |
+| ------------- | --------------------- | --------------------------------- |
+| `type`        | `uint16_t`            | Type of element (see `jes_type`). |
+| `length`      | `uint16_t`            | Length of the value.              |
+| `value`       | `const char *`        | Pointer to the value.             |
+| `parent`      | `jes_node_descriptor` | Index of the parent node.         |
+| `sibling`     | `jes_node_descriptor` | Index of the next sibling.        |
+| `first_child` | `jes_node_descriptor` | Index of the first child node.    |
+| `last_child`  | `jes_node_descriptor` | Index of the last child node.     |
+
+---
+
+### Functions
+
+### `jes_init`
+
+Initializes a new JES context.
+
+```c
+struct jes_context* jes_init(void *buffer, uint32_t buffer_size);
+```
+
+**Parameters**
+
+- `buffer` – The working buffer to hold the context and JSON tree nodes.
+
+- `buffer_size` – Size of the working buffer.
+
+**Returns**  
+Pointer to context or `NULL` in case of failure.
+
+---
+
+### `jes_load`
+
+Loads a JSON string and creates a tree of JSON elements.
+
+```c
+uint32_t jes_load(struct jes_context* ctx, const char *json_data, uint32_t json_length);
+```
+
+**Parameters**
+
+- `ctx` – Initialized JES context.
+
+- `json_data` – JSON data string.
+
+- `json_length` – Length of the JSON data.
+
+**Returns**  
+Status of the parsing process (see `jes_status`)
+
+---
+
+### `jes_render`
+
+Renders a JSON tree into a string.
+
+```c
+uint32_t jes_render(struct jes_context *ctx, char *dst, uint32_t length, bool compact);
+```
+
+**Parameters**
+
+- `ctx` – Initialized JES context.
+
+- `dst` – Destination buffer.
+
+- `length` – Size of the destination buffer.
+
+- `compact` – If `true`, renders a compact JSON string; otherwise, formatted with indentation.
+
+**Returns**  
+Size of the JSON string or `0` if rendering failed. (use jes_get_status for the failure code)
+
+Compact JSON output:
+
+```json
+{"key1":["value1","value2",null]}
+```
+
+Formatted JSON output:
+
+```json
+{
+  "key1": [
+    "value1",
+    "value2",
+    null
+  ]
+}
+```
+
+---
+
+### `jes_evaluate`
+
+Evaluates the JSON tree structure and calculates the size of the rendered string.
+
+```c
+uint32_t jes_evaluate(struct jes_context *ctx, bool compact);
+```
+
+**Parameters**
+
+- `ctx` – Initialized JES context.
+
+- `compact` – If `true`, evaluates size of compact JSON string; otherwise, formatted JSON size.
+
+**Returns**  
+Size of JSON string or `0` if evaluation fails. (use jes_get_status for the failure code)
+
+---
+
+### `jes_get_status`
+
+Gets the status of the last process.
+
+```c
+`jes_status jes_get_status(struct jes_context *ctx);
+```
+
+**Parameters**
+
+- `ctx` – Initialized JES context.
+
+**Returns**  
+Status of the last process stored in the context.
+
+---
+
+### `jes_get_root`
+
+Returns the root element of the JSON tree.
+
+```c
+struct jes_element* jes_get_root(struct jes_context *ctx);
+```
+
+Gets the root element of the JSON tree. (This should be the lowest level OBJECT)
+
+---
+
+### `jes_get_key`
+
+Returns a key element addressed by a parent KEY element and a sequence of key names.
+
+```c
+struct jes_element* jes_get_key(struct jes_context *ctx, struct jes_element *parent_key, const char *keys);
+```
+
+**Parameters
+
+- `ctx` – Initialized JES context.
+
+- `parent_key` – A KEY element to start search from or NULL to start the search from root
+
+- `keys` – NUL-terminated string containing several key names separated by a dot "."
+
+---
+
+### `jes_stringify_status`
+
+Converts a status code to a human-readable string.
+
+```c
+char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len);
+```
+
+---
+
+## Example
+
+```c
+#include "jes.h"
+...
+uint8_t work_buffer[0xFFFF];
+const char json_str[] = "{\"key\": \"value\"}";
+struct jes_context *doc;
+struct jes_element *key = NULL;
+struct jes_element *value = NULL;
+jes_status err;
+
+doc = jes_init(work_buffer, sizeof(work_buffer));
+if (!doc) {
+    /* Error handling */
+}
+
+err = jes_load(doc, json_str, sizeof(json_str));
+if (err != JES_NO_ERROR) {
+    /* Error handling */
+}
+
+key = jes_get_key(doc, NULL, "key");
+if (key) {
+    value = jes_get_key_value(doc, key);
+    if (value) {
+        /* Process value */
+    }
+}
+```
+
+## Logging
+
+A debug build of JES also produces log outputs for Tokenizer, Allocator and Serializer.
+
+```dos
+JES - parsing demo.json...
+ JES.Token: [Pos:     0, Len:   1] OPENING_BRACE    "{"
+    + JES.Node: [0] "{" <OBJECT>,    parent:[-1], right:[-1], child:[-1]
+ JES.Token: [Pos:     8, Len:   0] STRING           ""
+    + JES.Node: [1] "" <KEY>,    parent:[0], right:[-1], child:[-1]
+ JES.Token: [Pos:     9, Len:   1] COLON            ":"
+ JES.Token: [Pos:    11, Len:   4] NULL             "null"
+    + JES.Node: [2] "null" <NULL_VALUE>,    parent:[1], right:[-1], child:[-1]
+ JES.Token: [Pos:    15, Len:   1] COMMA            ","
+ JES.Token: [Pos:    23, Len:   2] STRING           "ID"
+    + JES.Node: [3] "ID" <KEY>,    parent:[0], right:[-1], child:[-1]
+```
