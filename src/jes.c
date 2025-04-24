@@ -59,6 +59,8 @@ static struct jes_node* jes_allocate(struct jes_context *ctx)
 {
   struct jes_node *new_node = NULL;
 
+  assert(ctx != NULL);
+
   if (ctx->node_count < ctx->capacity) {
     if (ctx->free) {
       /* Pop the first node from free list */
@@ -85,6 +87,8 @@ static void jes_free(struct jes_context *ctx, struct jes_node *node)
 {
   struct jes_free_node *free_node = (struct jes_free_node*)node;
 
+  assert(ctx != NULL);
+  assert(node != NULL);
   assert(node >= ctx->node_pool);
   assert(node < (ctx->node_pool + ctx->capacity));
   assert(ctx->node_count > 0);
@@ -110,8 +114,15 @@ static bool jes_validate_node(struct jes_context *ctx, struct jes_node *node)
 
   if (((void*)node >= (void*)ctx->node_pool) &&
       (((void*)node + sizeof(*node)) <= ((void*)ctx->node_pool + ctx->pool_size))) {
+    /* Check if the node is correctly aligned */
     if ((((void*)node - (void*)ctx->node_pool) % sizeof(*node)) == 0) {
-      return true;
+      /* Check if the node links are in bound */
+      if (((node->parent == 0xFFFF) || (node->parent <= ctx->capacity)) &&
+          ((node->first_child == 0xFFFF) || (node->first_child <= ctx->capacity)) &&
+          ((node->last_child == 0xFFFF) || (node->last_child <= ctx->capacity)) &&
+          ((node->sibling == 0xFFFF) || (node->sibling <= ctx->capacity))) {
+        return true;
+      }
     }
   }
 
@@ -1330,6 +1341,7 @@ struct jes_element* jes_get_key(struct jes_context *ctx, struct jes_element *par
   }
 
   if ((parent->type != JES_OBJECT) && (parent->type != JES_KEY)) {
+
     ctx->status = JES_INVALID_PARAMETER;
     return NULL;
   }
