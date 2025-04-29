@@ -87,6 +87,8 @@ struct jes_context {
   /* Offset of the next symbol in the input JSON data Tokenizer is going to consume. */
   uint32_t  offset;
   uint32_t  line_number;
+  /* To dynamically switch tokenizer functions when detecting Integers, fractions and exponents */
+  bool (*number_tokenizer) (struct jes_context *ctx, char ch, struct jes_token *token);
   /* Part of the buffer given by the user at the time of the context initialization.
    * The buffer will be used to allocate the context structure at first.
    * The remaining memory will be used as a pool of nodes (max. 65535 nodes). */

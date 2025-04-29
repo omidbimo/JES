@@ -289,8 +289,39 @@ static inline bool jes_is_delimiter_token(char ch)
   return is_symbolic_token;
 }
 
-/* The token is already a NUMBER. Try to feed it with more symbols. */
-static inline bool jes_nurture_number_token(struct jes_context *ctx,
+
+
+/* Token type is NUMBER. Try to feed it with more symbols. */
+static inline bool jes_exponent_number_tokenizer(struct jes_context *ctx,
+                                            char ch, struct jes_token *token)
+{
+
+  bool end_of_token = false;
+
+  if (IS_DIGIT(ch)) {
+    token->length++;
+    if (!IS_DIGIT(LOOK_AHEAD(ctx))) {
+      end_of_token = true;
+    }
+  }
+  else if ((ch == '+') || (ch == '-')) {
+    token->length++;
+    ch = LOOK_AHEAD(ctx);
+    if (!IS_DIGIT(ch)) {
+      token->type = JES_TOKEN_INVALID;
+      end_of_token = true;
+    }
+  }
+  else {
+    token->type = JES_TOKEN_INVALID;
+    end_of_token = true;
+  }
+
+  return end_of_token;
+}
+
+/* Token type is NUMBER. Try to feed it with more symbols. */
+static inline bool jes_decimal_fraction_number_tokenizer(struct jes_context *ctx,
                                             char ch, struct jes_token *token)
 {
   bool end_of_token = false;
@@ -298,19 +329,46 @@ static inline bool jes_nurture_number_token(struct jes_context *ctx,
   if (IS_DIGIT(ch)) {
     token->length++;
     ch = LOOK_AHEAD(ctx);
-    if (!IS_DIGIT(ch) && (ch != '.')) { /* TODO: more symbols are acceptable in the middle of a number */
-      end_of_token = true;
+    if (!IS_DIGIT(ch)) {
+      if ((ch != 'e') && (ch != 'E')) {
+        end_of_token = true;
+      }
+    }
+  }
+  else if ((ch == 'e') || (ch == 'E')) {
+    token->length++;
+    ctx->number_tokenizer = jes_exponent_number_tokenizer;
+  }
+  else {
+    token->type = JES_TOKEN_INVALID;
+    end_of_token = true;
+  }
+
+  return end_of_token;
+}
+
+/* Token type is NUMBER. Try to feed it with more symbols. */
+static inline bool jes_integer_tokenizer(struct jes_context *ctx,
+                                            char ch, struct jes_token *token)
+{
+  bool end_of_token = false;
+
+  if (IS_DIGIT(ch)) {
+    token->length++;
+    ch = LOOK_AHEAD(ctx);
+    if (!IS_DIGIT(ch)) {
+      if ((ch != '.') && (ch != 'e') && (ch != 'E')) {
+        end_of_token = true;
+      }
     }
   }
   else if (ch == '.') {
     token->length++;
-    if (!IS_DIGIT(LOOK_AHEAD(ctx))) {
-      token->type = JES_TOKEN_INVALID;
-      end_of_token = true;
-    }
+    ctx->number_tokenizer = jes_decimal_fraction_number_tokenizer;
   }
-  else if (IS_SPACE(ch)) {
-    end_of_token = true;
+  else if ((ch == 'e') || (ch == 'E')) {
+    token->length++;
+    ctx->number_tokenizer = jes_exponent_number_tokenizer;
   }
   else {
     token->type = JES_TOKEN_INVALID;
@@ -364,18 +422,25 @@ static struct jes_token jes_get_token(struct jes_context *ctx)
 
       if (IS_DIGIT(ch)) {
         UPDATE_TOKEN(token, JES_TOKEN_NUMBER, ctx->offset, 1);
+        ctx->number_tokenizer = jes_integer_tokenizer;
         /* Unlike STRINGs, there are symbols for NUMBERs to indicate the
            end of number data. To avoid consuming non-NUMBER characters, take a look ahead
            and stop the process if found of non-numeric symbols. */
-        if (jes_is_delimiter_token(LOOK_AHEAD(ctx))) {
+        ch = LOOK_AHEAD(ctx);
+        if (jes_is_delimiter_token(ch) || IS_SPACE(ch)) {
           break;
         }
         continue;
       }
 
-      if ((ch == '-') && IS_DIGIT(LOOK_AHEAD(ctx))) {
-        UPDATE_TOKEN(token, JES_TOKEN_NUMBER, ctx->offset, 1);
-        continue;
+      if (ch == '-') {
+        if (IS_DIGIT(LOOK_AHEAD(ctx))) {
+          UPDATE_TOKEN(token, JES_TOKEN_NUMBER, ctx->offset, 1);
+          ctx->number_tokenizer = jes_integer_tokenizer;
+          continue;
+        }
+        token.type = JES_TOKEN_INVALID;
+        break;
       }
 
       if (ch == 't') {
@@ -413,7 +478,7 @@ static struct jes_token jes_get_token(struct jes_context *ctx)
       continue;
     }
     else if (token.type == JES_TOKEN_NUMBER) {
-      if (jes_nurture_number_token(ctx, ch, &token)) {
+      if (ctx->number_tokenizer(ctx, ch, &token)) {
         /* There are no more symbols to consume as a number. Deliver the token. */
         break;
       }
@@ -559,7 +624,7 @@ struct jes_context* jes_init(void *buffer, uint32_t buffer_size)
   ctx->capacity = (ctx->pool_size / sizeof(struct jes_node)) < JES_INVALID_INDEX
                  ? (jes_node_descriptor)(ctx->pool_size / sizeof(struct jes_node))
                  : JES_INVALID_INDEX -1;
-
+  ctx->number_tokenizer = jes_integer_tokenizer;
   ctx->iter = NULL;
   ctx->root = NULL;
   ctx->free = NULL;
