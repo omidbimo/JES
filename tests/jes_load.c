@@ -31,16 +31,49 @@ int main(void)
 
   const char json_str_positive_tests[][500] = {
         "{\"key\": \"value\"}",
+        "{\"key\": [\"value\", {}]}",
         };
 
   const char json_str_negative_tests[][500] = {
-        "{",
-        "}",
-        "{\"key\": }",
+        "{",                      /* Single Opening Brace */
+        "}",                      /* Single Closing Brace */
+        "{1}",                    /*  */
+        "{\"key\": }",             /* Empty Value */
         "{\"key\": \"value\"",
-        "{\"key: \"value\"",
+        "{\"key: \"value\"",       /* Non-terminated key String */
+        "{\"key\": \"value}",      /* Non-terminated value String */
         "{key\": \"value\"",
         "\"key\": \"value\"",
+        "{key: \"value\"}",         /* Missing Quotes Around Key */
+        "{\"key\": \"value\",}",    /* Trailing comma */
+#if 0
+        "{\"key2\": \"val"
+        "ue\"}",                    /* Unescaped Control Character */
+#endif
+        "{'key1': \"value\"}",       /* Single Quotes Instead of Double Quotes */
+        "{\"key\" \"value\"}",      /* Missing Colon */
+        "{\"key\": {}",             /* Missing closing Brace */
+#if 0
+        "{\"key\": \"value\"}}",    /* Extra closing Brace */
+#endif
+        "{\"key\": [\"value\",]}",    /* Array with trailing Comma */
+        "{\"key1\": \"value1\" \"key2\": \"value2\"}",    /* Missing Comma Between Fields */
+        "{\"key\": value}",           /* Unexpected Token */
+#if 0
+        "{\"key1\": \"value1\", \"key1\": \"value2\"}", /* Duplicate Keys */
+#endif
+        "{\"key\": True}",          /* Incorrect Boolean Case */
+        "{\"key\": False}",         /* Incorrect Boolean Case */
+        "{\"key\": Null}",         /* Incorrect null Case */
+        "\"key\"",                  /* Standalone string -Not Wrapped in an Object- */
+        "{\"key\": []]}",           /* Unexpected closing bracket */
+        "{\"key\": [[]}",           /* Missing closing Bracket */
+        "{\"key\": [,]}",           /* Unexpected Comma in array */
+        "{\"key\": ][}",            /* Wrong order of Brackets */
+        "{\"key\": [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}", /* Missing closing Brackets */
+        "{\"key\": ,[]}",             /* Unexpected Comma before value */
+        "{\"key\": [][]}",             /* Duplicate Array as value */
+
         };
 
   printf("\nRunning parser positive tests...");
@@ -73,8 +106,7 @@ int main(void)
       return -1;
     }
 
-    if (NULL == jes_load(doc, json_str_negative_tests[idx], sizeof(json_str_negative_tests[idx])))
-    {
+    if (NULL == jes_load(doc, json_str_negative_tests[idx], sizeof(json_str_negative_tests[idx]))) {
       printf("  %s", jes_stringify_status(doc, err_msg, sizeof(err_msg)));
     }
     else {
