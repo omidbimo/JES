@@ -53,9 +53,7 @@ int main(void)
         "{'key1': \"value\"}",       /* Single Quotes Instead of Double Quotes */
         "{\"key\" \"value\"}",      /* Missing Colon */
         "{\"key\": {}",             /* Missing closing Brace */
-#if 0
         "{\"key\": \"value\"}}",    /* Extra closing Brace */
-#endif
         "{\"key\": [\"value\",]}",    /* Array with trailing Comma */
         "{\"key1\": \"value1\" \"key2\": \"value2\"}",    /* Missing Comma Between Fields */
         "{\"key\": value}",           /* Unexpected Token */
