@@ -256,17 +256,14 @@ static inline bool jes_get_delimiter_token(struct jes_context *ctx,
   bool is_symbolic_token = true;
 
   switch (ch) {
-    case '\0': UPDATE_TOKEN((*token), JES_TOKEN_EOF, ctx->offset, 1); break;
-    case '{': UPDATE_TOKEN((*token), JES_TOKEN_OPENING_BRACE, ctx->offset, 1); break;
-    case '}': UPDATE_TOKEN((*token), JES_TOKEN_CLOSING_BRACE, ctx->offset, 1); break;
-    case '[': UPDATE_TOKEN((*token), JES_TOKEN_OPENING_BRACKET, ctx->offset, 1); break;
-    case ']': UPDATE_TOKEN((*token), JES_TOKEN_CLOSING_BRACKET, ctx->offset, 1); break;
-    case ':': UPDATE_TOKEN((*token), JES_TOKEN_COLON, ctx->offset, 1); break;
-    case ',': UPDATE_TOKEN((*token), JES_TOKEN_COMMA, ctx->offset, 1); break;
-
-    default:
-      is_symbolic_token = false;
-      break;
+    case '\0': UPDATE_TOKEN((*token), JES_TOKEN_EOF, ctx->offset, 1);             break;
+    case '{':  UPDATE_TOKEN((*token), JES_TOKEN_OPENING_BRACE, ctx->offset, 1);   break;
+    case '}':  UPDATE_TOKEN((*token), JES_TOKEN_CLOSING_BRACE, ctx->offset, 1);   break;
+    case '[':  UPDATE_TOKEN((*token), JES_TOKEN_OPENING_BRACKET, ctx->offset, 1); break;
+    case ']':  UPDATE_TOKEN((*token), JES_TOKEN_CLOSING_BRACKET, ctx->offset, 1); break;
+    case ':':  UPDATE_TOKEN((*token), JES_TOKEN_COLON, ctx->offset, 1);           break;
+    case ',':  UPDATE_TOKEN((*token), JES_TOKEN_COMMA, ctx->offset, 1);           break;
+    default:   is_symbolic_token = false;                                         break;
   }
 
   return is_symbolic_token;
@@ -274,28 +271,13 @@ static inline bool jes_get_delimiter_token(struct jes_context *ctx,
 
 static inline bool jes_is_delimiter_token(char ch)
 {
-  bool is_symbolic_token = false;
-
-  if ((ch == '\0') ||
-      (ch == '{')  ||
-      (ch == '}')  ||
-      (ch == '[')  ||
-      (ch == ']')  ||
-      (ch == ':')  ||
-      (ch == ',')) {
-      is_symbolic_token = true;
-  }
-
-  return is_symbolic_token;
+  return ((ch == '\0') || (ch == '{') || (ch == '}') || (ch == '[') || (ch == ']') || (ch == ':') || (ch == ','));
 }
-
-
 
 /* Token type is NUMBER. Try to feed it with more symbols. */
 static inline bool jes_exponent_number_tokenizer(struct jes_context *ctx,
                                             char ch, struct jes_token *token)
 {
-
   bool end_of_token = false;
 
   if (IS_DIGIT(ch)) {
