@@ -331,11 +331,16 @@ static inline bool jes_decimal_fraction_number_tokenizer(struct jes_context *ctx
 
 /* Token type is NUMBER. Try to feed it with more symbols. */
 static inline bool jes_integer_tokenizer(struct jes_context *ctx,
-                                            char ch, struct jes_token *token)
+                                         char ch, struct jes_token *token)
 {
   bool end_of_token = false;
 
   if (IS_DIGIT(ch)) {
+    /* Integers with leading zeros are invalid JSON numbers */
+    if ((token->length == 1) && (ctx->json_data[token->offset] == '0')) {
+      token->type = JES_TOKEN_INVALID;
+      end_of_token = true;
+    }
     token->length++;
     ch = LOOK_AHEAD(ctx);
     if (!IS_DIGIT(ch)) {
