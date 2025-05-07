@@ -57,6 +57,7 @@ static char jes_state_str[][JES_HELPER_STR_LENGTH] = {
   "HAVE_KEY_VALUE",
   "EXPECT_ARRAY_VALUE",
   "HAVE_ARRAY_VALUE",
+  "EXPECT_EOF",
 };
 
 void jes_log_token(uint16_t token_type,

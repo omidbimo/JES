@@ -25,6 +25,7 @@ enum jes_state {
   JES_HAVE_KEY_VALUE,
   JES_EXPECT_ARRAY_VALUE,
   JES_HAVE_ARRAY_VALUE,
+  JES_EXPECT_EOF,
 };
 
 enum jes_token_type {

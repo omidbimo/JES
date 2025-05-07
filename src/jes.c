@@ -683,6 +683,9 @@ static inline void jes_parser_on_closing_brace(struct jes_context *ctx)
       assert(0);
     }
   }
+  else {
+    ctx->state = JES_EXPECT_EOF;
+  }
 }
 
 static inline void jes_parser_on_opening_bracket(struct jes_context *ctx)
