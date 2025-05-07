@@ -31,6 +31,7 @@ typedef enum jes_status {
   JES_ELEMENT_NOT_FOUND,
   JES_INVALID_CONTEXT,
   JES_BROKEN_TREE,
+  JES_DUPLICATE_KEY,
 } jes_status;
 
 enum jes_type {

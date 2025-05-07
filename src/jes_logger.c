@@ -6,7 +6,7 @@
 #define JES_HELPER_STR_LENGTH 20
 
 static char jes_status_str[][JES_HELPER_STR_LENGTH] = {
-  "NO_ERR",
+  "NO_ERROR",
   "PARSING_FAILED",
   "RENDER_FAILED",
   "OUT_OF_MEMORY",
@@ -17,6 +17,7 @@ static char jes_status_str[][JES_HELPER_STR_LENGTH] = {
   "ELEMENT_NOT_FOUND",
   "INVALID_CONTEXT",
   "BROKEN_TREE",
+  "DUPLICATE_KEY",
 };
 
 static char jes_token_type_str[][JES_HELPER_STR_LENGTH] = {
@@ -95,28 +96,26 @@ char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len)
       break;
     case JES_UNEXPECTED_TOKEN:
       snprintf( msg, msg_len,
-                "%s(#%d): <%s> @[line:%d, pos:%d] (%.20s%.*s<<) state:<%s> after <%s> element",
+                "%s(#%d): <%s> @[line:%d, pos:%d] (\"%.*s\") state:<%s> after <%s> element",
                 jes_status_str[ctx->status],
                 ctx->status,
                 jes_token_type_str[ctx->token.type],
                 ctx->line_number,
                 ctx->offset,
-                ctx->token.offset >= 20 ? &ctx->json_data[ctx->token.offset - 20] : &ctx->json_data[0],
                 ctx->token.length,
                 &ctx->json_data[ctx->token.offset],
                 jes_state_str[ctx->ext_status],
-                jes_node_type_str[ctx->iter->json_tlv.type] );
+                ctx->iter != NULL ? jes_node_type_str[ctx->iter->json_tlv.type] : "");
       break;
 
     case JES_PARSING_FAILED:
       snprintf( msg, msg_len,
-                "%s(#%d): <%s> @[line:%d, pos:%d] (%.5s%.*s<<)",
+                "%s(#%d): <%s> @[line:%d, pos:%d] (\"%.*s\")",
                 jes_status_str[ctx->status],
                 ctx->status,
                 jes_token_type_str[ctx->token.type],
                 ctx->line_number,
                 ctx->offset,
-                ctx->token.offset >= 5 ? &ctx->json_data[ctx->token.offset - 5] : &ctx->json_data[0],
                 ctx->token.length,
                 &ctx->json_data[ctx->token.offset]);
       break;
