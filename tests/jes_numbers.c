@@ -91,6 +91,8 @@ int main(void)
         };
 
   const char json_str_negative_tests[][500] = {
+        "{\"number\": 00}",
+        "{\"number\": 01}",
         "{\"number\": .0}",
         "{\"number\": +0}",
         "{\"number\": -}",
@@ -100,6 +102,7 @@ int main(void)
         "{\"number\": 0..}",
         "{\"number\": 0-}",
         "{\"number\": 0+}",
+        "{\"number\": 01.0}",
         "{\"number\": 00.}",
         "{\"number\": 00.}",
         "{\"number\": 0.0.}",
