@@ -1,4 +1,28 @@
-Enums
+## Table of Contents
+
+- [Overview](#overview)
+- [Core Data Structures](#Core Data Structures)
+- [Functions](#Functions)
+  - [Initialization](#Initialization)
+  - [Loading and Rendering](#Loading and Rendering)
+  - [Navigating the JSON Tree](#Navigating the JSON Tree)
+  - [Working with Objects and Keys](#Working with Objects and Keys)
+  - [Working with Arrays](#Working with Arrays)
+  - [Element Manipulation](#Element Manipulation)
+  - [Error Handling](#Error Handling)
+  - [Iteration Macros](#Iteration Macros)
+- [Usage Examples](#Usage Examples)
+  - [Basic Parse and Render](#Basic Parse and Render)
+  - [Modifying JSON*](#Modifying JSON*)
+  - [Iterating Through Elements](#Iterating Through Elements)
+- [Logging](#Logging)
+
+
+## Overview
+
+JES represents JSON data as a tree of typed elements, with each element having a specific type, length, and value pointer. The library is designed to be memory-efficient, using a pre-allocated buffer for context and JSON nodes, and provides a comprehensive API for navigating, modifying, and rendering JSON structures.
+
+### Core Data Structures
 
 ### `jes_status`
 
@@ -15,8 +39,13 @@ Defines the possible status codes for JES operations:
 | `JES_UNEXPECTED_EOF`    | Unexpected end of JSON data.                    |
 | `JES_INVALID_PARAMETER` | Invalid parameter passed to function.           |
 | `JES_ELEMENT_NOT_FOUND` | Requested JSON element not found.               |
+| `JES_INVALID_CONTEXT`   | Context Cookie doesn't match the expected value |
+| `JES_BROKEN_TREE`       | A malformed JSON tree is detected               |
+| `JES_DUPLICATE_KEY`     | Duplicate Key is detected                       |
 
 ---
+
+### JSON Element Types
 
 ### `jes_type`
 
@@ -36,29 +65,25 @@ Defines the types of JSON elements:
 
 ---
 
-### Structs
+### `jes_element`
+
+Represents a JSON element in the tree.
+
+| Field    | Type           | Description                       |
+| -------- | -------------- | --------------------------------- |
+| `type`   | `uint16_t`     | Type of element (see `jes_type`). |
+| `length` | `uint16_t`     | Length of the value.              |
+| `value`  | `const char *` | Pointer to the value.             |
+
+---
 
 ### `jes_context`
 
 An opaque structure that holds the internal state of the parser including JSON tree information, element pool managemnet and process status.
 
-### `jes_element`
-
-Represents a JSON element in the tree.
-
-| Field         | Type                  | Description                       |
-| ------------- | --------------------- | --------------------------------- |
-| `type`        | `uint16_t`            | Type of element (see `jes_type`). |
-| `length`      | `uint16_t`            | Length of the value.              |
-| `value`       | `const char *`        | Pointer to the value.             |
-| `parent`      | `jes_node_descriptor` | Index of the parent node.         |
-| `sibling`     | `jes_node_descriptor` | Index of the next sibling.        |
-| `first_child` | `jes_node_descriptor` | Index of the first child node.    |
-| `last_child`  | `jes_node_descriptor` | Index of the last child node.     |
-
----
-
 ### Functions
+
+#### Initialization
 
 ### `jes_init`
 
@@ -70,64 +95,56 @@ struct jes_context* jes_init(void *buffer, uint32_t buffer_size);
 
 **Parameters**
 
-- `buffer` – The working buffer to hold the context and JSON tree nodes.
+  - `buffer` : Pre-allocated buffer to hold the context and JSON tree nodes
+  - `buffer_size` : Size of the provided buffer
 
-- `buffer_size` – Size of the working buffer.
-
-**Returns**  
-Pointer to context or `NULL` in case of failure.
+**Returns**  Pointer to the initialized context or NULL on failure
+**Note** The buffer must have enough space to hold the context and required JSON tree nodes (The context structure requires TBD bytes on a 32-bit system)
 
 ---
 
+## Loading and Rendering
+
 ### `jes_load`
 
-Loads a JSON string and creates a tree of JSON elements.
+Parse JSON into Tree
 
 ```c
-uint32_t jes_load(struct jes_context* ctx, const char *json_data, uint32_t json_length);
+struct jes_element* jes_load(struct jes_context* ctx, const char* json_data, uint32_t json_length);
 ```
 
 **Parameters**
+  - `ctx` : Initialized JES context.
+  - `json_data` : String of JSON data (not necessarily NUL-terminated)
+  - `json_length` : Length of the JSON data.
 
-- `ctx` – Initialized JES context.
-
-- `json_data` – JSON data string.
-
-- `json_length` – Length of the JSON data.
-
-**Returns**  
-Status of the parsing process (see `jes_status`)
+**Returns**  Root element of the tree (always an OBJECT) or NULL on failure
 
 ---
 
 ### `jes_render`
 
-Renders a JSON tree into a string.
+Render JSON Tree to String
 
 ```c
 uint32_t jes_render(struct jes_context *ctx, char *dst, uint32_t length, bool compact);
 ```
 
 **Parameters**
+  - `ctx` : JES context containing a JSON tree
+  - `dst` : Destination buffer for the rendered JSON string
+  - `length` : Size of destination buffer in bytes
+  - `compact` : If true, generates compact JSON; if false, generates formatted JSON with 2-space indentation
 
-- `ctx` – Initialized JES context.
+**Returns**  Size of the generated JSON string, or 0 on failure
 
-- `dst` – Destination buffer.
-
-- `length` – Size of the destination buffer.
-
-- `compact` – If `true`, renders a compact JSON string; otherwise, formatted with indentation.
-
-**Returns**  
-Size of the JSON string or `0` if rendering failed. (use jes_get_status for the failure code)
-
-Compact JSON output:
+Compact JSON example:
 
 ```json
 {"key1":["value1","value2",null]}
 ```
 
-Formatted JSON output:
+Formatted JSON example:
 
 ```json
 {
@@ -143,114 +160,650 @@ Formatted JSON output:
 
 ### `jes_evaluate`
 
-Evaluates the JSON tree structure and calculates the size of the rendered string.
+Evaluate the JSON tree and calculate required Buffer size for rendering
 
 ```c
 uint32_t jes_evaluate(struct jes_context *ctx, bool compact);
 ```
 
 **Parameters**
+  - `ctx` : Initialized JES context containing a JSON tree
+  - `compact` – If true, calculates size for compact JSON; if false, for formatted JSON
 
-- `ctx` – Initialized JES context.
+**Returns** Required buffer size to render the JSON, or 0 on failure
 
-- `compact` – If `true`, evaluates size of compact JSON string; otherwise, formatted JSON size.
+## Navigating the JSON Tree
 
-**Returns**  
-Size of JSON string or `0` if evaluation fails. (use jes_get_status for the failure code)
+## `jes_get_root`
 
----
-
-### `jes_get_status`
-
-Gets the status of the last process.
-
-```c
-`jes_status jes_get_status(struct jes_context *ctx);
-```
-
-**Parameters**
-
-- `ctx` – Initialized JES context.
-
-**Returns**  
-Status of the last process stored in the context.
-
----
-
-### `jes_get_root`
-
-Returns the root element of the JSON tree.
+Get Root Element
 
 ```c
 struct jes_element* jes_get_root(struct jes_context *ctx);
 ```
 
-Gets the root element of the JSON tree. (This should be the lowest level OBJECT)
+**Parameters**
+  - `ctx` – Initialized JES context.
 
----
+**Returns**  Root element of the JSON tree (always a `JES_OBJECT`) or NULL if tree is empty
 
-### `jes_get_key`
+## `jes_get_parent`
 
-Returns a key element addressed by a parent KEY element and a sequence of key names.
+Get parent Element
 
 ```c
-struct jes_element* jes_get_key(struct jes_context *ctx, struct jes_element *parent_key, const char *keys);
+struct jes_element* jes_get_parent(struct jes_context *ctx, struct jes_element *element);
 ```
 
-**Parameters
+**Parameters**
+  - `ctx` : Initialized JES context.
+  - `element` : Element to find the parent of
 
-- `ctx` – Initialized JES context.
+**Returns** Parent element or NULL if no parent exists
 
-- `parent_key` – A KEY element to start search from or NULL to start the search from root
+## `jes_get_child`
 
-- `keys` – NUL-terminated string containing several key names separated by a dot "."
+Get First Child Element
+
+```c
+struct jes_element* jes_get_child(struct jes_context *ctx, struct jes_element *element);
+```
+
+**Parameters**
+  - `ctx`: Initialized JES context
+  - `element`: Element to get the first child of
+
+**Returns** First child element or NULL if no children exist
+
+## `jes_get_sibling`
+
+Get Next Sibling Element
+
+```c
+struct jes_element* jes_get_sibling(struct jes_context *ctx, struct jes_element *element);
+```
+
+**Parameters**
+  - `ctx`: Initialized JES context
+  - `element`: Element to get the next sibling of
+
+**Returns** Next sibling element or NULL if no more siblings exist
 
 ---
 
-### `jes_stringify_status`
+## `jes_get_parent_type`
 
-Converts a status code to a human-readable string.
+Get Parent Type
+
+```c
+enum jes_type jes_get_parent_type(struct jes_context *ctx, struct jes_element *element);
+```
+
+**Parameters**
+- `ctx`: Initialized JES context
+- `element`: Element to get the parent type of
+
+**Returns** Type of parent element
+
+---
+
+## Working with Objects and Keys
+
+## `jes_get_key`
+
+Find a Key by Path
+
+```c
+struct jes_element* jes_get_key(struct jes_context *ctx, struct jes_element *parent, const char *keys);
+```
+
+**Parameters**
+  - `ctx`: Initialized JES context
+  - `parent`: Starting element (`JES_OBJECT` or `JES_KEY`) to search from
+  - `keys`: Path of keys separated by dots (e.g., "user.address.city")
+
+**Returns** Key element or NULL if not found
+**Note** Supports hierarchical navigation through dot notation
+
+---
+
+## `jes_get_key_value`
+
+Get Value of a Key
+
+```c
+struct jes_element* jes_get_key_value(struct jes_context *ctx, struct jes_element *key);
+```
+
+**Parameters**
+  - `ctx`: Initialized JES context
+  - `key`: Key element to get the value of
+
+**Returns** Value element or NULL if key has no value
+
+---
+
+## `jes_add_key`
+
+Add a Key to an Object
+
+```c
+struct jes_element* jes_add_key(struct jes_context *ctx, struct jes_element *parent, const char *keyword);
+```
+
+**Parameters**
+  - `ctx`: Initialized JES context
+  - `parent`: Parent element (`JES_OBJECT` or `JES_KEY`)
+  - `keyword`: Name of the new key
+
+**Returns** New key element or NULL on failure
+**Note** If parent is a KEY, its value will become an OBJECT if not already
+
+---
+
+## `jes_add_key_before`
+## `jes_add_key_after`
+
+Insert a Key Before or After
+
+```c
+struct jes_element* jes_add_key_before(struct jes_context *ctx, struct jes_element *key, const char *keyword);
+struct jes_element* jes_add_key_after(struct jes_context *ctx, struct jes_element *key, const char *keyword);
+```
+
+**Parameters**
+  - `ctx`: Initialized JES context
+  - `key`: Reference key element
+  - `keyword`: Name of the new key
+
+**Returns** New key element or NULL on failure
+
+---
+
+## `jes_update_key`
+
+Update a Key Name
+
+```c
+uint32_t jes_update_key(struct jes_context *ctx, struct jes_element *key, const char *keyword);
+```
+
+**Parameters**
+  - `ctx`: Initialized JES context
+  - `key`: Key element to update
+  - `keyword`: New name for the key
+
+**Returns** Status code
+**Note** The keyword string must persist for the lifecycle of the context
+
+---
+
+## `jes_update_key_value`
+
+Update a Key Value
+
+```c
+struct jes_element* jes_update_key_value(struct jes_context *ctx, struct jes_element *key, enum jes_type type, const char *value);
+```
+
+**Parameters**
+  - `ctx`: Initialized JES context
+  - `key`: Key element to update its value
+  - `type`: Type for the new value
+  - `value`: String representation of the new value
+
+**Returns** New value element or NULL on failure
+**Note** Existing value elements will be deleted first
+
+---
+
+## `jes_update_key_value_to_object`
+## `jes_update_key_value_to_array`
+## `jes_update_key_value_to_true`
+## `jes_update_key_value_to_false`
+## `jes_update_key_value_to_null`
+
+Convert Key Value to Specific Types
+
+```c
+struct jes_element* jes_update_key_value_to_object(struct jes_context *ctx, struct jes_element *key);
+struct jes_element* jes_update_key_value_to_array(struct jes_context *ctx, struct jes_element *key);
+struct jes_element* jes_update_key_value_to_true(struct jes_context *ctx, struct jes_element *key);
+struct jes_element* jes_update_key_value_to_false(struct jes_context *ctx, struct jes_element *key);
+struct jes_element* jes_update_key_value_to_null(struct jes_context *ctx, struct jes_element *key);
+```
+
+**Parameters**
+  - `ctx`: Initialized JES context
+  - `key`: Key element to update the value of
+
+**Returns** New value element or NULL on failure
+**Note** All previous value elements will be lost
+
+---
+
+## Working with Arrays
+
+## `jes_get_array_size`
+
+Get Array Size
+
+```c
+uint16_t jes_get_array_size(struct jes_context *ctx, struct jes_element *array);
+```
+
+**Parameters**
+  - `ctx`: Initialized JES context
+  - `array`: Array element
+
+**Returns** Number of elements in the array
+
+---
+
+## `jes_get_array_value`
+
+Get Array Value by Index
+
+```c
+struct jes_element* jes_get_array_value(struct jes_context *ctx, struct jes_element *array, int32_t index);
+```
+
+**Parameters**
+  - `ctx`: Initialized JES context
+  - `array`: Array element
+  - `index`: Index of the value to retrieve (negative indices count from the end)
+
+**Returns** Value element or NULL if index is out of bounds
+
+---
+
+## `jes_update_array_value`
+
+Update Array Value
+
+```c
+struct jes_element* jes_update_array_value(struct jes_context *ctx, struct jes_element *array, int32_t index, enum jes_type type, const char *value);
+```
+
+**Parameters**
+  - `ctx`: Initialized JES context
+  - `array`: Array element
+  - `index`: Index of the value to update
+  - `type`: Type for the new value
+  - `value`: String representation of the new value
+
+**Returns** Updated value element or NULL on failure
+
+---
+
+## `jes_append_array_value`
+
+Append Value to Array
+
+```c
+struct jes_element* jes_append_array_value(struct jes_context *ctx, struct jes_element *array, enum jes_type type, const char *value);
+```
+
+**Parameters**
+  - `ctx`: Initialized JES context
+  - `array`: Array element
+  - `type`: Type for the new value
+  - `value`: String representation of the new value
+
+**Returns** New value element or NULL on failure
+
+---
+
+## `jes_add_array_value`
+
+Insert Value into Array
+
+```c
+struct jes_element* jes_add_array_value(struct jes_context *ctx, struct jes_element *array, int32_t index, enum jes_type type, const char *value);
+```
+
+**Parameters**
+  - `ctx`: Initialized JES context
+  - `array`: Array element
+  - `index`: Position to insert the new value (negative indices count from the end)
+  - `type`: Type for the new value
+  - `value`: String representation of the new value
+
+**Returns** New value element or NULL on failure
+**Note** Out-of-bounds positive indices are handled as append, negative as prepend
+
+---
+
+## Element Manipulation
+
+## `jes_add_element`
+
+Generic way to add an Element
+
+```c
+struct jes_element* jes_add_element(struct jes_context *ctx, struct jes_element *parent, enum jes_type type, const char *value);
+```
+
+**Parameters**
+  - `ctx`: Initialized JES context
+  - `parent`: Parent element to add the new element to
+  - `type`: Type for the new element
+  - `value`: String representation of the element value
+
+**Returns** New element or NULL on failure
+
+---
+
+## `jes_delete_element`
+
+Delete an Element
+
+```c
+jes_status jes_delete_element(struct jes_context *ctx, struct jes_element *element);
+```
+
+**Parameters**
+  - `ctx`: Initialized JES context
+  - `element`: Element to delete along with its branch
+
+**Returns** Status code
+
+---
+
+## `jes_get_element_count`
+
+Count Elements
+
+```c
+size_t jes_get_element_count(struct jes_context *ctx);
+```
+
+**Parameters**
+  - `ctx`: Initialized JES context
+
+**Returns** Number of elements in the JSON tree
+
+---
+
+## Error Handling
+
+## `jes_get_status`
+
+```c
+jes_status jes_get_status(struct jes_context *ctx);
+```
+
+**Parameters**
+  - `ctx`: Initialized JES context
+
+**Returns** Status code of the latest operation
+
+---
+
+## `jes_stringify_status`
+
+Convert status codes into human-readable string
 
 ```c
 char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len);
 ```
+**Parameters**
+  - `ctx`: Initialized JES context
+  - `msg`: Buffer to hold the string
+  - `msg_len`: Size of the buffer in bytes
+
+**Returns** Pointer to the buffer for convenient access (e.g., calling the function inside printf())
 
 ---
 
-## Example
+## Iteration Macros
+
+**Iterate Over Elements by Type**
+
+```c
+#define JES_FOR_EACH(ctx_, elem_, type_)
+```
+
+**Iterate Over Array Elements**
+
+```c
+#define JES_ARRAY_FOR_EACH(ctx_, array_, iter_)
+```
+
+**Iterate Over Object Keys**
+
+```c
+#define JES_FOR_EACH_KEY(ctx_, object_, iter_)
+```
+
+---
+
+## Usage Examples
+
+**Basic Parse and Render**
 
 ```c
 #include "jes.h"
-...
-uint8_t work_buffer[0xFFFF];
-const char json_str[] = "{\"key\": \"value\"}";
-struct jes_context *doc;
-struct jes_element *key = NULL;
-struct jes_element *value = NULL;
-jes_status err;
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-doc = jes_init(work_buffer, sizeof(work_buffer));
-if (!doc) {
-    /* Error handling */
+static uint8_t buffer[32 * 1024]; /* 32KB buffer */
+
+int main() {
+  /* Initialize JES context */
+  struct jes_context *ctx = jes_init(buffer, sizeof(buffer));
+  if (!ctx) {
+    fprintf(stderr, "Failed to initialize JES context\n");
+    return 1;
+  }
+
+  /* JSON data to parse */
+  const char *json = "{\"name\":\"John\",\"age\":30,\"city\":\"New York\"}";
+
+  /* Parse JSON */
+  struct jes_element *root = jes_load(ctx, json, strlen(json));
+  if (!root) {
+    fprintf(stderr, "Failed to parse JSON: %d\n", jes_get_status(ctx));
+    return 1;
+  }
+
+  /* Calculate required buffer for rendering if you are using malloc */
+  uint32_t required_size = jes_evaluate(ctx, false); /* Formatted output */
+
+  /* Allocate buffer for rendered JSON */
+  char *output = malloc(required_size + 1);  // +1 for null terminator
+  if (!output) {
+    fprintf(stderr, "Failed to allocate output buffer\n");
+    return 1;
+  }
+
+  /* Render JSON */
+  uint32_t rendered_size = jes_render(ctx, output, required_size, false);
+  if (rendered_size == 0) {
+    fprintf(stderr, "Failed to render JSON: %d\n", jes_get_status(ctx));
+    free(output);
+    return 1;
+  }
+
+  /* Null-terminate and print */
+  output[rendered_size] = '\0';
+  printf("Formatted JSON:\n%s\n", output);
+
+  /* Clean up */
+  free(output);
+  return 0;
 }
+```
 
-err = jes_load(doc, json_str, sizeof(json_str));
-if (err != JES_NO_ERROR) {
-    /* Error handling */
+**Modifying JSON**
+
+```c
+#include "jes.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+static uint8_t buffer[32 * 1024]; /* 32KB buffer */
+
+int main() {
+
+  struct jes_context *ctx = jes_init(buffer, sizeof(buffer));
+
+  /* JSON data to parse */
+  const char *json = "{\"person\":{\"name\":\"John\",\"age\":30}}";
+
+  /* Parse JSON */
+  struct jes_element *root = jes_load(ctx, json, strlen(json));
+
+  /* Find the person object */
+  struct jes_element *person = jes_get_key(ctx, root, "person");
+
+  /* Add email key */
+  struct jes_element *email = jes_add_key(ctx, person, "email");
+  jes_update_key_value(ctx, email, JES_VALUE_STRING, "john@example.com");
+
+  /* Update age */
+  struct jes_element *age = jes_get_key(ctx, person, "age");
+  jes_update_key_value(ctx, age, JES_VALUE_NUMBER, "31");
+
+  /* Add an address object */
+  struct jes_element *addr = jes_add_key(ctx, person, "address");
+  jes_update_key_value_to_object(ctx, addr);
+
+  /* Add fields to address */
+  struct jes_element *city = jes_add_key(ctx, addr, "city");
+  jes_update_key_value(ctx, city, JES_VALUE_STRING, "New York");
+
+  struct jes_element *zip = jes_add_key(ctx, addr, "zip");
+  jes_update_key_value(ctx, zip, JES_VALUE_STRING, "10001");
+
+  /* Add hobbies array */
+  struct jes_element *hobbies = jes_add_key(ctx, person, "hobbies");
+  jes_update_key_value_to_array(ctx, hobbies);
+
+  /* Add items to array */
+  jes_append_array_value(ctx, jes_get_key_value(ctx, hobbies), JES_VALUE_STRING, "reading");
+  jes_append_array_value(ctx, jes_get_key_value(ctx, hobbies), JES_VALUE_STRING, "running");
+  jes_append_array_value(ctx, jes_get_key_value(ctx, hobbies), JES_VALUE_STRING, "coding");
+
+  /* Render modified JSON */
+  uint32_t required_size = jes_evaluate(ctx, false);
+  char *output = malloc(required_size + 1);
+  uint32_t rendered_size = jes_render(ctx, output, required_size, false);
+  output[rendered_size] = '\0';
+
+  printf("Modified JSON:\n%s\n", output);
+
+  /* Clean up */
+  free(output);
+
+  return 0;
 }
+```
 
-key = jes_get_key(doc, NULL, "key");
-if (key) {
-    value = jes_get_key_value(doc, key);
-    if (value) {
-        /* Process value */
+**Iterating Through Elements**
+
+```c
+#include "jes.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+static uint8_t buffer[32 * 1024]; /* 32KB buffer */
+
+/* Print key-value pairs in an object */
+void print_object(struct jes_context *ctx, struct jes_element *obj, int indent) {
+    struct jes_element *key = NULL;
+    char spaces[64] = {0};
+
+    /* Create indentation */
+    memset(spaces, ' ', indent * 2);
+    spaces[indent * 2] = '\0';
+
+    JES_FOR_EACH_KEY(ctx, obj, key) {
+      struct jes_element *value = jes_get_key_value(ctx, key);
+      printf("%s- %.*s: ", spaces, key->length, key->value);
+
+      if (!value) {
+        printf("null\n");
+        continue;
+      }
+
+        switch (value->type) {
+          case JES_VALUE_STRING:
+            printf("\"%.*s\"\n", value->length, value->value);
+            break;
+          case JES_VALUE_NUMBER:
+            printf("%.*s\n", value->length, value->value);
+            break;
+          case JES_VALUE_TRUE:
+            printf("true\n");
+            break;
+          case JES_VALUE_FALSE:
+            printf("false\n");
+            break;
+          case JES_VALUE_NULL:
+            printf("null\n");
+            break;
+          case JES_OBJECT:
+            printf("{\n");
+            print_object(ctx, value, indent + 1);
+            printf("%s}\n", spaces);
+            break;
+          case JES_ARRAY:
+            printf("[\n");
+            struct jes_element *item = NULL;
+            JES_ARRAY_FOR_EACH(ctx, value, item) {
+            printf("%s  ", spaces);
+            switch (item->type) {
+              case JES_VALUE_STRING:
+                printf("\"%.*s\"\n", item->length, item->value);
+                break;
+              case JES_VALUE_NUMBER:
+                printf("%.*s\n", item->length, item->value);
+                break;
+              default:
+                printf("(other type)\n");
+                break;
+            }
+          }
+          printf("%s]\n", spaces);
+          break;
+      default:
+        printf("(unknown type)\n");
+        break;
     }
+  }
+}
+
+int main() {
+    /* Allocate buffer for JES context */
+    struct jes_context *ctx = jes_init(buffer, sizeof(buffer));
+
+    /* JSON data to parse */
+    const char *json = "{"
+        "\"name\":\"John\","
+        "\"details\":{"
+            "\"age\":30,"
+            "\"married\":true,"
+            "\"children\":null"
+        "},"
+        "\"hobbies\":[\"reading\",\"swimming\",\"hiking\"]"
+    "}";
+
+    /* Parse JSON */
+    struct jes_element *root = jes_load(ctx, json, strlen(json));
+
+    printf("JSON Structure:\n");
+    print_object(ctx, root, 0);
+    return 0;
 }
 ```
 
 ## Logging
 
-A debug build of JES also produces log outputs for Tokenizer, Allocator and Serializer.
+A debug build of JES produces log outputs for Tokenizer, Allocator and Serializer.
 
 ```dos
 JES - parsing demo.json...
