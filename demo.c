@@ -175,7 +175,7 @@ int main(void)
     printf("\n Render Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
   }
   else {
-    printf("\n %.*s\n\n", out_size, output);
+    printf("\n%.*s\n\n", out_size, output);
   }
 
   printf("\nSerilize JSON tree with indention...\n\n");
