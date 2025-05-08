@@ -389,6 +389,7 @@ static struct jes_token jes_get_token(struct jes_context *ctx)
       /* End of data. If token is incomplete, mark it as invalid. */
       if (token.type) {
         token.type = JES_TOKEN_INVALID;
+        ctx->status = JES_UNEXPECTED_EOF;
       }
       break;
     }
@@ -547,9 +548,7 @@ static struct jes_node* jes_add_key_node(struct jes_context *ctx, struct jes_nod
      Only the last key:value will be reported if the keys are duplicated. */
   struct jes_node *node = jes_find_duplicate_key_node(ctx, parent, keyword_length, keyword);
   if (node) {
-    /* Re-use the duplicate node after deleting its value */
-    jes_delete_node(ctx, GET_FIRST_CHILD(ctx, node));
-    new_node = node;
+    ctx->status = JES_DUPLICATE_KEY;
   }
   else
 #endif
@@ -892,7 +891,10 @@ struct jes_element* jes_load(struct jes_context *ctx, const char *json_data, uin
         break;
 
       case JES_TOKEN_INVALID:
-        ctx->status = JES_PARSING_FAILED;
+        /* Do not overwrite errors from Tokenizer */
+        if (ctx->status == JES_NO_ERROR) {
+          ctx->status = JES_PARSING_FAILED;
+        }
         break;
 
       default:
@@ -902,14 +904,8 @@ struct jes_element* jes_load(struct jes_context *ctx, const char *json_data, uin
     }
   } while ((ctx->status == JES_NO_ERROR) && (ctx->token.type != JES_TOKEN_EOF));
 
-  /* TODO: test this part */
-  if (ctx->status == JES_NO_ERROR) {
-    if (ctx->token.type != JES_TOKEN_EOF) {
-      ctx->status = JES_UNEXPECTED_TOKEN;
-    }
-    else if (ctx->iter) {
+  if ((ctx->status == JES_NO_ERROR) && (ctx->iter != NULL)) {
       ctx->status = JES_UNEXPECTED_EOF;
-    }
   }
 
   return ctx->status == JES_NO_ERROR ? (struct jes_element*)ctx->root : NULL;
