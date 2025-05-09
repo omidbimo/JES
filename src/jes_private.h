@@ -77,7 +77,7 @@ struct jes_context {
   uint32_t status;
   /* Extended status code. In some cases provides more detailed information about the status. */
   uint32_t ext_status;
-  /*  */
+  /* State of the parser state machine or the serializer state machine */
   enum jes_state state;
   /* Number of nodes in the current JSON */
   uint32_t node_count;
