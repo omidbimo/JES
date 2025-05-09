@@ -18,7 +18,7 @@
   tok.offset = offset_; \
   tok.length = size_;
 
-#define IS_SPACE(c) ((c==' ') || (c=='\t') || (c=='\r') || (c=='\n'))
+#define IS_SPACE(c) ((c==' ') || (c=='\t') || (c=='\r') || (c=='\n') || (c=='\f'))
 #define IS_NEW_LINE(c) ((c=='\r') || (c=='\n'))
 #define IS_DIGIT(c) ((c >= '0') && (c <= '9'))
 #define IS_ESCAPE(c) ((c=='\\') || (c=='\"') || (c=='\/') || (c=='\b') || \
@@ -379,7 +379,7 @@ static inline bool jes_get_specific_token(struct jes_context *ctx,
   return tokenizing_completed;
 }
 
-static struct jes_token jes_get_token(struct jes_context *ctx)
+static jes_status jes_get_token(struct jes_context *ctx)
 {
   struct jes_token token = { 0 };
 
@@ -388,7 +388,6 @@ static struct jes_token jes_get_token(struct jes_context *ctx)
     if ((++ctx->offset >= ctx->json_size) || (ctx->json_data[ctx->offset] == '\0')) {
       /* End of data. If token is incomplete, mark it as invalid. */
       if (token.type) {
-        token.type = JES_TOKEN_INVALID;
         ctx->status = JES_UNEXPECTED_EOF;
       }
       break;
@@ -461,7 +460,10 @@ static struct jes_token jes_get_token(struct jes_context *ctx)
       if (ch == '\"') { /* End of STRING. '\"' symbol isn't a part of token. */
         break;
       }
-      /* TODO: add checking for scape symbols */
+      if ((ch =='\b') || (ch =='\f') || (ch =='\n') || (ch =='\r') || (ch =='\t')) {
+        ctx->status = JES_UNEXPECTED_SYMBOL;
+        break;
+      }
       token.length++;
       continue;
     }
@@ -490,14 +492,15 @@ static struct jes_token jes_get_token(struct jes_context *ctx)
       }
       continue;
     }
-
+  printf("\nWoooooooooow");
     token.type = JES_TOKEN_INVALID;
     break;
   }
 
   JES_LOG_TOKEN(token.type, token.offset, token.length, &ctx->json_data[token.offset]);
 
-  return token;
+  ctx->token = token;
+  return ctx->status;
 }
 
 #ifndef JES_ALLOW_DUPLICATE_KEYS
@@ -621,6 +624,21 @@ struct jes_context* jes_init(void *buffer, uint32_t buffer_size)
 
   ctx->cookie = JES_CONTEXT_COOKIE;
   return ctx;
+}
+
+void jes_reset(struct jes_context *ctx)
+{
+  if (JES_IS_INITIATED(ctx)) {
+    ctx->status = JES_NO_ERROR;
+    ctx->node_count = 0;
+    ctx->json_data = NULL;
+    ctx->offset = (uint32_t)-1;
+    ctx->index = 0;
+    ctx->number_tokenizer = jes_integer_tokenizer;
+    ctx->iter = NULL;
+    ctx->root = NULL;
+    ctx->free = NULL;
+  }
 }
 
 static inline void jes_parser_on_opening_brace(struct jes_context *ctx)
@@ -842,13 +860,14 @@ struct jes_element* jes_load(struct jes_context *ctx, const char *json_data, uin
     return NULL;
   }
 
+  jes_reset(ctx);
+
   ctx->state = JES_EXPECT_OBJECT;
   ctx->json_data = json_data;
   ctx->json_size = json_length;
-  ctx->status = JES_NO_ERROR;
-
+  printf("\n size of json: %d", json_length);
   do {
-    ctx->token = jes_get_token(ctx);
+    if (jes_get_token(ctx) != JES_NO_ERROR) break;
 
     switch (ctx->token.type) {
 
