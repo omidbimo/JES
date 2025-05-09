@@ -15,8 +15,6 @@ int main(void)
   uint32_t idx;
 
   struct jes_context *doc = NULL;
-  char a[4] = {0};
-  struct jes_context *dummy_ctx = (struct jes_context *)a;
   size_t out_size;
 
   char err_msg[250] = {'\0'};
@@ -32,6 +30,7 @@ int main(void)
   const char json_str_positive_tests[][500] = {
         "{\"key\": \"value\"}",
         "{\"key\": [\"value\", {}]}",
+        "     {    \"key\"     :   \"value\"    }   "
         };
 
   const char json_str_negative_tests[][500] = {
@@ -111,6 +110,32 @@ int main(void)
       return -1;
     }
   }
+
+  /* Testing some specific cases */
+    doc = jes_init(work_buffer, sizeof(work_buffer));
+    if (!doc) {
+      printf("\n Context initiation failed!");
+      return -1;
+    }
+    for (idx = 2; idx <= sizeof("{\"key\":\"value\"}"); idx++) {
+      printf("\n Parsing %.*s ", sizeof("{\"key\":\"value\"}")-idx, "{\"key\":\"value\"}");
+      if (NULL == jes_load(doc, "{\"key\":\"value\"}", sizeof("{\"key\":\"value\"}")-idx)) {
+        printf("  %s", jes_stringify_status(doc, err_msg, sizeof(err_msg)));
+      }
+      else {
+        printf("\nUnexpected successful parsing of invalid JSON string!");
+        return -1;
+      }
+    }
+
+    printf("\n Passing NULL as the json string parameter");
+    if (NULL == jes_load(doc, NULL, sizeof("{\"key\":\"value\"}"))) {
+      printf("  %s", jes_stringify_status(doc, err_msg, sizeof(err_msg)));
+    }
+    else {
+      printf("\nUnexpected successful parsing of invalid JSON string!");
+      return -1;
+    }
 
   printf("\nTest finished successfully.");
   return 0;

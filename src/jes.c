@@ -833,6 +833,15 @@ static inline void jes_parser_on_value(struct jes_context *ctx, enum jes_type va
 
 struct jes_element* jes_load(struct jes_context *ctx, const char *json_data, uint32_t json_length)
 {
+  if ((ctx == NULL) || !JES_IS_INITIATED(ctx)) {
+    return NULL;
+  }
+
+  if (json_data == NULL) {
+    ctx->status = JES_INVALID_PARAMETER;
+    return NULL;
+  }
+
   ctx->state = JES_EXPECT_OBJECT;
   ctx->json_data = json_data;
   ctx->json_size = json_length;
@@ -915,6 +924,10 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
 {
   uint32_t json_len = 0;
   uint32_t indention = 0;
+
+  if ((ctx == NULL) || !JES_IS_INITIATED(ctx)) {
+    return 0;
+  }
 
   if (!ctx->root) {
     return 0;
@@ -1140,6 +1153,15 @@ uint32_t jes_render(struct jes_context *ctx, char *buffer, uint32_t length, bool
   struct jes_node *iter = ctx->root;
   uint32_t required_buffer = 0;
   uint32_t indention = 0;
+
+  if ((ctx == NULL) || !JES_IS_INITIATED(ctx)) {
+    return 0;
+  }
+
+  if (buffer == NULL) {
+    ctx->status = JES_INVALID_PARAMETER;
+    return 0;
+  }
 
   required_buffer = jes_evaluate(ctx, compact);
 
