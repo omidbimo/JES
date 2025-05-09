@@ -6,8 +6,8 @@
 
 /* Allow duplicate keys (default: disabled)
  * When enabled, multiple keys with the same name can exist in the same object
- *      Enable this feature with caution. It improves the parser performance.
- *      But the parser always delivers the first key it founds.
+ *      Use this feature with caution. It improves the parser performance-
+ *      but the parser will always deliver only the first key.
  * When disabled, JES will generate error when detecting duplicate keys.
  * Note: Disabling this reduces parser performance due to duplicate key detection
  */
