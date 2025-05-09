@@ -10,6 +10,7 @@ static char jes_status_str[][JES_HELPER_STR_LENGTH] = {
   "PARSING_FAILED",
   "RENDER_FAILED",
   "OUT_OF_MEMORY",
+  "UNEXPECTED_SYMBOL",
   "UNEXPECTED_TOKEN",
   "UNEXPECTED_ELEMENT",
   "UNEXPECTED_EOF",
@@ -95,9 +96,9 @@ char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len)
     case JES_NO_ERROR:
       snprintf(msg, msg_len, "%s(#%d)", jes_status_str[ctx->status], ctx->status);
       break;
-    case JES_UNEXPECTED_TOKEN:
+    case JES_UNEXPECTED_SYMBOL:
       snprintf( msg, msg_len,
-                "%s(#%d): <%s> @[line:%d, pos:%d] (\"%.*s\") state:<%s> after <%s> element",
+                "%s(#%d): Token<%s> @[line:%d, pos:%d] (\"%.*s\") state:<%s> after <%s> element",
                 jes_status_str[ctx->status],
                 ctx->status,
                 jes_token_type_str[ctx->token.type],
@@ -105,13 +106,26 @@ char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len)
                 ctx->offset,
                 ctx->token.length,
                 &ctx->json_data[ctx->token.offset],
-                jes_state_str[ctx->ext_status],
+                jes_state_str[ctx->state],
+                ctx->iter != NULL ? jes_node_type_str[ctx->iter->json_tlv.type] : "");
+      break;
+    case JES_UNEXPECTED_TOKEN:
+      snprintf( msg, msg_len,
+                "%s(#%d): Token<%s> @[line:%d, pos:%d] (\"%.*s\") state:<%s> after <%s> element",
+                jes_status_str[ctx->status],
+                ctx->status,
+                jes_token_type_str[ctx->token.type],
+                ctx->line_number,
+                ctx->offset,
+                ctx->token.length,
+                &ctx->json_data[ctx->token.offset],
+                jes_state_str[ctx->state],
                 ctx->iter != NULL ? jes_node_type_str[ctx->iter->json_tlv.type] : "");
       break;
 
     case JES_PARSING_FAILED:
       snprintf( msg, msg_len,
-                "%s(#%d): <%s> @[line:%d, pos:%d] (\"%.*s\")",
+                "%s(#%d): Token<%s> @[line:%d, pos:%d] (\"%.*s\")",
                 jes_status_str[ctx->status],
                 ctx->status,
                 jes_token_type_str[ctx->token.type],
@@ -137,6 +151,19 @@ char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len)
                 ctx->iter->json_tlv.length,
                 ctx->iter->json_tlv.value,
                 jes_state_str[ctx->state]);
+      break;
+    case JES_UNEXPECTED_EOF:
+      snprintf( msg, msg_len,
+                "%s(#%d): Token<%s> @[line:%d, pos:%d] (\"%.*s\") state:<%s> after <%s> element",
+                jes_status_str[ctx->status],
+                ctx->status,
+                jes_token_type_str[ctx->token.type],
+                ctx->line_number,
+                ctx->offset,
+                ctx->token.length,
+                &ctx->json_data[ctx->token.offset],
+                jes_state_str[ctx->state],
+                ctx->iter != NULL ? jes_node_type_str[ctx->iter->json_tlv.type] : "");
       break;
     default:
       snprintf(msg, msg_len, "%s(#%d)", jes_status_str[ctx->status], ctx->status);
