@@ -32,21 +32,16 @@ While JES is designed to be a robust and efficient JSON parser for embedded and 
 
 JES is optimized for small JSON documents (typically a few kilobytes) used in configuration or control systems. It is not intended for parsing or manipulating large, complex JSON structures. Below are key limitations to be aware of:
 
-- **Linear Search Performance**
-  JES does not implement fast lookup algorithms like binary search or hashing. All element searches are linear, which may become inefficient for larger datasets.
+- **Linear Search Performance** - JES does not implement fast lookup algorithms like binary search or hashing. All element searches are linear, which may become inefficient for larger datasets.
 
-- **No Unicode Support**
-  JES does not support Unicode encoding. All strings are expected to be ASCII-compatible.
+- **No Unicode Support** - JES does not support Unicode encoding. All strings are expected to be ASCII-compatible.
 
-- **No Dynamic Memory Allocation**
-  JES avoids dynamic memory allocation and works with user-provided memory buffers. This has implications:
+- **No Dynamic Memory Allocation** - JES avoids dynamic memory allocation and works with user-provided memory buffers. This has implications:
 
   - The user must pre-allocate enough memory based on an estimate of the maximum JSON size.
 
   - When creating or modifying JSON elements, the user is responsible for storing and maintaining any new string values.
 
-- **Not Thread-Safe**
-  JES does not provide internal synchronization and is not safe for use across multiple threads unless externally protected.
+- **Not Thread-Safe** - JES does not provide internal synchronization and is not safe for use across multiple threads unless externally protected.
 
-- **Limited JSON Feature Support**
-  JES focuses on core JSON parsing and does not currently support advanced features such as JSON Pointer, JSONPath, or other modern JSON querying standards.
+- **Limited JSON Feature Support** - JES focuses on core JSON parsing and does not currently support advanced features such as JSON Pointer, JSONPath, or other modern JSON querying standards.
