@@ -4,23 +4,49 @@
 
 ## Overview
 
-JES provides a simple and efficient API to:  
+JES provides a simple and efficient API to:
 
-- Parse a JSON string into a tree of JSON elements.  
-- Modify the elements in place.  
-- Serialize the tree back into a JSON string.  
+- Parse a JSON string into a tree of JSON elements.
+- Modify the elements in place.
+- Serialize the tree back into a JSON string.
 
 ## Key Features
 
-- ✅ **No dynamic memory allocation** – All objects are stored in a single working buffer, ensuring predictable memory usage.  
-- ✅ **Non-recursive parser** – Designed to handle deep JSON structures without relying on recursion, making it suitable for environments with limited stack size.  
-- ✅ **Concurrent document handling** – Supports parsing multiple JSON documents simultaneously by using a separate parser context and working buffer for each document.  
-- ✅ **High performance** – Operates directly on the input buffer without copying data, ensuring minimal processing overhead.  
-- ✅ **No external dependencies** – Fully self-contained, making it easy to integrate into embedded projects.  
-- ✅ **Configurable key handling** – Can be configured at compile time to support or overwrite duplicate keys.  
+- ✅ **No dynamic memory allocation** – All objects are stored in a single working buffer, ensuring predictable memory usage.
+- ✅ **Non-recursive parser** – Designed to handle deep JSON structures without relying on recursion, making it suitable for environments with limited stack size.
+- ✅ **Concurrent document handling** – Supports parsing multiple JSON documents simultaneously by using a separate parser context and working buffer for each document.
+- ✅ **High performance** – Operates directly on the input buffer without copying data, ensuring minimal processing overhead.
+- ✅ **No external dependencies** – Fully self-contained, making it easy to integrate into embedded projects.
+- ✅ **Configurable key handling** – Can be configured at compile time to support or overwrite duplicate keys.
 - ✅ **Flexible output formatting** – The output can be generated as a compact string or formatted with indentation for readability.
 
-## 
+
 
 ## [API Documentation](https://github.com/omidbimo/JES/blob/main/documentation.md)
 
+
+
+## Limitations
+
+While JES is designed to be a robust and efficient JSON parser for embedded and resource-constrained environments, it has certain limitations that should be taken into account when evaluating it for your project.
+
+JES is optimized for small JSON documents (typically a few kilobytes) used in configuration or control systems. It is not intended for parsing or manipulating large, complex JSON structures. Below are key limitations to be aware of:
+
+- **Linear Search Performance**
+  JES does not implement fast lookup algorithms like binary search or hashing. All element searches are linear, which may become inefficient for larger datasets.
+
+- **No Unicode Support**
+  JES does not support Unicode encoding. All strings are expected to be ASCII-compatible.
+
+- **No Dynamic Memory Allocation**
+  JES avoids dynamic memory allocation and works with user-provided memory buffers. This has implications:
+
+  - The user must pre-allocate enough memory based on an estimate of the maximum JSON size.
+
+  - When creating or modifying JSON elements, the user is responsible for storing and maintaining any new string values.
+
+- **Not Thread-Safe**
+  JES does not provide internal synchronization and is not safe for use across multiple threads unless externally protected.
+
+- **Limited JSON Feature Support**
+  JES focuses on core JSON parsing and does not currently support advanced features such as JSON Pointer, JSONPath, or other modern JSON querying standards.
