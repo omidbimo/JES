@@ -1,6 +1,7 @@
 ## Table of Contents
 
 - [Overview](#overview)
+- [Compile-time-Configuration](#Compile-time-Configuration)
 - [Core Data Structures](#Core-Data-Structures)
 - [Functions](#Functions)
   - [Initialization](#Initialization)
@@ -21,6 +22,25 @@
 ## Overview
 
 JES represents JSON data as a tree of typed elements, with each element having a specific type, length, and value pointer. The library is designed to be memory-efficient, using a pre-allocated buffer for context and JSON nodes, and provides a comprehensive API for navigating, modifying, and rendering JSON structures.
+
+## Compile time Configuration
+
+The library behavior can be configured by defining the following macros:
+
+```c
+/* Allow duplicate keys (default: disabled)
+ * When enabled, multiple keys with the same name can exist in the same object
+ * When disabled, JES will generate error when detecting duplicate keys
+ * Note: Enabling this reduces parser performance due to duplicate key detection
+ */
+#define JES_ALLOW_DUPLICATE_KEYS
+
+/* Use 32-bit node descriptors (default: 16-bit)
+ * Enable this to parse very large JSON files (up to 4,294,967,294 nodes)
+ * With 16-bit descriptors, the parser can address up to 65534 nodes
+ */
+#define JES_USE_32BIT_NODE_DESCRIPTOR
+```
 
 ### Core Data Structures
 
