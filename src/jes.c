@@ -865,7 +865,7 @@ struct jes_element* jes_load(struct jes_context *ctx, const char *json_data, uin
   ctx->state = JES_EXPECT_OBJECT;
   ctx->json_data = json_data;
   ctx->json_size = json_length;
-  printf("\n size of json: %d", json_length);
+
   do {
     if (jes_get_token(ctx) != JES_NO_ERROR) break;
 
@@ -1395,7 +1395,7 @@ enum jes_type jes_get_parent_type(struct jes_context *ctx, struct jes_element *e
   return JES_UNKNOWN;
 }
 
-uint32_t jes_delete_element(struct jes_context *ctx, struct jes_element *element)
+jes_status jes_delete_element(struct jes_context *ctx, struct jes_element *element)
 {
   if ((ctx == NULL) || !JES_IS_INITIATED(ctx)) {
     return JES_INVALID_CONTEXT;

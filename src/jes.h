@@ -114,8 +114,10 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact);
  */
 jes_status jes_get_status(struct jes_context *ctx);
 
-/* Delete an element and its whole branch. */
-uint32_t jes_delete_element(struct jes_context *ctx, struct jes_element *element);
+/* Delete an element and its whole branch.
+  return: Status code
+ */
+jes_status jes_delete_element(struct jes_context *ctx, struct jes_element *element);
 
 /* Number of JSON tree element count */
 size_t jes_get_element_count(struct jes_context *ctx);
