@@ -371,7 +371,7 @@ static inline bool jes_get_specific_token(struct jes_context *ctx,
   bool tokenizing_completed = false;
   token->length++;
   if (token->length == len) {
-    if (0 != (strncmp(&ctx->json_data[token->offset], cmp_str, len))) {
+    if (strncmp(&ctx->json_data[token->offset], cmp_str, len) != 0) {
       token->type = JES_TOKEN_INVALID;
     }
     tokenizing_completed = true;
@@ -1218,6 +1218,9 @@ uint32_t jes_render(struct jes_context *ctx, char *buffer, uint32_t length, bool
       }
 
       *dst++ = '"';
+      /* The JSON string has already been validated for size and structure,
+         so this memcpy can proceed safely without further boundary checks. */
+      assert((dst + iter->json_tlv.length) <= (buffer + length));
       dst = (char*)memcpy(dst, iter->json_tlv.value, iter->json_tlv.length) + iter->json_tlv.length;
       *dst++ = '"';
       *dst++ = ':';
@@ -1237,6 +1240,9 @@ uint32_t jes_render(struct jes_context *ctx, char *buffer, uint32_t length, bool
       }
 
       *dst++ = '"';
+      /* The JSON string has already been validated for size and structure,
+         so this memcpy can proceed safely without further boundary checks. */
+      assert((dst + iter->json_tlv.length) <= (buffer + length));
       dst = (char*)memcpy(dst, iter->json_tlv.value, iter->json_tlv.length) + iter->json_tlv.length;
       *dst++ = '"';
     }
@@ -1252,6 +1258,9 @@ uint32_t jes_render(struct jes_context *ctx, char *buffer, uint32_t length, bool
           dst += indention;
         }
       }
+      /* The JSON string has already been validated for size and structure,
+         so this memcpy can proceed safely without further boundary checks. */
+      assert((dst + iter->json_tlv.length) <= (buffer + length));
       dst = (char*)memcpy(dst, iter->json_tlv.value, iter->json_tlv.length) + iter->json_tlv.length;
     }
     else if (iter->json_tlv.type == JES_ARRAY) {
@@ -1432,8 +1441,13 @@ struct jes_element* jes_get_key(struct jes_context *ctx, struct jes_element *par
     return NULL;
   }
 
-  if ((parent->type != JES_OBJECT) && (parent->type != JES_KEY)) {
+  key_len = strnlen(keys, JES_MAX_VALUE_LENGTH);
+  if (key_len == JES_MAX_VALUE_LENGTH) {
+    ctx->status = JES_INVALID_PARAMETER;
+    return NULL;
+  }
 
+  if ((parent->type != JES_OBJECT) && (parent->type != JES_KEY)) {
     ctx->status = JES_INVALID_PARAMETER;
     return NULL;
   }
@@ -1458,6 +1472,7 @@ struct jes_element* jes_get_key(struct jes_context *ctx, struct jes_element *par
       keys = keys + key_len + sizeof(*dot);
     }
     else {
+      /* keys length has already been validated to make sure a buffer over read won't happen. */
       key_len = strlen(keys);
       keys = keys + key_len;
     }
@@ -1465,7 +1480,7 @@ struct jes_element* jes_get_key(struct jes_context *ctx, struct jes_element *par
     iter = GET_FIRST_CHILD(ctx, iter);
 
     while ((iter) && (iter->json_tlv.type == JES_KEY)) {
-      if ((iter->json_tlv.length == key_len) && (0 == memcmp(iter->json_tlv.value, key, key_len))) {
+      if ((iter->json_tlv.length == key_len) && (memcmp(iter->json_tlv.value, key, key_len) == 0)) {
         break;
       }
       iter = GET_SIBLING(ctx, iter);
@@ -1987,7 +2002,7 @@ struct jes_element* jes_add_array_value(struct jes_context *ctx, struct jes_elem
     if (anchor_node != NULL) {
       new_node->sibling = JES_GET_NODE_INDEX(ctx, anchor_node);
 
-      if (((struct jes_node*)array)->first_child ==  JES_GET_NODE_INDEX(ctx, anchor_node)) {
+      if (((struct jes_node*)array)->first_child == JES_GET_NODE_INDEX(ctx, anchor_node)) {
         /* Inserting the new node at index 0 */
         ((struct jes_node*)array)->first_child = JES_GET_NODE_INDEX(ctx, new_node);
       }
