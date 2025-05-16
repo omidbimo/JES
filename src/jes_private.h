@@ -4,6 +4,16 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#ifdef JES_ENABLE_FAST_KEY_SEARCH
+  #include "jes_keymap.h"
+#endif
+
+#ifdef JES_USE_32BIT_NODE_DESCRIPTOR
+  #define JES_INVALID_INDEX 0xFFFFFFFF
+#else
+  #define JES_INVALID_INDEX 0xFFFF
+#endif
+
 #define HAS_PARENT(node_ptr) ((node_ptr)->parent < JES_INVALID_INDEX)
 #define HAS_SIBLING(node_ptr) ((node_ptr)->sibling < JES_INVALID_INDEX)
 #define HAS_FIRST_CHILD(node_ptr) ((node_ptr)->first_child < JES_INVALID_INDEX)
@@ -22,6 +32,9 @@
 #define PARENT_TYPE(ctx_, node_ptr) (HAS_PARENT(node_ptr) ? ctx_->node_pool[(node_ptr)->parent].json_tlv.type : JES_UNKNOWN)
 
 #define JES_GET_NODE_INDEX(ctx_, node_) ((jes_node_descriptor)((node_) - ctx_->node_pool))
+
+#define JES_CONTEXT_COOKIE 0xABC09DEF
+#define JES_IS_INITIATED(ctx_) (ctx_->cookie == JES_CONTEXT_COOKIE)
 
 #ifdef JES_USE_32BIT_NODE_DESCRIPTOR
 /* A 32bit node descriptor limits the total number of nodes to 4294967295.

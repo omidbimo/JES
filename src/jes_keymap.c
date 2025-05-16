@@ -103,9 +103,8 @@ void jes_hash_table_remove(struct jes_context* ctx, struct jes_node* parent_obje
   size_t index;
 
   assert(parent_object != NULL);
-  printf("\n....jes_hash_table_remove...");
-  hash = table->hash_fn(JES_GET_NODE_INDEX(ctx, parent_object), key->json_tlv.value, key->json_tlv.length);
 
+  hash = table->hash_fn(JES_GET_NODE_INDEX(ctx, parent_object), key->json_tlv.value, key->json_tlv.length);
   index = hash % table->capacity;
 
   /* Linear probing to find the key */
@@ -114,7 +113,6 @@ void jes_hash_table_remove(struct jes_context* ctx, struct jes_node* parent_obje
         (lookup_entries[index].key_element->length == key->json_tlv.length) &&
         (memcmp(lookup_entries[index].key_element->value, key->json_tlv.value, key->json_tlv.length) == 0)) {
       lookup_entries[index].key_element = NULL;
-      printf("\n....done.");
       break;
     }
     index = (index + 1) % table->capacity;
@@ -129,7 +127,6 @@ struct jes_hash_table* jes_init_hash_table(struct jes_context* ctx, void *buffer
   table->size = buffer_size - sizeof(struct jes_hash_table);
   table->capacity = table->size / sizeof(struct jes_hash_entry);
   table->entries = (struct jes_hash_entry*)(table + 1);
-  printf("\n  &entries: %X, buffer: %X", table->entries, buffer);
   ctx->find_key_fn = jes_find_key_lookup_table;
 
   return table;

@@ -67,6 +67,8 @@ struct jes_context;
  */
 struct jes_context* jes_init(void *buffer, uint32_t buffer_size);
 
+void jes_reset(struct jes_context *ctx);
+
 /* Loads a string JSON and parse it into a tree of JSON nodes.
  * param [in] ctx is an initialized context
  * param [in] json_data is a string of ascii characters. (no need to be NUL terminated)
