@@ -16,8 +16,6 @@
 
 #define HAS_PARENT(node_ptr) (((node_ptr) != NULL) ? (node_ptr)->parent < JES_INVALID_INDEX : false)
 #define HAS_SIBLING(node_ptr) (((node_ptr) != NULL) ? (node_ptr)->sibling < JES_INVALID_INDEX : false)
-#define HAS_FIRST_CHILD(node_ptr) ((node_ptr)->first_child < JES_INVALID_INDEX)
-#define HAS_LAST_CHILD(node_ptr) ((node_ptr)->last_child < JES_INVALID_INDEX)
 #define HAS_CHILD(node_ptr) (((node_ptr) != NULL) ? (node_ptr)->last_child < JES_INVALID_INDEX : false)
 
 #define GET_PARENT(ctx_, node_ptr) (HAS_PARENT(node_ptr) ? &ctx_->node_pool[(node_ptr)->parent] : NULL)

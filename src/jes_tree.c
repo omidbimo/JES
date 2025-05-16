@@ -8,10 +8,8 @@
 #include "jes_logger.h"
 
 #ifndef NDEBUG
-  #define JES_LOG_TOKEN jes_log_token
   #define JES_LOG_NODE  jes_log_node
 #else
-  #define JES_LOG_TOKEN(...)
   #define JES_LOG_NODE(...)
 #endif
 
@@ -87,6 +85,16 @@ bool jes_validate_node(struct jes_context* ctx, struct jes_node* node)
   }
 
   return false;
+}
+
+enum jes_type jes_get_parent_type(struct jes_context *ctx, struct jes_element *element)
+{
+  struct jes_element *parent = jes_get_parent(ctx, element);
+  if (parent) {
+    return parent->type;
+  }
+
+  return JES_UNKNOWN;
 }
 
 struct jes_node* jes_get_parent_node_of_type(struct jes_context *ctx,
@@ -171,7 +179,7 @@ struct jes_node* jes_insert_node(struct jes_context* ctx,
         /* There is no node before. Prepend node */
         new_node->sibling = parent->first_child;
         parent->first_child = JES_NODE_INDEX(ctx, new_node);
-        if (!HAS_LAST_CHILD(parent)) {
+        if (!HAS_CHILD(parent)) {
           parent->last_child = JES_NODE_INDEX(ctx, new_node);
         }
       }
@@ -193,21 +201,10 @@ struct jes_node* jes_insert_node(struct jes_context* ctx,
   return new_node;
 }
 
-void jes_add_object_node(struct jes_context* ctx)
-{
-  struct jes_node* new_node = NULL;
-  /* Append node */
-  new_node = jes_insert_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter),
-                             JES_OBJECT, ctx->token.length, &ctx->json_data[ctx->token.offset]);
-  if (new_node) {
-    ctx->iter = new_node;
-  }
-}
-
-struct jes_node* jes_add_key_node_after(struct jes_context* ctx,
-                                        struct jes_node* parent_object,
-                                        struct jes_node* anchor,
-                                        uint16_t keyword_length, const char* keyword)
+struct jes_node* jes_insert_key_node(struct jes_context* ctx,
+                                     struct jes_node* parent_object,
+                                     struct jes_node* anchor,
+                                     uint16_t keyword_length, const char* keyword)
 {
   struct jes_node* new_node = NULL;
   if (parent_object) {
@@ -236,28 +233,6 @@ struct jes_node* jes_add_key_node_after(struct jes_context* ctx,
   return new_node;
 }
 
-void jes_add_array_node(struct jes_context* ctx)
-{
-  struct jes_node* new_node = NULL;
-  /* Append node */
-  new_node = jes_insert_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter),
-                             JES_ARRAY, ctx->token.length, &ctx->json_data[ctx->token.offset]);
-  if (new_node) {
-    ctx->iter = new_node;
-  }
-}
-
-void jes_add_value_node(struct jes_context* ctx, enum jes_type value_type )
-{
-  struct jes_node* new_node = NULL;
-  new_node = jes_insert_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter),
-                             value_type, ctx->token.length, &ctx->json_data[ctx->token.offset]);
-
-  if (new_node) {
-    ctx->iter = new_node;
-  }
-}
-
 /* To delete a node and its whole branch */
 void jes_delete_node(struct jes_context* ctx, struct jes_node* node)
 {
@@ -270,7 +245,7 @@ void jes_delete_node(struct jes_context* ctx, struct jes_node* node)
 
   while (true) {
     /* Reaching the last child */
-    while (HAS_FIRST_CHILD(iter)) { iter = UNSAFE_GET_FIRST_CHILD(ctx, iter); }
+    while (HAS_CHILD(iter)) { iter = UNSAFE_GET_FIRST_CHILD(ctx, iter); }
     assert(iter != NULL);
 
     if (iter == node) {
@@ -329,10 +304,10 @@ void jes_delete_node(struct jes_context* ctx, struct jes_node* node)
   jes_free(ctx, node);
 }
 
-static struct jes_node* jes_find_key(struct jes_context* ctx,
-                                     struct jes_node* parent_object,
-                                     const char* keyword,
-                                     size_t keyword_lenngth)
+struct jes_node* jes_find_key(struct jes_context* ctx,
+                              struct jes_node* parent_object,
+                              const char* keyword,
+                              size_t keyword_lenngth)
 {
   struct jes_node* key = NULL;
   struct jes_node* iter = parent_object;

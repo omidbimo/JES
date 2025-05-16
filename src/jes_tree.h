@@ -5,10 +5,8 @@ bool jes_validate_node(struct jes_context* ctx, struct jes_node* node);
 struct jes_node* jes_insert_node(struct jes_context* ctx,
                                  struct jes_node* parent, struct jes_node* anchor,
                                  uint16_t type, uint16_t length, const char* value);
-void jes_add_object_node(struct jes_context* ctx);
-void jes_add_array_node(struct jes_context* ctx);
-void jes_add_value_node(struct jes_context* ctx, enum jes_type value_type);
-struct jes_node* jes_add_key_node_after(struct jes_context* ctx,
+
+struct jes_node* jes_insert_key_node(struct jes_context* ctx,
                                         struct jes_node* parent_object,
                                         struct jes_node* anchor,
                                         uint16_t keyword_length, const char* keyword);
@@ -20,5 +18,10 @@ struct jes_node* jes_get_parent_node_of_type(struct jes_context* ctx,
 
 struct jes_node* jes_get_parent_node_of_type_object_or_array(struct jes_context* ctx,
                                                              struct jes_node* node);
+
+struct jes_node* jes_find_key(struct jes_context* ctx,
+                              struct jes_node* parent_object,
+                              const char* keyword,
+                              size_t keyword_lenngth);
 
 #endif

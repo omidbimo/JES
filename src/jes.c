@@ -68,7 +68,7 @@ void jes_reset(struct jes_context *ctx)
 
 struct jes_element* jes_get_root(struct jes_context *ctx)
 {
-  if (ctx) {
+  if ((ctx != NULL) && JES_IS_INITIATED(ctx)) {
     return &ctx->root->json_tlv;
   }
   return NULL;
@@ -111,16 +111,6 @@ struct jes_element* jes_get_child(struct jes_context *ctx, struct jes_element *e
   }
 
   return NULL;
-}
-
-enum jes_type jes_get_parent_type(struct jes_context *ctx, struct jes_element *element)
-{
-  struct jes_element *parent = jes_get_parent(ctx, element);
-  if (parent) {
-    return parent->type;
-  }
-
-  return JES_UNKNOWN;
 }
 
 jes_status jes_delete_element(struct jes_context *ctx, struct jes_element *element)
@@ -355,7 +345,7 @@ struct jes_element* jes_add_key(struct jes_context *ctx, struct jes_element *par
     object = (struct jes_node*)parent;
   }
   /* Append the key */
-  new_node = jes_add_key_node_after(ctx, object, GET_LAST_CHILD(ctx, object), keyword_length, keyword);
+  new_node = jes_insert_key_node(ctx, object, GET_LAST_CHILD(ctx, object), keyword_length, keyword);
 
   return (struct jes_element*)new_node;
 }
@@ -392,7 +382,7 @@ struct jes_element* jes_add_key_before(struct jes_context *ctx, struct jes_eleme
   for (iter = GET_FIRST_CHILD(ctx, parent); iter != NULL; iter = GET_SIBLING(ctx, iter)) {
     assert(iter->json_tlv.type == JES_KEY);
     if (iter == key_node) {
-      new_node = jes_add_key_node_after(ctx, parent, before, keyword_length, keyword);
+      new_node = jes_insert_key_node(ctx, parent, before, keyword_length, keyword);
       break;
     }
     before = iter;
@@ -427,7 +417,7 @@ struct jes_element* jes_add_key_after(struct jes_context *ctx, struct jes_elemen
     return NULL;
   }
 
-  new_node = jes_add_key_node_after(ctx, parent, (struct jes_node*)key, keyword_length, keyword);
+  new_node = jes_insert_key_node(ctx, parent, (struct jes_node*)key, keyword_length, keyword);
 
   return (struct jes_element*)new_node;
 }
@@ -462,11 +452,8 @@ struct jes_element* jes_update_key_value(struct jes_context *ctx, struct jes_ele
   struct jes_element *key_value = NULL;
 
   /* First delete the old value of the key if exists. */
-  if (jes_delete_element(ctx, jes_get_child(ctx, key)) == JES_NO_ERROR) {
-    /* It's possible that the key loses its value if the add_element fails.
-       The user should stop using the context or try to assign a value again.  */
-    key_value = jes_add_element(ctx, key, type, value);
-  }
+  jes_delete_node(ctx, GET_FIRST_CHILD(ctx, (struct jes_node*)key));
+  key_value = jes_add_element(ctx, key, type, value);
 
   return key_value;
 }

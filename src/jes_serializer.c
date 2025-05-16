@@ -144,7 +144,7 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
     }
 
     /* Iterate this branch down to the last child */
-    if (HAS_FIRST_CHILD(ctx->iter)) {
+    if (HAS_CHILD(ctx->iter)) {
       ctx->iter = GET_FIRST_CHILD(ctx, ctx->iter);
       continue;
     }
@@ -357,7 +357,7 @@ uint32_t jes_render(struct jes_context *ctx, char *buffer, uint32_t length, bool
     }
 
     /* Iterate this branch down to the last child */
-    if (HAS_FIRST_CHILD(iter)) {
+    if (HAS_CHILD(iter)) {
       iter = GET_FIRST_CHILD(ctx, iter);
       continue;
     }
