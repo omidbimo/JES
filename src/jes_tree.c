@@ -244,35 +244,42 @@ void jes_delete_node(struct jes_context* ctx, struct jes_node* node)
   }
 
   while (true) {
-    /* Reaching the last child */
-    while (HAS_CHILD(iter)) { iter = UNSAFE_GET_FIRST_CHILD(ctx, iter); }
-    assert(iter != NULL);
+    /* getting the last child in branch */
+    while (HAS_CHILD(iter)) {
+      iter = GET_FIRST_CHILD(ctx, iter);
+    }
 
     if (iter == node) {
-      /* Node has no children. Do not delete the node yet */
+      /* Node has no children. Do not delete it before maintaining its parent & sibling links */
       break;
     }
 
     /* Set the parent first child link to node's possible sibling. So we don't lost the branch. */
     assert(HAS_PARENT(iter));
-    UNSAFE_GET_PARENT(ctx, iter)->first_child = iter->sibling;
+    parent = GET_PARENT(ctx, iter);
+    if (parent == NULL) {
+      ctx->status = JES_BROKEN_TREE;
+      return;
+    }
+
+    parent->first_child = iter->sibling;
     JES_LOG_NODE("\n    - ", JES_NODE_INDEX(ctx, iter), iter->json_tlv.type,
                   iter->json_tlv.length, iter->json_tlv.value,
                   iter->parent, iter->sibling, iter->first_child, iter->last_child, "");
 
 #ifdef JES_ENABLE_FAST_KEY_SEARCH
     if (iter->json_tlv.type == JES_KEY) {
-      jes_hash_table_remove(ctx, UNSAFE_GET_PARENT(ctx, iter), iter);
+      jes_hash_table_remove(ctx, parent, iter);
     }
 #endif
     jes_free(ctx, iter);
-    iter = UNSAFE_GET_PARENT(ctx, iter);
+    iter = parent;
   }
 
   /* All sub-elements are deleted. To delete the node itself, all parent and sibling links need to be maintained. */
   parent = GET_PARENT(ctx, node);
   if (parent) {
-    if (UNSAFE_GET_FIRST_CHILD(ctx, parent) == node) {
+    if (parent->first_child == JES_NODE_INDEX(ctx, node)) {
       parent->first_child = node->sibling;
       parent->last_child = node->sibling;
     }
@@ -298,7 +305,7 @@ void jes_delete_node(struct jes_context* ctx, struct jes_node* node)
 
 #ifdef JES_ENABLE_FAST_KEY_SEARCH
   if (node->json_tlv.type == JES_KEY) {
-    jes_hash_table_remove(ctx, UNSAFE_GET_PARENT(ctx, node), node);
+    jes_hash_table_remove(ctx, parent, node);
   }
 #endif
   jes_free(ctx, node);
