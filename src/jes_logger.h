@@ -11,13 +11,14 @@ void jes_log_token(uint16_t token_type,
                    const char* token_value);
 /* */
 void jes_log_node(const char *pre_msg,
-                  int16_t node_id,
+                  int32_t node_id,
                   uint32_t node_type,
                   uint32_t node_length,
                   const char *node_value,
-                  int16_t parent_id,
-                  int16_t right_id,
-                  int16_t child_id,
+                  int32_t parent_id,
+                  int32_t right_id,
+                  int32_t first_child_id,
+                  int32_t last_child_id,
                   const char *post_msg);
 /* Provides a textual overview of the latest failure */
 char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len);

@@ -141,13 +141,15 @@ static inline bool jes_integer_tokenizer(struct jes_context *ctx,
   return end_of_token;
 }
 
-static inline bool jes_get_specific_token(struct jes_context *ctx,
-                          struct jes_token *token, char *cmp_str, uint16_t len)
+static inline bool jes_get_null_true_false_token(struct jes_context* ctx,
+                                                 struct jes_token* token,
+                                                 char* target_str,
+                                                 uint16_t target_str_len)
 {
   bool tokenizing_completed = false;
   token->length++;
-  if (token->length == len) {
-    if (strncmp(&ctx->json_data[token->offset], cmp_str, len) != 0) {
+  if (token->length == target_str_len) {
+    if (strncmp(&ctx->json_data[token->offset], target_str, target_str_len) != 0) {
       token->type = JES_TOKEN_INVALID;
     }
     tokenizing_completed = true;
@@ -251,19 +253,19 @@ jes_status jes_get_token(struct jes_context *ctx)
       continue;
     }
     else if (token.type == JES_TOKEN_TRUE) {
-      if (jes_get_specific_token(ctx, &token, "true", sizeof("true") - 1)) {
+      if (jes_get_null_true_false_token(ctx, &token, "true", sizeof("true") - 1)) {
         break;
       }
       continue;
     }
     else if (token.type == JES_TOKEN_FALSE) {
-      if (jes_get_specific_token(ctx, &token, "false", sizeof("false") - 1)) {
+      if (jes_get_null_true_false_token(ctx, &token, "false", sizeof("false") - 1)) {
         break;
       }
       continue;
     }
     else if (token.type == JES_TOKEN_NULL) {
-      if (jes_get_specific_token(ctx, &token, "null", sizeof("null") - 1)) {
+      if (jes_get_null_true_false_token(ctx, &token, "null", sizeof("null") - 1)) {
         break;
       }
       continue;

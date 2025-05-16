@@ -125,7 +125,6 @@ enum jes_type jes_get_parent_type(struct jes_context *ctx, struct jes_element *e
 
 jes_status jes_delete_element(struct jes_context *ctx, struct jes_element *element)
 {
-
   if ((ctx == NULL) || !JES_IS_INITIATED(ctx)) {
     return JES_INVALID_CONTEXT;
   }
@@ -308,7 +307,8 @@ struct jes_element* jes_add_element(struct jes_context *ctx, struct jes_element 
     }
   }
 
-  new_node = jes_append_node(ctx, (struct jes_node*)parent, type, value_length, value);
+  new_node = jes_insert_node(ctx, (struct jes_node*)parent, GET_LAST_CHILD(ctx, (struct jes_node*)parent),
+                             type, value_length, value);
 
   return (struct jes_element*)new_node;
 }
@@ -343,7 +343,7 @@ struct jes_element* jes_add_key(struct jes_context *ctx, struct jes_element *par
     /* The key must be added to an existing key and must be embedded in an OBJECT */
     object = GET_FIRST_CHILD(ctx, (struct jes_node*)parent);
     if (object == NULL) {
-      object = jes_append_node(ctx, (struct jes_node*)parent, JES_OBJECT, 1, "{");
+      object = jes_insert_node(ctx, (struct jes_node*)parent, GET_LAST_CHILD(ctx, (struct jes_node*)parent), JES_OBJECT, 1, "{");
     }
     else if (object->json_tlv.type != JES_OBJECT) {
       /* We should not land here */
@@ -551,8 +551,6 @@ struct jes_element* jes_update_array_value(struct jes_context *ctx, struct jes_e
 
 struct jes_element* jes_append_array_value(struct jes_context *ctx, struct jes_element *array, enum jes_type type, const char *value)
 {
-  /* TODO */
-  #if 0
   struct jes_node *anchor_node = NULL;
   struct jes_node *new_node = NULL;
   uint32_t value_length = 0;
@@ -572,39 +570,13 @@ struct jes_element* jes_append_array_value(struct jes_context *ctx, struct jes_e
     return NULL;
   }
 
-  new_node = jes_allocate(ctx);
-  if (new_node) {
-    /* Appending the new node to the end of array. */
-    anchor_node = GET_LAST_CHILD(ctx, (struct jes_node*)array);
-    if (anchor_node != NULL) {
-      /* Array is not empty. */
-      anchor_node->sibling = JES_GET_NODE_INDEX(ctx, new_node);
-    }
-    else {
-      /* Array is empty. */
-      ((struct jes_node*)array)->first_child = JES_GET_NODE_INDEX(ctx, new_node);
-    }
-
-    ((struct jes_node*)array)->last_child = JES_GET_NODE_INDEX(ctx, new_node);
-
-    new_node->parent = JES_GET_NODE_INDEX(ctx, (struct jes_node*)array);
-    new_node->json_tlv.type = type;
-    new_node->json_tlv.length = value_length;
-    new_node->json_tlv.value = value;
-
-    JES_LOG_NODE("\n    + ", JES_GET_NODE_INDEX(ctx, new_node),
-                  new_node->json_tlv.type, new_node->json_tlv.length, new_node->json_tlv.value,
-                  new_node->parent, new_node->sibling, new_node->first_child, "");
-  }
+  new_node = jes_insert_node(ctx, (struct jes_node*)array, GET_LAST_CHILD(ctx, (struct jes_node*)array), type, value_length, value);
 
   return (struct jes_element*)new_node;
-  #endif
 }
 
 struct jes_element* jes_add_array_value(struct jes_context *ctx, struct jes_element *array, int32_t index, enum jes_type type, const char *value)
 {
-  /* TODO */
-  #if 0
   struct jes_node *anchor_node = NULL;
   struct jes_node *prev_node = NULL;
   struct jes_node *new_node = NULL;
@@ -651,35 +623,9 @@ struct jes_element* jes_add_array_value(struct jes_context *ctx, struct jes_elem
     return NULL;
   }
 
-  new_node = jes_allocate(ctx);
-  if (new_node != NULL) {
-    if (anchor_node != NULL) {
-      new_node->sibling = JES_GET_NODE_INDEX(ctx, anchor_node);
-
-      if (((struct jes_node*)array)->first_child == JES_GET_NODE_INDEX(ctx, anchor_node)) {
-        /* Inserting the new node at index 0 */
-        ((struct jes_node*)array)->first_child = JES_GET_NODE_INDEX(ctx, new_node);
-      }
-      else {
-       assert(prev_node != NULL);
-       prev_node->sibling = JES_GET_NODE_INDEX(ctx, new_node);
-      }
-    }
-    else {
-      assert(0);
-    }
-
-    new_node->parent = JES_GET_NODE_INDEX(ctx, (struct jes_node*)array);
-    new_node->json_tlv.type = type;
-    new_node->json_tlv.length = value_length;
-    new_node->json_tlv.value = value;
-    JES_LOG_NODE("\n    + ", JES_GET_NODE_INDEX(ctx, new_node),
-                  new_node->json_tlv.type, new_node->json_tlv.length, new_node->json_tlv.value,
-                  new_node->parent, new_node->sibling, new_node->first_child, "");
-  }
+  new_node = jes_insert_node(ctx, (struct jes_node*)array, anchor_node, type, value_length, value);
 
   return (struct jes_element*)new_node;
-  #endif
 }
 
 size_t jes_get_element_count(struct jes_context *ctx)

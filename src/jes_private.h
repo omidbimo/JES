@@ -14,15 +14,16 @@
   #define JES_INVALID_INDEX 0xFFFF
 #endif
 
-#define HAS_PARENT(node_ptr) ((node_ptr)->parent < JES_INVALID_INDEX)
-#define HAS_SIBLING(node_ptr) ((node_ptr)->sibling < JES_INVALID_INDEX)
+#define HAS_PARENT(node_ptr) (((node_ptr) != NULL) ? (node_ptr)->parent < JES_INVALID_INDEX : false)
+#define HAS_SIBLING(node_ptr) (((node_ptr) != NULL) ? (node_ptr)->sibling < JES_INVALID_INDEX : false)
 #define HAS_FIRST_CHILD(node_ptr) ((node_ptr)->first_child < JES_INVALID_INDEX)
 #define HAS_LAST_CHILD(node_ptr) ((node_ptr)->last_child < JES_INVALID_INDEX)
+#define HAS_CHILD(node_ptr) (((node_ptr) != NULL) ? (node_ptr)->last_child < JES_INVALID_INDEX : false)
 
 #define GET_PARENT(ctx_, node_ptr) (HAS_PARENT(node_ptr) ? &ctx_->node_pool[(node_ptr)->parent] : NULL)
 #define GET_SIBLING(ctx_, node_ptr) (HAS_SIBLING(node_ptr) ? &ctx_->node_pool[(node_ptr)->sibling] : NULL)
-#define GET_FIRST_CHILD(ctx_, node_ptr) (HAS_FIRST_CHILD(node_ptr) ? &ctx_->node_pool[(node_ptr)->first_child] : NULL)
-#define GET_LAST_CHILD(ctx_, node_ptr) (HAS_FIRST_CHILD(node_ptr) ? &ctx_->node_pool[(node_ptr)->last_child] : NULL)
+#define GET_FIRST_CHILD(ctx_, node_ptr) (HAS_CHILD(node_ptr) ? &ctx_->node_pool[(node_ptr)->first_child] : NULL)
+#define GET_LAST_CHILD(ctx_, node_ptr) (HAS_CHILD(node_ptr) ? &ctx_->node_pool[(node_ptr)->last_child] : NULL)
 /* Unsafe getters do not check the nodes against NULL pointers. They must be used only when a valid pointer is assured */
 #define UNSAFE_GET_PARENT(ctx_, node_ptr) (&ctx_->node_pool[(node_ptr)->parent])
 #define UNSAFE_GET_SIBLING(ctx_, node_ptr) (&ctx_->node_pool[(node_ptr)->sibling])
@@ -31,7 +32,7 @@
 
 #define PARENT_TYPE(ctx_, node_ptr) (HAS_PARENT(node_ptr) ? ctx_->node_pool[(node_ptr)->parent].json_tlv.type : JES_UNKNOWN)
 
-#define JES_GET_NODE_INDEX(ctx_, node_) ((jes_node_descriptor)((node_) - ctx_->node_pool))
+#define JES_NODE_INDEX(ctx_, node_) ((jes_node_descriptor)((node_) - ctx_->node_pool))
 
 #define JES_CONTEXT_COOKIE 0xABC09DEF
 #define JES_IS_INITIATED(ctx_) (ctx_->cookie == JES_CONTEXT_COOKIE)
