@@ -7,6 +7,10 @@
 #include "jes_private.h"
 #include "jes_logger.h"
 
+#ifdef JES_ENABLE_FAST_KEY_SEARCH
+  #include "jes_keymap.h"
+#endif
+
 #ifdef JES_USE_32BIT_NODE_DESCRIPTOR
   #define JES_INVALID_INDEX 0xFFFFFFFF
 #else
@@ -24,25 +28,6 @@
 #define IS_ESCAPE(c) ((c=='\\') || (c=='\"') || (c=='\/') || (c=='\b') || \
                       (c=='\f') || (c=='\n') || (c=='\r') || (c=='\t') || (c == '\u'))
 #define LOOK_AHEAD(ctx_) (((ctx_->offset + 1) < ctx_->json_size) ? ctx_->json_data[ctx_->offset + 1] : '\0')
-
-#define HAS_PARENT(node_ptr) ((node_ptr)->parent < JES_INVALID_INDEX)
-#define HAS_SIBLING(node_ptr) ((node_ptr)->sibling < JES_INVALID_INDEX)
-#define HAS_FIRST_CHILD(node_ptr) ((node_ptr)->first_child < JES_INVALID_INDEX)
-#define HAS_LAST_CHILD(node_ptr) ((node_ptr)->last_child < JES_INVALID_INDEX)
-
-#define GET_PARENT(ctx_, node_ptr) (HAS_PARENT(node_ptr) ? &ctx_->node_pool[(node_ptr)->parent] : NULL)
-#define GET_SIBLING(ctx_, node_ptr) (HAS_SIBLING(node_ptr) ? &ctx_->node_pool[(node_ptr)->sibling] : NULL)
-#define GET_FIRST_CHILD(ctx_, node_ptr) (HAS_FIRST_CHILD(node_ptr) ? &ctx_->node_pool[(node_ptr)->first_child] : NULL)
-#define GET_LAST_CHILD(ctx_, node_ptr) (HAS_FIRST_CHILD(node_ptr) ? &ctx_->node_pool[(node_ptr)->last_child] : NULL)
-/* Unsafe getters do not check the nodes against NULL pointers. They must be used only when a valid pointer is assured */
-#define UNSAFE_GET_PARENT(ctx_, node_ptr) (&ctx_->node_pool[(node_ptr)->parent])
-#define UNSAFE_GET_SIBLING(ctx_, node_ptr) (&ctx_->node_pool[(node_ptr)->sibling])
-#define UNSAFE_GET_FIRST_CHILD(ctx_, node_ptr) (&ctx_->node_pool[(node_ptr)->first_child])
-#define UNSAFE_GET_LAST_CHILD(ctx_, node_ptr) (&ctx_->node_pool[(node_ptr)->last_child])
-
-#define PARENT_TYPE(ctx_, node_ptr) (HAS_PARENT(node_ptr) ? ctx_->node_pool[(node_ptr)->parent].json_tlv.type : JES_UNKNOWN)
-
-#define JES_GET_NODE_INDEX(ctx_, node_) ((jes_node_descriptor)((node_) - ctx_->node_pool))
 
 #define JES_CONTEXT_COOKIE 0xABC09DEF
 #define JES_IS_INITIATED(ctx_) (ctx_->cookie == JES_CONTEXT_COOKIE)
@@ -117,10 +102,10 @@ static bool jes_validate_node(struct jes_context *ctx, struct jes_node *node)
     /* Check if the node is correctly aligned */
     if ((((void*)node - (void*)ctx->node_pool) % sizeof(*node)) == 0) {
       /* Check if the node links are in bound */
-      if (((node->parent == 0xFFFF) || (node->parent <= ctx->capacity)) &&
-          ((node->first_child == 0xFFFF) || (node->first_child <= ctx->capacity)) &&
-          ((node->last_child == 0xFFFF) || (node->last_child <= ctx->capacity)) &&
-          ((node->sibling == 0xFFFF) || (node->sibling <= ctx->capacity))) {
+      if (((node->parent == JES_INVALID_INDEX) || (node->parent <= ctx->capacity)) &&
+          ((node->first_child == JES_INVALID_INDEX) || (node->first_child <= ctx->capacity)) &&
+          ((node->last_child == JES_INVALID_INDEX) || (node->last_child <= ctx->capacity)) &&
+          ((node->sibling == JES_INVALID_INDEX) || (node->sibling <= ctx->capacity))) {
         return true;
       }
     }
@@ -199,6 +184,73 @@ static struct jes_node* jes_append_node(struct jes_context *ctx, struct jes_node
     new_node->json_tlv.value = value;
   }
 
+  if (new_node) {
+    JES_LOG_NODE("\n    + ", JES_GET_NODE_INDEX(ctx, new_node), new_node->json_tlv.type,
+                  new_node->json_tlv.length, new_node->json_tlv.value,
+                  new_node->parent, new_node->sibling, new_node->first_child, "");
+  }
+
+  return new_node;
+}
+
+static struct jes_node* jes_add_node_after(struct jes_context* ctx,
+                                           struct jes_node* parent, struct jes_node* anchor_node,
+                                           uint16_t type, uint16_t length, const char* value)
+{
+  struct jes_node *new_node = NULL;
+#if 0
+  if (parent) {
+    if (!anchor_node) {
+      ctx->JES_INVALID_PARAMETER;
+      return NULL;
+    }
+    else if (anchor_node->parent != JES_GET_NODE_INDEX(ctx, parent) {
+      ctx->JES_INVALID_PARAMETER;
+      return NULL;
+    }
+  }
+  else {
+    ctx->JES_INVALID_PARAMETER;
+    return NULL;
+  }
+#endif
+  new_node = jes_allocate(ctx);
+
+  if (new_node) {
+    if (parent) {
+      new_node->parent = JES_GET_NODE_INDEX(ctx, parent);
+
+      if (anchor_node) {
+        /* We have to insert after an existing node */
+        new_node->sibling = anchor_node->sibling;
+        anchor_node->sibling = JES_GET_NODE_INDEX(ctx, new_node);
+        if (parent->last_child == JES_GET_NODE_INDEX(ctx, anchor_node)) {
+          parent->last_child = JES_GET_NODE_INDEX(ctx, new_node);
+        }
+      }
+      else {
+        /* There is no node before. Prepend node */
+        new_node->sibling = parent->first_child;
+        parent->first_child = JES_GET_NODE_INDEX(ctx, new_node);
+        if (!HAS_LAST_CHILD(parent)) {
+          parent->last_child = JES_GET_NODE_INDEX(ctx, new_node);
+        }
+      }
+    }
+    else {
+      assert(!ctx->root);
+      ctx->root = new_node;
+    }
+
+    new_node->json_tlv.type = type;
+    new_node->json_tlv.length = length;
+    new_node->json_tlv.value = value;
+
+    JES_LOG_NODE("\n    + ", JES_GET_NODE_INDEX(ctx, new_node), new_node->json_tlv.type,
+                  new_node->json_tlv.length, new_node->json_tlv.value,
+                  new_node->parent, new_node->sibling, new_node->first_child, "");
+  }
+
   return new_node;
 }
 
@@ -223,7 +275,15 @@ static void jes_delete_node(struct jes_context *ctx, struct jes_node *node)
     /* Set the parent first child link to node's possible sibling. So we don't lost the branch. */
     assert(HAS_PARENT(iter));
     UNSAFE_GET_PARENT(ctx, iter)->first_child = iter->sibling;
+    JES_LOG_NODE("\n    - ", JES_GET_NODE_INDEX(ctx, iter), iter->json_tlv.type,
+                  iter->json_tlv.length, iter->json_tlv.value,
+                  iter->parent, iter->sibling, iter->first_child, "");
 
+#ifdef JES_ENABLE_FAST_KEY_SEARCH
+    if (iter->json_tlv.type == JES_KEY) {
+      jes_hash_table_remove(ctx, UNSAFE_GET_PARENT(ctx, iter), iter);
+    }
+#endif
     jes_free(ctx, iter);
     iter = UNSAFE_GET_PARENT(ctx, iter);
   }
@@ -247,6 +307,15 @@ static void jes_delete_node(struct jes_context *ctx, struct jes_node *node)
     }
   }
 
+  JES_LOG_NODE("\n    - ", JES_GET_NODE_INDEX(ctx, node), node->json_tlv.type,
+                node->json_tlv.length, node->json_tlv.value,
+                node->parent, node->sibling, node->first_child, "");
+
+#ifdef JES_ENABLE_FAST_KEY_SEARCH
+  if (iter->json_tlv.type == JES_KEY) {
+    jes_hash_table_remove(ctx, UNSAFE_GET_PARENT(ctx, iter), iter);
+  }
+#endif
   jes_free(ctx, node);
 }
 
@@ -319,7 +388,7 @@ static inline bool jes_decimal_fraction_number_tokenizer(struct jes_context *ctx
   }
   else if ((ch == 'e') || (ch == 'E')) {
     token->length++;
-    ctx->number_tokenizer = jes_exponent_number_tokenizer;
+    ctx->number_tokenizer_fn = jes_exponent_number_tokenizer;
   }
   else {
     token->type = JES_TOKEN_INVALID;
@@ -351,11 +420,11 @@ static inline bool jes_integer_tokenizer(struct jes_context *ctx,
   }
   else if (ch == '.') {
     token->length++;
-    ctx->number_tokenizer = jes_decimal_fraction_number_tokenizer;
+    ctx->number_tokenizer_fn = jes_decimal_fraction_number_tokenizer;
   }
   else if ((ch == 'e') || (ch == 'E')) {
     token->length++;
-    ctx->number_tokenizer = jes_exponent_number_tokenizer;
+    ctx->number_tokenizer_fn = jes_exponent_number_tokenizer;
   }
   else {
     token->type = JES_TOKEN_INVALID;
@@ -409,7 +478,7 @@ static jes_status jes_get_token(struct jes_context *ctx)
 
       if (IS_DIGIT(ch)) {
         UPDATE_TOKEN(token, JES_TOKEN_NUMBER, ctx->offset, 1);
-        ctx->number_tokenizer = jes_integer_tokenizer;
+        ctx->number_tokenizer_fn = jes_integer_tokenizer;
         /* Unlike STRINGs, there are symbols for NUMBERs to indicate the
            end of number data. To avoid consuming non-NUMBER characters, take a look ahead
            and stop the process if found of non-numeric symbols. */
@@ -423,7 +492,7 @@ static jes_status jes_get_token(struct jes_context *ctx)
       if (ch == '-') {
         if (IS_DIGIT(LOOK_AHEAD(ctx))) {
           UPDATE_TOKEN(token, JES_TOKEN_NUMBER, ctx->offset, 1);
-          ctx->number_tokenizer = jes_integer_tokenizer;
+          ctx->number_tokenizer_fn = jes_integer_tokenizer;
           continue;
         }
         token.type = JES_TOKEN_INVALID;
@@ -468,7 +537,7 @@ static jes_status jes_get_token(struct jes_context *ctx)
       continue;
     }
     else if (token.type == JES_TOKEN_NUMBER) {
-      if (ctx->number_tokenizer(ctx, ch, &token)) {
+      if (ctx->number_tokenizer_fn(ctx, ch, &token)) {
         /* There are no more symbols to consume as a number. Deliver the token. */
         break;
       }
@@ -492,7 +561,6 @@ static jes_status jes_get_token(struct jes_context *ctx)
       }
       continue;
     }
-  printf("\nWoooooooooow");
     token.type = JES_TOKEN_INVALID;
     break;
   }
@@ -503,31 +571,37 @@ static jes_status jes_get_token(struct jes_context *ctx)
   return ctx->status;
 }
 
-#ifndef JES_ALLOW_DUPLICATE_KEYS
-static struct jes_node *jes_find_duplicate_key_node(struct jes_context *ctx,
-                                                    struct jes_node *parent_object,
-                                                    uint16_t keyword_length,
-                                                    const char *keyword)
+static struct jes_node* jes_find_key(struct jes_context* ctx,
+                                     struct jes_node* parent_object,
+                                     const char* keyword,
+                                     size_t keyword_lenngth)
 {
-  struct jes_node *duplicate = NULL;
-  struct jes_node *iter = NULL;
+  struct jes_node* key = NULL;
+  struct jes_node* iter = parent_object;
 
-  assert(parent_object->json_tlv.type == JES_OBJECT);
+  assert(parent_object != NULL);
 
-  iter = GET_FIRST_CHILD(ctx, parent_object);
+  if (parent_object->json_tlv.type != JES_OBJECT) {
+    ctx->status = JES_UNEXPECTED_ELEMENT;
+    return NULL;
+  }
 
-  while(iter) {
-    assert(iter->json_tlv.type == JES_KEY);
-    if ((iter->json_tlv.length == keyword_length) &&
-        (strncmp(iter->json_tlv.value, keyword, keyword_length) == 0)) {
-      duplicate = iter;
+  iter = GET_FIRST_CHILD(ctx, iter);
+
+  while ((iter != NULL) && (iter->json_tlv.type == JES_KEY)) {
+                JES_LOG_NODE("\n    ~ ", JES_GET_NODE_INDEX(ctx, iter),
+                      iter->json_tlv.type, iter->json_tlv.length, iter->json_tlv.value,
+                      iter->parent, iter->sibling, iter->first_child, "");
+    if ((iter->json_tlv.length == keyword_lenngth) &&
+        (memcmp(iter->json_tlv.value, keyword, keyword_lenngth) == 0)) {
+      key = iter;
       break;
     }
     iter = GET_SIBLING(ctx, iter);
   }
-  return duplicate;
+
+  return key;
 }
-#endif
 
 static void jes_parser_add_object(struct jes_context *ctx)
 {
@@ -541,25 +615,34 @@ static void jes_parser_add_object(struct jes_context *ctx)
   }
 }
 
-static struct jes_node* jes_add_key_node(struct jes_context *ctx, struct jes_node *parent, uint16_t keyword_length, const char *keyword)
+static struct jes_node* jes_add_key_node_after(struct jes_context *ctx,
+                                               struct jes_node *parent_object,
+                                               struct jes_node *anchor,
+                                               uint16_t keyword_length, const char *keyword)
 {
   struct jes_node *new_node = NULL;
-  assert(parent->json_tlv.type == JES_OBJECT);
+  if (parent_object) {
+    assert(parent_object->json_tlv.type == JES_OBJECT);
+  }
+  else {
+    assert(anchor == NULL);
+  }
 
-#ifndef JES_ALLOW_DUPLICATE_KEYS
-  /* No duplicate keys in the same object are allowed.
-     Only the last key:value will be reported if the keys are duplicated. */
-  struct jes_node *node = jes_find_duplicate_key_node(ctx, parent, keyword_length, keyword);
+
+  /* No duplicate keys in the same object are allowed. */
+  struct jes_node *node = ctx->find_key_fn(ctx, parent_object, keyword, keyword_length);
   if (node) {
     ctx->status = JES_DUPLICATE_KEY;
   }
   else
-#endif
   {
-    new_node = jes_append_node(ctx, parent, JES_KEY, keyword_length, keyword);
+    new_node = jes_add_node_after(ctx, parent_object, anchor, JES_KEY, keyword_length, keyword);
   }
 
   if (new_node) {
+#ifdef JES_ENABLE_FAST_KEY_SEARCH
+    jes_hash_table_add(ctx, parent_object, new_node);
+#endif
     JES_LOG_NODE("\n    + ", JES_GET_NODE_INDEX(ctx, new_node), new_node->json_tlv.type,
                   new_node->json_tlv.length, new_node->json_tlv.value,
                   new_node->parent, new_node->sibling, new_node->first_child, "");
@@ -609,18 +692,29 @@ struct jes_context* jes_init(void *buffer, uint32_t buffer_size)
   ctx->offset = (uint32_t)-1;
   ctx->index = 0;
   ctx->node_pool = (struct jes_node*)(ctx + 1);
+#ifndef JES_ENABLE_FAST_KEY_SEARCH
   ctx->pool_size = buffer_size - (uint32_t)(sizeof(struct jes_context));
   ctx->capacity = (ctx->pool_size / sizeof(struct jes_node)) < JES_INVALID_INDEX
                  ? (jes_node_descriptor)(ctx->pool_size / sizeof(struct jes_node))
                  : JES_INVALID_INDEX -1;
-  ctx->number_tokenizer = jes_integer_tokenizer;
+  ctx->hash_table = NULL;
+  ctx->find_key_fn = jes_find_key;
+#else
+  {
+    size_t usable_size = buffer_size - sizeof(struct jes_context) - sizeof(struct jes_hash_table);
+    size_t node_count = usable_size / (sizeof(struct jes_node) + sizeof(struct jes_hash_entry));
+
+    ctx->capacity = node_count < JES_INVALID_INDEX
+                   ? (jes_node_descriptor)node_count
+                   : JES_INVALID_INDEX -1;
+    ctx->pool_size = ctx->capacity * sizeof(struct jes_node);
+    ctx->hash_table = jes_init_hash_table(ctx, (uint8_t*)ctx->node_pool + ctx->pool_size, buffer_size - sizeof(struct jes_context) - ctx->pool_size);
+  }
+#endif
+  ctx->number_tokenizer_fn = jes_integer_tokenizer;
   ctx->iter = NULL;
   ctx->root = NULL;
   ctx->free = NULL;
-
-#ifndef NDEBUG
-  printf("\nallocator capacity is %d nodes", ctx->capacity);
-#endif
 
   ctx->cookie = JES_CONTEXT_COOKIE;
   return ctx;
@@ -634,7 +728,7 @@ void jes_reset(struct jes_context *ctx)
     ctx->json_data = NULL;
     ctx->offset = (uint32_t)-1;
     ctx->index = 0;
-    ctx->number_tokenizer = jes_integer_tokenizer;
+    ctx->number_tokenizer_fn = jes_integer_tokenizer;
     ctx->iter = NULL;
     ctx->root = NULL;
     ctx->free = NULL;
@@ -813,7 +907,8 @@ static inline void jes_parser_on_comma(struct jes_context *ctx)
 static inline void jes_parser_on_string(struct jes_context *ctx)
 {
   if (ctx->state == JES_EXPECT_KEY) {
-    ctx->iter = jes_add_key_node(ctx, ctx->iter, ctx->token.length, &ctx->json_data[ctx->token.offset]);
+    /* Append the key */
+    ctx->iter = jes_add_key_node_after(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter), ctx->token.length, &ctx->json_data[ctx->token.offset]);
     ctx->state = JES_EXPECT_COLON;
   }
   else if (ctx->state == JES_EXPECT_KEY_VALUE) {
@@ -1406,6 +1501,7 @@ enum jes_type jes_get_parent_type(struct jes_context *ctx, struct jes_element *e
 
 jes_status jes_delete_element(struct jes_context *ctx, struct jes_element *element)
 {
+
   if ((ctx == NULL) || !JES_IS_INITIATED(ctx)) {
     return JES_INVALID_CONTEXT;
   }
@@ -1426,8 +1522,8 @@ jes_status jes_delete_element(struct jes_context *ctx, struct jes_element *eleme
 
 struct jes_element* jes_get_key(struct jes_context *ctx, struct jes_element *parent, const char *keys)
 {
-  struct jes_node *target_key = NULL;
-  struct jes_node *iter = NULL;
+  struct jes_element *target_key = NULL;
+  struct jes_node *iter = (struct jes_node*)parent;
   uint32_t key_len;
   const char *key;
   char *dot;
@@ -1451,20 +1547,8 @@ struct jes_element* jes_get_key(struct jes_context *ctx, struct jes_element *par
     ctx->status = JES_INVALID_PARAMETER;
     return NULL;
   }
-
-  if (parent->type == JES_KEY) {
-    iter = GET_FIRST_CHILD(ctx, (struct jes_node*)parent);
-  }
-  else {
-    iter = (struct jes_node*)parent;
-  }
-
-  if (iter->json_tlv.type != JES_OBJECT) {
-    ctx->status = JES_UNEXPECTED_ELEMENT;
-    return NULL;
-  }
-
-  while (iter) {
+  /* TODO: Cleanup */
+  while (iter != NULL) {
     key = keys;
     dot = strchr(keys, '.');
     if (dot) {
@@ -1477,30 +1561,22 @@ struct jes_element* jes_get_key(struct jes_context *ctx, struct jes_element *par
       keys = keys + key_len;
     }
 
-    iter = GET_FIRST_CHILD(ctx, iter);
-
-    while ((iter) && (iter->json_tlv.type == JES_KEY)) {
-      if ((iter->json_tlv.length == key_len) && (memcmp(iter->json_tlv.value, key, key_len) == 0)) {
-        break;
-      }
-      iter = GET_SIBLING(ctx, iter);
-    }
-
-    if (iter) {
-      if (*keys == '\0') {
-        target_key = iter;
-        break;
-      }
+    if (iter->json_tlv.type == JES_KEY) {
       iter = GET_FIRST_CHILD(ctx, iter);
     }
+    iter = ctx->find_key_fn(ctx, iter, key, key_len);
+
+    if ((iter != NULL) && (*keys == '\0')) {
+      target_key = (struct jes_element*)iter;
+      break;
+    }
   }
 
-  if (target_key) {
-    return &target_key->json_tlv;
+  if ((target_key == NULL) && (ctx->status == JES_NO_ERROR)) {
+    ctx->status = JES_ELEMENT_NOT_FOUND;
   }
 
-  ctx->status = JES_ELEMENT_NOT_FOUND;
-  return NULL;
+  return target_key;
 }
 
 struct jes_element* jes_get_key_value(struct jes_context *ctx, struct jes_element *key)
@@ -1624,7 +1700,6 @@ struct jes_element* jes_add_element(struct jes_context *ctx, struct jes_element 
 
 struct jes_element* jes_add_key(struct jes_context *ctx, struct jes_element *parent, const char *keyword)
 {
-  struct jes_element *new_key = NULL;
   struct jes_node *object = NULL;
   struct jes_node *new_node = NULL;
   uint16_t keyword_length = 0;
@@ -1664,16 +1739,10 @@ struct jes_element* jes_add_key(struct jes_context *ctx, struct jes_element *par
   else { /* parent is an OBJECT */
     object = (struct jes_node*)parent;
   }
+  /* Append the key */
+  new_node = jes_add_key_node_after(ctx, object, GET_LAST_CHILD(ctx, object), keyword_length, keyword);
 
-  new_node = jes_append_node(ctx, object, JES_KEY, keyword_length, keyword);
-  if (new_node) {
-    new_key = &new_node->json_tlv;
-    JES_LOG_NODE("\n    + ", JES_GET_NODE_INDEX(ctx, new_node),
-              new_key->type, new_key->length, new_key->value,
-              new_node->parent, new_node->sibling, new_node->first_child, "");
-  }
-
-  return new_key;
+  return (struct jes_element*)new_node;
 }
 
 struct jes_element* jes_add_key_before(struct jes_context *ctx, struct jes_element *key, const char *keyword)
@@ -1681,7 +1750,7 @@ struct jes_element* jes_add_key_before(struct jes_context *ctx, struct jes_eleme
   struct jes_node *new_node = NULL;
   struct jes_node *parent = NULL;
   struct jes_node *iter = NULL;
-  struct jes_node *temp = NULL;
+  struct jes_node *before = NULL;
   struct jes_node *key_node = (struct jes_node*)key;
   uint32_t keyword_length = 0;
 
@@ -1704,33 +1773,14 @@ struct jes_element* jes_add_key_before(struct jes_context *ctx, struct jes_eleme
   assert(parent != NULL);
   assert(parent->json_tlv.type == JES_OBJECT);
 
-  new_node = jes_allocate(ctx);
 
-  if (new_node) {
-    for (iter = GET_FIRST_CHILD(ctx, parent); iter != NULL; iter = GET_SIBLING(ctx, iter)) {
-      assert(iter->json_tlv.type == JES_KEY);
-      if (iter == key_node) {
-        if (temp == NULL) {
-          /* Key was the first element in the object group */
-          new_node->sibling = parent->first_child;
-          parent->first_child = JES_GET_NODE_INDEX(ctx, new_node);
-        }
-        else {
-          new_node->sibling = temp->sibling;
-          temp->sibling = JES_GET_NODE_INDEX(ctx, new_node);
-
-        }
-        new_node->parent = key_node->parent;
-        new_node->json_tlv.type = JES_KEY;
-        new_node->json_tlv.length = keyword_length;
-        new_node->json_tlv.value = keyword;
-        JES_LOG_NODE("\n    + ", JES_GET_NODE_INDEX(ctx, new_node),
-                      new_node->json_tlv.type, new_node->json_tlv.length, new_node->json_tlv.value,
-                      new_node->parent, new_node->sibling, new_node->first_child, "");
-        break;
-      }
+  for (iter = GET_FIRST_CHILD(ctx, parent); iter != NULL; iter = GET_SIBLING(ctx, iter)) {
+    assert(iter->json_tlv.type == JES_KEY);
+    if (iter == key_node) {
+      new_node = jes_add_key_node_after(ctx, parent, before, keyword_length, keyword);
+      break;
     }
-    temp = iter;
+    before = iter;
   }
 
   return (struct jes_element*)new_node;
@@ -1762,27 +1812,10 @@ struct jes_element* jes_add_key_after(struct jes_context *ctx, struct jes_elemen
     return NULL;
   }
 
-  new_node = jes_allocate(ctx);
-  if (new_node) {
-    if (!HAS_SIBLING(key_node)) {
-      /* Key was the last element in the object group */
-      parent->last_child = JES_GET_NODE_INDEX(ctx, new_node);
-    }
-
-    new_node->sibling = key_node->sibling;
-    key_node->sibling = JES_GET_NODE_INDEX(ctx, new_node);
-    new_node->parent = key_node->parent;
-    new_node->json_tlv.type = JES_KEY;
-    new_node->json_tlv.length = keyword_length;
-    new_node->json_tlv.value = keyword;
-    JES_LOG_NODE("\n    + ", JES_GET_NODE_INDEX(ctx, new_node),
-                  new_node->json_tlv.type, new_node->json_tlv.length, new_node->json_tlv.value,
-                  new_node->parent, new_node->sibling, new_node->first_child, "");
-  }
+  new_node = jes_add_key_node_after(ctx, parent, (struct jes_node*)key, keyword_length, keyword);
 
   return (struct jes_element*)new_node;
 }
-
 
 uint32_t jes_update_key(struct jes_context *ctx, struct jes_element *key, const char *keyword)
 {
@@ -1812,6 +1845,7 @@ uint32_t jes_update_key(struct jes_context *ctx, struct jes_element *key, const 
 struct jes_element* jes_update_key_value(struct jes_context *ctx, struct jes_element *key, enum jes_type type, const char *value)
 {
   struct jes_element *key_value = NULL;
+
   /* First delete the old value of the key if exists. */
   if (jes_delete_element(ctx, jes_get_child(ctx, key)) == JES_NO_ERROR) {
     /* It's possible that the key loses its value if the add_element fails.

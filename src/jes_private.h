@@ -4,6 +4,24 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define HAS_PARENT(node_ptr) ((node_ptr)->parent < JES_INVALID_INDEX)
+#define HAS_SIBLING(node_ptr) ((node_ptr)->sibling < JES_INVALID_INDEX)
+#define HAS_FIRST_CHILD(node_ptr) ((node_ptr)->first_child < JES_INVALID_INDEX)
+#define HAS_LAST_CHILD(node_ptr) ((node_ptr)->last_child < JES_INVALID_INDEX)
+
+#define GET_PARENT(ctx_, node_ptr) (HAS_PARENT(node_ptr) ? &ctx_->node_pool[(node_ptr)->parent] : NULL)
+#define GET_SIBLING(ctx_, node_ptr) (HAS_SIBLING(node_ptr) ? &ctx_->node_pool[(node_ptr)->sibling] : NULL)
+#define GET_FIRST_CHILD(ctx_, node_ptr) (HAS_FIRST_CHILD(node_ptr) ? &ctx_->node_pool[(node_ptr)->first_child] : NULL)
+#define GET_LAST_CHILD(ctx_, node_ptr) (HAS_FIRST_CHILD(node_ptr) ? &ctx_->node_pool[(node_ptr)->last_child] : NULL)
+/* Unsafe getters do not check the nodes against NULL pointers. They must be used only when a valid pointer is assured */
+#define UNSAFE_GET_PARENT(ctx_, node_ptr) (&ctx_->node_pool[(node_ptr)->parent])
+#define UNSAFE_GET_SIBLING(ctx_, node_ptr) (&ctx_->node_pool[(node_ptr)->sibling])
+#define UNSAFE_GET_FIRST_CHILD(ctx_, node_ptr) (&ctx_->node_pool[(node_ptr)->first_child])
+#define UNSAFE_GET_LAST_CHILD(ctx_, node_ptr) (&ctx_->node_pool[(node_ptr)->last_child])
+
+#define PARENT_TYPE(ctx_, node_ptr) (HAS_PARENT(node_ptr) ? ctx_->node_pool[(node_ptr)->parent].json_tlv.type : JES_UNKNOWN)
+
+#define JES_GET_NODE_INDEX(ctx_, node_) ((jes_node_descriptor)((node_) - ctx_->node_pool))
 
 #ifdef JES_USE_32BIT_NODE_DESCRIPTOR
 /* A 32bit node descriptor limits the total number of nodes to 4294967295.
@@ -68,7 +86,7 @@ struct jes_node {
 };
 
 struct jes_free_node {
-  struct jes_free_node *next;
+  struct jes_free_node* next;
 };
 
 struct jes_context {
@@ -89,11 +107,11 @@ struct jes_context {
   uint32_t  offset;
   uint32_t  line_number;
   /* To dynamically switch tokenizer functions when detecting Integers, fractions and exponents */
-  bool (*number_tokenizer) (struct jes_context *ctx, char ch, struct jes_token *token);
+  bool (*number_tokenizer_fn) (struct jes_context* ctx, char ch, struct jes_token* token);
   /* Part of the buffer given by the user at the time of the context initialization.
    * The buffer will be used to allocate the context structure at first.
    * The remaining memory will be used as a pool of nodes (max. 65535 nodes). */
-   struct jes_node *node_pool;
+   struct jes_node* node_pool;
   /* node_pool size in bytes. (buffer size - context size) */
   uint32_t pool_size;
   /* Number of nodes that can be allocated on the given buffer. The value will
@@ -104,12 +122,16 @@ struct jes_context {
   /* Holds the last token delivered by tokenizer. */
   struct jes_token token;
   /* Internal node iterator */
-  struct jes_node *iter;
+  struct jes_node* iter;
   /* Holds the main object node */
-  struct jes_node *root;
+  struct jes_node* root;
   /* Singly Linked list of freed nodes. This way the deleted nodes can be recycled
      by the allocator. */
-  struct jes_free_node *free;
+  struct jes_free_node* free;
+
+  struct jes_node* (*find_key_fn) (struct jes_context* ctx, struct jes_node* parent, const char* key, size_t key_len);
+
+  struct jes_hash_table* hash_table;
 };
 
 #endif

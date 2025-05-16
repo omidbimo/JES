@@ -8,7 +8,7 @@
 void jes_log_token(uint16_t token_type,
                    uint32_t token_pos,
                    uint32_t token_len,
-                   const uint8_t *token_value);
+                   const char* token_value);
 /* */
 void jes_log_node(const char *pre_msg,
                   int16_t node_id,

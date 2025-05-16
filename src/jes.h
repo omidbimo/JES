@@ -4,22 +4,15 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-/* Allow duplicate keys (default: disabled)
- * When enabled, multiple keys with the same name can exist in the same object
- *      Use this feature with caution. It improves the parser performance-
- *      but the parser will always deliver only the first key.
- * When disabled, JES will generate error when detecting duplicate keys.
- * Note: Disabling this reduces parser performance due to duplicate key detection
- */
-//#define JES_ALLOW_DUPLICATE_KEYS
-
 /* Use 32-bit node descriptors (default: 16-bit)
  * Enable this to parse very large JSON files (up to 4,294,967,294 nodes)
  * With 16-bit descriptors, the parser can address up to 65,534 nodes
  */
-//#define JES_USE_32BIT_NODE_DESCRIPTOR
+#define JES_USE_32BIT_NODE_DESCRIPTOR
 
 #define JES_MAX_VALUE_LENGTH 0xFFFF
+/*  */
+#define JES_ENABLE_FAST_KEY_SEARCH
 
 typedef enum jes_status {
   JES_NO_ERROR = 0,

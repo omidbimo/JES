@@ -64,7 +64,7 @@ static char jes_state_str[][JES_HELPER_STR_LENGTH] = {
 void jes_log_token(uint16_t token_type,
                    uint32_t token_pos,
                    uint32_t token_len,
-                   const uint8_t *token_value)
+                   const char *token_value)
 {
   printf("\n JES.Token: [Pos: %5d, Len: %3d] %-16s \"%.*s\"",
           token_pos, token_len, jes_token_type_str[token_type],
