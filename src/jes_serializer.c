@@ -93,7 +93,7 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
         }
         break;
 
-      case JES_VALUE_STRING:
+      case JES_STRING:
         if (ctx->state == JES_EXPECT_KEY_VALUE) {
           ctx->state = JES_HAVE_KEY_VALUE;
         }
@@ -114,10 +114,10 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
         }
         break;
 
-      case JES_VALUE_NUMBER:
-      case JES_VALUE_TRUE:
-      case JES_VALUE_FALSE:
-      case JES_VALUE_NULL:
+      case JES_NUMBER:
+      case JES_TRUE:
+      case JES_FALSE:
+      case JES_NULL:
         if (ctx->state == JES_EXPECT_KEY_VALUE) {
           ctx->state = JES_HAVE_KEY_VALUE;
         }
@@ -303,7 +303,7 @@ uint32_t jes_render(struct jes_context *ctx, char *buffer, uint32_t length, bool
         *dst++ = ' ';
       }
     }
-    else if (iter->json_tlv.type == JES_VALUE_STRING) {
+    else if (iter->json_tlv.type == JES_STRING) {
 
       if (!compact) {
         if (PARENT_TYPE(ctx, iter) != JES_KEY) {
@@ -320,10 +320,10 @@ uint32_t jes_render(struct jes_context *ctx, char *buffer, uint32_t length, bool
       dst = (char*)memcpy(dst, iter->json_tlv.value, iter->json_tlv.length) + iter->json_tlv.length;
       *dst++ = '"';
     }
-    else if ((iter->json_tlv.type == JES_VALUE_NUMBER)  ||
-             (iter->json_tlv.type == JES_VALUE_TRUE)    ||
-             (iter->json_tlv.type == JES_VALUE_FALSE)   ||
-             (iter->json_tlv.type == JES_VALUE_NULL)) {
+    else if ((iter->json_tlv.type == JES_NUMBER)  ||
+             (iter->json_tlv.type == JES_TRUE)    ||
+             (iter->json_tlv.type == JES_FALSE)   ||
+             (iter->json_tlv.type == JES_NULL)) {
 
       if (!compact) {
         if (PARENT_TYPE(ctx, iter) != JES_KEY) {

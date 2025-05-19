@@ -470,17 +470,17 @@ struct jes_element* jes_update_key_value_to_array(struct jes_context *ctx, struc
 
 struct jes_element* jes_update_key_value_to_true(struct jes_context *ctx, struct jes_element *key)
 {
-  return jes_update_key_value(ctx, key, JES_VALUE_TRUE, "true");
+  return jes_update_key_value(ctx, key, JES_TRUE, "true");
 }
 
 struct jes_element* jes_update_key_value_to_false(struct jes_context *ctx, struct jes_element *key)
 {
-  return jes_update_key_value(ctx, key, JES_VALUE_FALSE, "false");
+  return jes_update_key_value(ctx, key, JES_FALSE, "false");
 }
 
 struct jes_element* jes_update_key_value_to_null(struct jes_context *ctx, struct jes_element *key)
 {
-  return jes_update_key_value(ctx, key, JES_VALUE_NULL, "null");
+  return jes_update_key_value(ctx, key, JES_NULL, "null");
 }
 
 struct jes_element* jes_update_array_value(struct jes_context *ctx, struct jes_element *array, int32_t index, enum jes_type type, const char *value)

@@ -35,11 +35,11 @@ enum jes_type {
   JES_OBJECT,
   JES_KEY,
   JES_ARRAY,
-  JES_VALUE_STRING,
-  JES_VALUE_NUMBER,
-  JES_VALUE_TRUE,
-  JES_VALUE_FALSE,
-  JES_VALUE_NULL,
+  JES_STRING,
+  JES_NUMBER,
+  JES_TRUE,
+  JES_FALSE,
+  JES_NULL,
 };
 
 /* JES element contains JSON data in the form of Type/Length/Value */

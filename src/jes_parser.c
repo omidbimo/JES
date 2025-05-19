@@ -190,11 +190,11 @@ static inline void jes_parser_on_string(struct jes_context *ctx)
   }
   else if (ctx->state == JES_EXPECT_KEY_VALUE) {
     /* Append value node */
-    ctx->iter = jes_insert_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter), JES_VALUE_STRING, ctx->token.length, &ctx->json_data[ctx->token.offset]);
+    ctx->iter = jes_insert_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter), JES_STRING, ctx->token.length, &ctx->json_data[ctx->token.offset]);
     ctx->state = JES_HAVE_KEY_VALUE;
   }
   else if (ctx->state == JES_EXPECT_ARRAY_VALUE) {
-    ctx->iter = jes_insert_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter), JES_VALUE_STRING, ctx->token.length, &ctx->json_data[ctx->token.offset]);
+    ctx->iter = jes_insert_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter), JES_STRING, ctx->token.length, &ctx->json_data[ctx->token.offset]);
     ctx->state = JES_HAVE_ARRAY_VALUE;
   }
   else {
@@ -266,19 +266,19 @@ void jes_parse(struct jes_context *ctx)
         break;
 
       case JES_TOKEN_FALSE:
-        jes_parser_on_value(ctx, JES_VALUE_FALSE);
+        jes_parser_on_value(ctx, JES_FALSE);
         break;
 
       case JES_TOKEN_TRUE:
-        jes_parser_on_value(ctx, JES_VALUE_TRUE);
+        jes_parser_on_value(ctx, JES_TRUE);
         break;
 
       case JES_TOKEN_NULL:
-        jes_parser_on_value(ctx, JES_VALUE_NULL);
+        jes_parser_on_value(ctx, JES_NULL);
         break;
 
       case JES_TOKEN_NUMBER:
-        jes_parser_on_value(ctx, JES_VALUE_NUMBER);
+        jes_parser_on_value(ctx, JES_NUMBER);
         break;
 
       case JES_TOKEN_INVALID:

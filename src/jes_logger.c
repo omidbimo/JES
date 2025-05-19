@@ -43,11 +43,11 @@ static char jes_node_type_str[][JES_HELPER_STR_LENGTH] = {
   "OBJECT",
   "KEY",
   "ARRAY",
-  "STRING_VALUE",
-  "NUMBER_VALUE",
-  "TRUE_VALUE",
-  "FALSE_VALUE",
-  "NULL_VALUE",
+  "STRING",
+  "NUMBER",
+  "TRUE",
+  "FALSE",
+  "NULL",
 };
 
 static char jes_state_str[][JES_HELPER_STR_LENGTH] = {
