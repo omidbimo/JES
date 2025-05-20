@@ -23,9 +23,10 @@
 #define GET_FIRST_CHILD(ctx_, node_ptr) (HAS_CHILD(node_ptr) ? &ctx_->node_pool[(node_ptr)->first_child] : NULL)
 #define GET_LAST_CHILD(ctx_, node_ptr) (HAS_CHILD(node_ptr) ? &ctx_->node_pool[(node_ptr)->last_child] : NULL)
 
+#define NODE_TYPE(node_ptr) ((node_ptr != NULL) ? node_ptr->json_tlv.type : JES_UNKNOWN)
 #define PARENT_TYPE(ctx_, node_ptr) (HAS_PARENT(node_ptr) ? ctx_->node_pool[(node_ptr)->parent].json_tlv.type : JES_UNKNOWN)
 
-#define JES_NODE_INDEX(ctx_, node_) ((jes_node_descriptor)((node_) - ctx_->node_pool))
+#define JES_NODE_INDEX(ctx_, node_ptr) ((node_ptr != NULL) ? (jes_node_descriptor)((node_ptr) - ctx_->node_pool) : JES_INVALID_INDEX)
 
 #define JES_CONTEXT_COOKIE 0xABC09DEF
 #define JES_IS_INITIATED(ctx_) (ctx_->cookie == JES_CONTEXT_COOKIE)

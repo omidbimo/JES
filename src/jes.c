@@ -156,7 +156,7 @@ struct jes_element* jes_get_key(struct jes_context *ctx, struct jes_element *par
     return NULL;
   }
 
-  if ((parent->type != JES_OBJECT) && (parent->type != JES_KEY)) {
+  if ((parent->type != JES_EMPTY_OBJECT) && (parent->type != JES_KEY)) {
     ctx->status = JES_INVALID_PARAMETER;
     return NULL;
   }
@@ -318,7 +318,7 @@ struct jes_element* jes_add_key(struct jes_context *ctx, struct jes_element *par
     return NULL;
   }
 
-  if ((parent->type != JES_OBJECT) && (parent->type != JES_KEY)) {
+  if ((parent->type != JES_EMPTY_OBJECT) && (parent->type != JES_KEY)) {
     ctx->status = JES_INVALID_PARAMETER;
     return NULL;
   }
@@ -333,9 +333,9 @@ struct jes_element* jes_add_key(struct jes_context *ctx, struct jes_element *par
     /* The key must be added to an existing key and must be embedded in an OBJECT */
     object = GET_FIRST_CHILD(ctx, (struct jes_node*)parent);
     if (object == NULL) {
-      object = jes_insert_node(ctx, (struct jes_node*)parent, GET_LAST_CHILD(ctx, (struct jes_node*)parent), JES_OBJECT, 1, "{");
+      object = jes_insert_node(ctx, (struct jes_node*)parent, GET_LAST_CHILD(ctx, (struct jes_node*)parent), JES_EMPTY_OBJECT, 1, "{");
     }
-    else if (object->json_tlv.type != JES_OBJECT) {
+    else if (object->json_tlv.type != JES_EMPTY_OBJECT) {
       /* We should not land here */
       ctx->status = JES_UNEXPECTED_ELEMENT;
       return NULL;
@@ -376,7 +376,7 @@ struct jes_element* jes_add_key_before(struct jes_context *ctx, struct jes_eleme
 
   parent = GET_PARENT(ctx, key_node);
   assert(parent != NULL);
-  assert(parent->json_tlv.type == JES_OBJECT);
+  assert(parent->json_tlv.type == JES_EMPTY_OBJECT);
 
 
   for (iter = GET_FIRST_CHILD(ctx, parent); iter != NULL; iter = GET_SIBLING(ctx, iter)) {
@@ -409,7 +409,7 @@ struct jes_element* jes_add_key_after(struct jes_context *ctx, struct jes_elemen
 
   parent = GET_PARENT(ctx, key_node);
   assert(parent != NULL);
-  assert(parent->json_tlv.type == JES_OBJECT);
+  assert(parent->json_tlv.type == JES_EMPTY_OBJECT);
 
   keyword_length = strnlen(keyword, JES_MAX_VALUE_LENGTH);
   if (keyword_length == JES_MAX_VALUE_LENGTH) {
@@ -460,7 +460,7 @@ struct jes_element* jes_update_key_value(struct jes_context *ctx, struct jes_ele
 
 struct jes_element* jes_update_key_value_to_object(struct jes_context *ctx, struct jes_element *key)
 {
-  return jes_update_key_value(ctx, key, JES_OBJECT, "");
+  return jes_update_key_value(ctx, key, JES_EMPTY_OBJECT, "");
 }
 
 struct jes_element* jes_update_key_value_to_array(struct jes_context *ctx, struct jes_element *key)
