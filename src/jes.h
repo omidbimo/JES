@@ -8,11 +8,26 @@
  * Enable this to parse very large JSON files (up to 4,294,967,294 nodes)
  * With 16-bit descriptors, the parser can address up to 65,534 nodes
  */
-#define JES_USE_32BIT_NODE_DESCRIPTOR
+//#define JES_USE_32BIT_NODE_DESCRIPTOR
 
 #define JES_MAX_VALUE_LENGTH 0xFFFF
-/*  */
-#define JES_ENABLE_FAST_KEY_SEARCH
+/**
+ * JES_ENABLE_FAST_KEY_SEARCH
+ * Enables hash table–based key lookup for faster access to keys in JSON objects.
+ *
+ * When defined, JES uses a hash table to accelerate key lookups within JSON objects.
+ * This improves performance in larger JSON documents with many keys, particularly
+ * when key access is frequent.
+ *
+ * For small or simple JSON structures (typically a few kilobytes), linear search is often
+ * more efficient and faster due to minimal overhead and lower memory usage. In such cases,
+ * it is recommended to keep fast key search disabled.
+ *
+ * Note: When fast key search is enabled, the user must provide a **larger memory buffer**
+ * for the JES context to accommodate the internal hash table structure.
+ * Insufficient memory may lead to parsing failures.
+ */
+//#define JES_ENABLE_FAST_KEY_SEARCH
 
 typedef enum jes_status {
   JES_NO_ERROR = 0,
