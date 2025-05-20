@@ -11,6 +11,25 @@
 #define JES_FNV_PRIME_32BIT         16777619
 #define JES_FNV_OFFSET_BASIS_32BIT  2166136261
 
+/**
+ * @brief Generates a compound hash using the FNV-1a algorithm.
+ *
+ * This function calculates a hash value based on two inputs:
+ * 1. A parent ID (uint32_t)
+ * 2. A keyword string
+ *
+ * The function implements the FNV-1a hashing algorithm, which first processes
+ * the bytes of the parent ID and then the characters of the keyword string.
+ * The resulting hash uniquely represents the combination of a parent node and a
+ * key, allowing keys with identical names to be distinguished when stored in
+ * separate objects or namespaces.
+ *
+ * @param parent_id The ID of the parent node (typically another hash value)
+ * @param keyword Pointer to the keyword string to be hashed
+ * @param keyword_length Length of the keyword string in bytes
+ *
+ * @return size_t The calculated hash value
+ */
 static size_t jes_fnv1a_compound_hash(uint32_t parent_id, const char* keyword, size_t keyword_length) {
   uint8_t* parent_id_bytes = (uint8_t*)&parent_id;
   size_t hash = JES_FNV_OFFSET_BASIS_32BIT;
@@ -18,11 +37,13 @@ static size_t jes_fnv1a_compound_hash(uint32_t parent_id, const char* keyword, s
 
   assert(keyword != NULL);
 
+  /* Process each byte of the parent ID */
   for (index = 0; index < sizeof(parent_id); index++) {
     hash ^= parent_id_bytes[index];
     hash *= JES_FNV_PRIME_32BIT;
   }
 
+  /* Process each character of the keyword */
   for (index = 0; index < keyword_length; index++) {
     hash ^= (unsigned char)keyword[index];
     hash *= JES_FNV_PRIME_32BIT;
@@ -31,6 +52,12 @@ static size_t jes_fnv1a_compound_hash(uint32_t parent_id, const char* keyword, s
   return hash;
 }
 
+/**
+ * @brief Searches for a specific key within the JES context's hash table, where keys are
+ * indexed based on their parent object and the key string. It uses a compound hash
+ * of the parent object's index and the key string to locate entries, and handles
+ * hash collisions using linear probing.
+ */
 static struct jes_node* jes_find_key_lookup_table(struct jes_context* ctx,
                                                   struct jes_node* parent_object,
                                                   const char* keyword,
@@ -112,7 +139,7 @@ void jes_hash_table_remove(struct jes_context* ctx, struct jes_node* parent_obje
     if ((lookup_entries[index].hash == hash) &&
         (lookup_entries[index].key_element->length == key->json_tlv.length) &&
         (memcmp(lookup_entries[index].key_element->value, key->json_tlv.value, key->json_tlv.length) == 0)) {
-      printf("\n    key removed from hash table: %.*s", key->json_tlv.length, key->json_tlv.value);
+
       lookup_entries[index].key_element = NULL;
       break;
     }

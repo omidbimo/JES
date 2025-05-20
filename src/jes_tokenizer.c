@@ -7,7 +7,6 @@
 #include "jes_private.h"
 #include "jes_logger.h"
 
-
 #define UPDATE_TOKEN(tok, type_, offset_, size_) \
   tok.type = type_; \
   tok.offset = offset_; \

@@ -233,7 +233,11 @@ struct jes_node* jes_insert_key_node(struct jes_context* ctx,
   return new_node;
 }
 
-/* To delete a node and its whole branch */
+/**
+ * @brief Deletes a JSON node and all its children from the parse tree.
+ *
+ * This function performs a post-order traversal to delete a node and its entire subtree.
+ */
 void jes_delete_node(struct jes_context* ctx, struct jes_node* node)
 {
   struct jes_node* iter = node;
@@ -243,58 +247,76 @@ void jes_delete_node(struct jes_context* ctx, struct jes_node* node)
     return;
   }
 
+  /* First phase: Delete all children using post-order traversal
+   * The deletion process:
+   * 1. Traverse to the deepest leaf node in the subtree
+   * 2. Delete leaf nodes, working back up the tree
+   * 3. Update parent-child and sibling references
+   * 4. Remove any hash table entries for keys
+   */
   while (true) {
-    /* getting the last child in branch */
+
+    /* Navigate to the deepest leaf node in this branch */
     while (HAS_CHILD(iter)) {
       iter = GET_FIRST_CHILD(ctx, iter);
     }
 
+    /* If we're back at the original node, all children have been deleted */
     if (iter == node) {
-      /* Node has no children. Do not delete it before maintaining its parent & sibling links */
       break;
     }
 
-    /* Set the parent first child link to node's possible sibling. So we don't lost the branch. */
-    assert(HAS_PARENT(iter));
+    /* Get parent before deleting the node */
     parent = GET_PARENT(ctx, iter);
     if (parent == NULL) {
       ctx->status = JES_BROKEN_TREE;
       return;
     }
 
+    /* Update parent's first_child to skip the node being deleted */
     parent->first_child = iter->sibling;
+
     JES_LOG_NODE("\n    - ", JES_NODE_INDEX(ctx, iter), iter->json_tlv.type,
                   iter->json_tlv.length, iter->json_tlv.value,
                   iter->parent, iter->sibling, iter->first_child, iter->last_child, "");
 
+    /* Remove key from hash table if applicable */
 #ifdef JES_ENABLE_FAST_KEY_SEARCH
     if (iter->json_tlv.type == JES_KEY) {
       jes_hash_table_remove(ctx, parent, iter);
     }
 #endif
+
     jes_free(ctx, iter);
     iter = parent;
   }
 
-  /* All sub-elements are deleted. To delete the node itself, all parent and sibling links need to be maintained. */
+  /* Second phase: Delete the original node and update parent references */
   parent = GET_PARENT(ctx, node);
-  if (parent) {
+  if (parent != NULL) {
     if (parent->first_child == JES_NODE_INDEX(ctx, node)) {
+      /* Node is the first child of its parent */
       parent->first_child = node->sibling;
-      parent->last_child = node->sibling;
+
+      /* If this was the only child, update last_child as well */
+      if (parent->last_child == JES_NODE_INDEX(ctx, node)) {
+        parent->last_child = node->sibling;
+      }
     }
     else {
-      /* Node is not the first child. Iterate all children from the first child to reach the node and restore the links. */
-      for (iter = GET_FIRST_CHILD(ctx, parent); iter != NULL; iter = GET_SIBLING(ctx, iter)) {
-        /* If node is iter's next sibling, update iter's sibling then the node is ready to be freed. */
-        if (iter->sibling == JES_NODE_INDEX(ctx, node)) {
-          iter->sibling = node->sibling;
-          break;
-        }
+      /* Node is not the first child - find the sibling that points to it */
+      for (iter = GET_FIRST_CHILD(ctx, parent);
+           iter != NULL && iter->sibling != JES_NODE_INDEX(ctx, node);
+           iter = GET_SIBLING(ctx, iter)) {
+        /* Just find the node whose sibling pointer points to our target node */
       }
-      parent->last_child = JES_INVALID_INDEX;
-      if (iter) {
-        parent->last_child = JES_NODE_INDEX(ctx, iter);
+
+      if (iter != NULL) {
+        iter->sibling = node->sibling;
+        /* Update parent's last_child if necessary */
+        if (parent->last_child == JES_NODE_INDEX(ctx, node)) {
+          parent->last_child = JES_NODE_INDEX(ctx, iter);
+        }
       }
     }
   }
@@ -303,6 +325,7 @@ void jes_delete_node(struct jes_context* ctx, struct jes_node* node)
                 node->json_tlv.length, node->json_tlv.value,
                 node->parent, node->sibling, node->first_child, node->last_child, "");
 
+/* Remove from hash table if it's a key */
 #ifdef JES_ENABLE_FAST_KEY_SEARCH
   if (node->json_tlv.type == JES_KEY) {
     jes_hash_table_remove(ctx, parent, node);

@@ -25,8 +25,15 @@ static inline void jes_parser_on_opening_brace(struct jes_context *ctx)
   ctx->state = JES_EXPECT_KEY;
 }
 
+
+/**
+ * @brief Handles the parsing of a closing brace '}' in a JSON document.
+ * It validates the current parser state, determines the proper parent node to return to,
+ * and updates the parser state accordingly.
+ */
 static inline void jes_parser_on_closing_brace(struct jes_context *ctx)
 {
+  /* Validate current state - closing brace is only valid in specific states */
   if ((ctx->state != JES_EXPECT_KEY) &&
       (ctx->state != JES_HAVE_KEY_VALUE)) {
     ctx->status = JES_UNEXPECTED_TOKEN;
@@ -34,13 +41,9 @@ static inline void jes_parser_on_closing_brace(struct jes_context *ctx)
     return;
   }
 
-  /* Delimiter tokens can trigger upward iteration in the direction of parent node.
-     A '}' indicates the end of a key:value sequence (object). */
-
-  /* {} (empty object)is a special case that needs no iteration back to
-   the parent node. */
+  /* Handle special case: empty object "{}" */
   if ((ctx->iter->json_tlv.type == JES_OBJECT) && (ctx->state == JES_EXPECT_KEY)) {
-    /* An object in EXPECT_KEY state, can only be an empty object and must have no values */
+    /* An object in EXPECT_KEY state, can only be an empty object with no children */
     if (HAS_CHILD(ctx->iter)) {
       ctx->status = JES_UNEXPECTED_TOKEN;
       ctx->ext_status = ctx->state;
@@ -48,29 +51,33 @@ static inline void jes_parser_on_closing_brace(struct jes_context *ctx)
     }
   }
 
-  /* The current node isn't an OBJECT? then iterate the parents to find a matching OBJECT. */
-  /* TODO: It's probably not a solid way to find the correct OBJECT. */
+  /* If current node is not an OBJECT type, navigate up to find the parent OBJECT */
   if (ctx->iter->json_tlv.type != JES_OBJECT) {
     ctx->iter = jes_get_parent_node_of_type(ctx, ctx->iter, JES_OBJECT);
     assert(ctx->iter != NULL);
   }
 
-  /* Internal iterator now points to the object that is just closed. One more iteration
-     is needed to get the parent object or array for further insertions. */
+  /* Now that we've found the object being closed, move up one more level
+   * to the parent container (either an object or array) to continue parsing */
   ctx->iter = jes_get_parent_node_of_type_object_or_array(ctx, ctx->iter);
 
+  /* Update parser state based on the type of parent container we've moved to */
   if (ctx->iter) {
     if (ctx->iter->json_tlv.type == JES_ARRAY) {
+      /* We're now inside an array, ready for the next value */
       ctx->state = JES_HAVE_ARRAY_VALUE;
     }
     else if (ctx->iter->json_tlv.type == JES_OBJECT) {
+      /* We're now inside an object, just finished a key-value pair */
       ctx->state = JES_HAVE_KEY_VALUE;
     }
     else {
+      /* This should never happen - parent should always be object or array */
       assert(0);
     }
   }
   else {
+    /* We've reached the root level, expect end of file */
     ctx->state = JES_EXPECT_EOF;
   }
 }
@@ -89,8 +96,14 @@ static inline void jes_parser_on_opening_bracket(struct jes_context *ctx)
   ctx->state = JES_EXPECT_ARRAY_VALUE;
 }
 
+/**
+ * @brief Handles the parsing of a closing bracket ']' in a JSON document.
+ * It validates the current parser state, determines the proper parent node to return to,
+ * and updates the parser state accordingly.
+ */
 static inline void jes_parser_on_closing_bracket(struct jes_context *ctx)
 {
+  /* Validate current state - closing bracket is only valid in specific states */
   if ((ctx->state != JES_EXPECT_ARRAY_VALUE) &&
       (ctx->state != JES_HAVE_ARRAY_VALUE)) {
     ctx->status = JES_UNEXPECTED_TOKEN;
@@ -98,13 +111,7 @@ static inline void jes_parser_on_closing_bracket(struct jes_context *ctx)
     return;
   }
 
-  /* Delimiter tokens can trigger upward iteration in the direction of parent node.
-     A ']' indicates the end of an Array or possibly the end of a key:value sequence.
-  */
-
-  /* [] (empty array) is a special case that needs no backward iteration in the
-     parent node direction.
-  */
+  /* Handle special case: empty array "[]" */
   if ((ctx->iter->json_tlv.type == JES_ARRAY) && (ctx->state == JES_EXPECT_ARRAY_VALUE)) {
     /* An array in expecting state, can only be an empty and must have no values */
     if (HAS_CHILD(ctx->iter)) {
@@ -118,8 +125,8 @@ static inline void jes_parser_on_closing_bracket(struct jes_context *ctx)
     ctx->iter = jes_get_parent_node_of_type(ctx, ctx->iter, JES_ARRAY);
     assert(ctx->iter != NULL);
   }
-  /* Iterator now points the array that is just closed. One more upward iteration
-     is required to get the parent object or array for new insertions. */
+  /* Now that we've found the object being closed, move up one more level
+   * to the parent container (either an object or array) to continue parsing */
   ctx->iter = jes_get_parent_node_of_type_object_or_array(ctx, ctx->iter);
 
   if (!ctx->iter) {
@@ -134,6 +141,7 @@ static inline void jes_parser_on_closing_bracket(struct jes_context *ctx)
     ctx->state = JES_HAVE_KEY_VALUE;
   }
   else {
+    /* This should never happen - parent should always be object or array */
     assert(0);
   }
 }
@@ -152,24 +160,27 @@ static inline void jes_parser_on_colon(struct jes_context *ctx)
 
 static inline void jes_parser_on_comma(struct jes_context *ctx)
 {
+  /* Update parser state based on the current context */
   if (ctx->state == JES_HAVE_KEY_VALUE) {
+    /* Inside an object, after a key-value pair - now expect another key */
     ctx->state = JES_EXPECT_KEY;
   }
   else if (ctx->state == JES_HAVE_ARRAY_VALUE) {
+    /* Inside an array, after a value - now expect another array value */
     ctx->state = JES_EXPECT_ARRAY_VALUE;
   }
   else {
+    /* Comma is invalid in any other state */
     ctx->status = JES_UNEXPECTED_TOKEN;
-        ctx->ext_status = ctx->state;
+    ctx->ext_status = ctx->state;
     return;
   }
 
-  /* Delimiter tokens can trigger upward iteration in the direction of parent node.
-     A ',' indicates the end of a value.
-       - If the value is inside an array, iterate back to the parent array node.
-       - Otherwise, iterate back to the parent object.
-  */
-
+  /*
+   * Handle navigation within the JSON structure after a comma:
+   * - For container nodes (objects/arrays), validate they have children
+   * - For value nodes, move back up to the parent container
+   */
   if ((ctx->iter->json_tlv.type == JES_OBJECT) || (ctx->iter->json_tlv.type == JES_ARRAY)) {
     if (!HAS_CHILD(ctx->iter)) {
       ctx->status = JES_UNEXPECTED_TOKEN;
@@ -177,6 +188,7 @@ static inline void jes_parser_on_comma(struct jes_context *ctx)
     }
   }
   else {
+    /* Current node is a value - navigate up to the parent container (object or array) */
     ctx->iter = jes_get_parent_node_of_type_object_or_array(ctx, ctx->iter);
   }
 }
