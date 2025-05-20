@@ -129,7 +129,7 @@ struct jes_node* jes_get_parent_node_of_type_object_or_array(struct jes_context 
 
   parent = GET_PARENT(ctx, node);
   while (parent) {
-    if ((parent->json_tlv.type == JES_KEY) ||
+    if ((parent->json_tlv.type == JES_OBJECT) ||
         (parent->json_tlv.type == JES_ARRAY)) {
       return parent;
     }
@@ -143,34 +143,49 @@ struct jes_node* jes_insert_node(struct jes_context* ctx,
                                  struct jes_node* parent, struct jes_node* anchor,
                                  uint16_t type, uint16_t length, const char* value)
 {
-  /* TODO: review*/
+
   struct jes_node *new_node = NULL;
-
-  if ((parent == NULL) && (anchor != NULL)) {
-    assert(NODE_TYPE(anchor) == JES_KEY);
+#if 0
+  if (parent) {
+    if (!anchor) {
+      ctx->JES_INVALID_PARAMETER;
+      return NULL;
+    }
+    else if (anchor->parent != JES_NODE_INDEX(ctx, parent) {
+      ctx->JES_INVALID_PARAMETER;
+      return NULL;
+    }
   }
-
+  else {
+    ctx->JES_INVALID_PARAMETER;
+    return NULL;
+  }
+#endif
   new_node = jes_allocate(ctx);
 
   if (new_node) {
-
-    if (parent != NULL) {
+    if (parent) {
       new_node->parent = JES_NODE_INDEX(ctx, parent);
-      if (parent->last_child == JES_NODE_INDEX(ctx, anchor)) {
+
+      if (anchor) {
+        /* We have to insert after an existing node */
+        new_node->sibling = anchor->sibling;
+        anchor->sibling = JES_NODE_INDEX(ctx, new_node);
+        if (parent->last_child == JES_NODE_INDEX(ctx, anchor)) {
           parent->last_child = JES_NODE_INDEX(ctx, new_node);
+        }
       }
-      if (anchor == NULL) {
+      else {
+        /* There is no node before. Prepend node */
+        new_node->sibling = parent->first_child;
         parent->first_child = JES_NODE_INDEX(ctx, new_node);
+        if (!HAS_CHILD(parent)) {
+          parent->last_child = JES_NODE_INDEX(ctx, new_node);
+        }
       }
     }
-
-    if (anchor != NULL) {
-      /* Inserting the node after an existing node */
-      new_node->sibling = anchor->sibling;
-      anchor->sibling = JES_NODE_INDEX(ctx, new_node);
-    }
-
-    if (ctx->root == NULL) {
+    else {
+      assert(!ctx->root);
       ctx->root = new_node;
     }
 
@@ -187,24 +202,32 @@ struct jes_node* jes_insert_node(struct jes_context* ctx,
 }
 
 struct jes_node* jes_insert_key_node(struct jes_context* ctx,
-                                     struct jes_node* parent,
+                                     struct jes_node* parent_object,
                                      struct jes_node* anchor,
                                      uint16_t keyword_length, const char* keyword)
 {
   struct jes_node* new_node = NULL;
+  if (parent_object) {
+    assert(parent_object->json_tlv.type == JES_OBJECT);
+  }
+  else {
+    assert(anchor == NULL);
+  }
+
 
   /* No duplicate keys in the same object are allowed. */
-  if (ctx->find_key_fn(ctx, parent, keyword, keyword_length) != NULL) {
+  struct jes_node* node = ctx->find_key_fn(ctx, parent_object, keyword, keyword_length);
+  if (node) {
     ctx->status = JES_DUPLICATE_KEY;
   }
   else
   {
-    new_node = jes_insert_node(ctx, parent, anchor, JES_KEY, keyword_length, keyword);
+    new_node = jes_insert_node(ctx, parent_object, anchor, JES_KEY, keyword_length, keyword);
   }
 
   if (new_node) {
 #ifdef JES_ENABLE_FAST_KEY_SEARCH
-    jes_hash_table_add(ctx, parent, new_node);
+    jes_hash_table_add(ctx, parent_object, new_node);
 #endif
   }
   return new_node;
@@ -298,7 +321,7 @@ struct jes_node* jes_find_key(struct jes_context* ctx,
 
   assert(parent_object != NULL);
 
-  if (parent_object->json_tlv.type != JES_EMPTY_OBJECT) {
+  if (parent_object->json_tlv.type != JES_OBJECT) {
     ctx->status = JES_UNEXPECTED_ELEMENT;
     return NULL;
   }

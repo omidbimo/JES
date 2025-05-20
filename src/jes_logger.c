@@ -40,8 +40,7 @@ static char jes_token_type_str[][JES_HELPER_STR_LENGTH] = {
 
 static char jes_node_type_str[][JES_HELPER_STR_LENGTH] = {
   "NONE",
-  "ENTRY_OBJECT",
-  "EMPTY_OBJECT",
+  "OBJECT",
   "KEY",
   "ARRAY",
   "STRING",

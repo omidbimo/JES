@@ -37,7 +37,7 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
 
     switch (ctx->iter->json_tlv.type) {
 
-      case JES_EMPTY_OBJECT:
+      case JES_OBJECT:
         if ((ctx->state == JES_EXPECT_OBJECT) ||
             (ctx->state == JES_EXPECT_KEY_VALUE)  ||
             (ctx->state == JES_EXPECT_ARRAY_VALUE)) {
@@ -150,7 +150,7 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
     }
 
     /* Node has no child. if it's an object or array, forge a closing delimiter. */
-    if (ctx->iter->json_tlv.type == JES_EMPTY_OBJECT) {
+    if (ctx->iter->json_tlv.type == JES_OBJECT) {
       /* This covers empty objects */
       json_len += sizeof("}") - 1;
       if (!compact) {
@@ -189,7 +189,7 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
         ctx->state = JES_HAVE_KEY_VALUE;
       }
       /* If the parent is an object or array, forge a closing delimiter. */
-      else if (ctx->iter->json_tlv.type == JES_EMPTY_OBJECT) {
+      else if (ctx->iter->json_tlv.type == JES_OBJECT) {
         if (!compact) {
           indention -= 2;
           json_len += indention + sizeof("\n") - 1;
@@ -214,7 +214,7 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
         ctx->iter = GET_SIBLING(ctx, ctx->iter);
         json_len += sizeof(",") - 1;
 
-        if (PARENT_TYPE(ctx, ctx->iter) == JES_EMPTY_OBJECT) {
+        if (PARENT_TYPE(ctx, ctx->iter) == JES_OBJECT) {
           ctx->state = JES_EXPECT_KEY;
         }
         else if (PARENT_TYPE(ctx, ctx->iter) == JES_ARRAY) {
@@ -271,7 +271,7 @@ uint32_t jes_render(struct jes_context *ctx, char *buffer, uint32_t length, bool
 
   while (iter) {
 
-    if (iter->json_tlv.type == JES_EMPTY_OBJECT) {
+    if (iter->json_tlv.type == JES_OBJECT) {
 
       if (!compact) {
         if (PARENT_TYPE(ctx, iter) == JES_ARRAY) {
@@ -363,7 +363,7 @@ uint32_t jes_render(struct jes_context *ctx, char *buffer, uint32_t length, bool
     }
 
     /* Node has no child. if it's an object or array, forge a closing delimiter. */
-    if (iter->json_tlv.type == JES_EMPTY_OBJECT) {
+    if (iter->json_tlv.type == JES_OBJECT) {
       /* This covers empty objects */
       if (!compact) {
         indention -= 2;
@@ -389,7 +389,7 @@ uint32_t jes_render(struct jes_context *ctx, char *buffer, uint32_t length, bool
     /* Node doesn't have any children or siblings. Iterate backward to the parent. */
     while ((iter = GET_PARENT(ctx, iter))) {
       /* If the parent is an object or array, forge a closing delimiter. */
-      if (iter->json_tlv.type == JES_EMPTY_OBJECT) {
+      if (iter->json_tlv.type == JES_OBJECT) {
         if (!compact) {
           *dst++ = '\n';
           indention -= 2;

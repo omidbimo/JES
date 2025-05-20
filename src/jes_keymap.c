@@ -32,15 +32,19 @@ static size_t jes_fnv1a_compound_hash(uint32_t parent_id, const char* keyword, s
 }
 
 static struct jes_node* jes_find_key_lookup_table(struct jes_context* ctx,
-                                                  struct jes_node* parent,
+                                                  struct jes_node* parent_object,
                                                   const char* keyword,
                                                   size_t keyword_length)
 {
   struct jes_hash_table* table = ctx->hash_table;
   struct jes_node* key = NULL;
-  size_t parent_id = (parent != NULL) ? JES_NODE_INDEX(ctx, parent) : JES_INVALID_INDEX;
-  size_t hash = table->hash_fn(parent_id, keyword, keyword_length);
-  size_t index = hash % table->capacity;
+  size_t hash;
+  size_t index;
+
+  assert(parent_object != NULL);
+
+  hash = table->hash_fn(JES_NODE_INDEX(ctx, parent_object), keyword, keyword_length);
+  index = hash % table->capacity;
 
   /* Linear probing to handle collisions */
   while (table->entries[index].key_element != NULL) {
@@ -57,11 +61,10 @@ static struct jes_node* jes_find_key_lookup_table(struct jes_context* ctx,
   return key;
 }
 
-jes_status jes_hash_table_add(struct jes_context* ctx, struct jes_node* parent, struct jes_node* key)
+jes_status jes_hash_table_add(struct jes_context* ctx, struct jes_node* parent_object, struct jes_node* key)
 {
   struct jes_hash_table* table = ctx->hash_table;
-  size_t parent_id = (parent != NULL) ? JES_NODE_INDEX(ctx, parent) : JES_INVALID_INDEX;
-  size_t hash = table->hash_fn(parent_id, key->json_tlv.value, key->json_tlv.length);
+  size_t hash = table->hash_fn(JES_NODE_INDEX(ctx, parent_object), key->json_tlv.value, key->json_tlv.length);
   size_t index = hash % table->capacity;
   size_t start_index = index;
 
@@ -92,13 +95,17 @@ jes_status jes_hash_table_add(struct jes_context* ctx, struct jes_node* parent, 
   return ctx->status;
 }
 
-void jes_hash_table_remove(struct jes_context* ctx, struct jes_node* parent, struct jes_node* key)
+void jes_hash_table_remove(struct jes_context* ctx, struct jes_node* parent_object, struct jes_node* key)
 {
   struct jes_hash_table* table = ctx->hash_table;
   struct jes_hash_entry* lookup_entries = table->entries;
-  size_t parent_id = (parent != NULL) ? JES_NODE_INDEX(ctx, parent) : JES_INVALID_INDEX;
-  size_t hash = table->hash_fn(parent_id, key->json_tlv.value, key->json_tlv.length);
-  size_t index = hash % table->capacity;
+  size_t hash;
+  size_t index;
+
+  assert(parent_object != NULL);
+
+  hash = table->hash_fn(JES_NODE_INDEX(ctx, parent_object), key->json_tlv.value, key->json_tlv.length);
+  index = hash % table->capacity;
 
   /* Linear probing to find the key */
   while (lookup_entries[index].key_element != NULL) {

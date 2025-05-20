@@ -32,8 +32,7 @@ typedef enum jes_status {
 
 enum jes_type {
   JES_UNKNOWN = 0,
-  JES_ENTRY_OBJECT,
-  JES_EMPTY_OBJECT,
+  JES_OBJECT,
   JES_KEY,
   JES_ARRAY,
   JES_STRING,
@@ -140,7 +139,7 @@ enum jes_type jes_get_parent_type(struct jes_context *ctx, struct jes_element *e
 
 /* Returns a Key element inside the given object.
  * param [in] ctx
- * param [in] parent is a JSON element of type JES_EMPTY_OBJECT or JES_KEY
+ * param [in] parent is a JSON element of type JES_OBJECT or JES_KEY
  * param [in] keys is a NUL-terminated string containing potentially several key names separated by a dot "."
  *            The target key is the last key in keys.
  * Note: The search for the target key starts from the parent which can be an OBJECT or a KEY.
@@ -190,7 +189,7 @@ uint32_t jes_update_key(struct jes_context *ctx, struct jes_element *key, const 
  */
 struct jes_element* jes_update_key_value(struct jes_context *ctx, struct jes_element *key, enum jes_type type, const char *value);
 
-/* Convert the key value to a JES_EMPTY_OBJECT element. All the previous value elements will be lost.
+/* Convert the key value to a JES_OBJECT element. All the previous value elements will be lost.
  * return the new key value element or NULL in case of a failure
  */
 struct jes_element* jes_update_key_value_to_object(struct jes_context *ctx, struct jes_element *key);
@@ -281,6 +280,6 @@ struct jes_element* jes_add_element(struct jes_context *ctx, struct jes_element 
 /* For loop to to iterate over keys of an object.
  * object_ is a pointer to an object element to iterate its KEYs.
  * iter_ must be initially NULL then in each iteration it will deliver a KEY member. */
-#define JES_FOR_EACH_KEY(ctx_, object_, iter_) for(iter_ = (object_->type == JES_EMPTY_OBJECT) ? jes_get_child(ctx_, object_) : NULL; iter_ != NULL && iter_->type == JES_KEY; iter_ = jes_get_sibling(ctx_, iter_))
+#define JES_FOR_EACH_KEY(ctx_, object_, iter_) for(iter_ = (object_->type == JES_OBJECT) ? jes_get_child(ctx_, object_) : NULL; iter_ != NULL && iter_->type == JES_KEY; iter_ = jes_get_sibling(ctx_, iter_))
 
 #endif

@@ -9,43 +9,6 @@
 #include "jes_tokenizer.h"
 #include "jes_tree.h"
 
-#ifndef NDEBUG
-  #define JES_LOG_NODE  jes_log_node
-#else
-  #define JES_LOG_NODE(...)
-#endif
-
-static struct jes_node* jes_transform_object_to_key(struct jes_context* ctx, struct jes_node* object,
-                                    const char* keyword, uint16_t keyword_length)
-{
-  struct jes_node* key = NULL;
-
-  assert(object->json_tlv.type == JES_EMPTY_OBJECT);
-
-  /* No duplicate keys in the same object are allowed. */
-  if (ctx->find_key_fn(ctx, GET_PARENT(ctx, object), keyword, keyword_length) != NULL) {
-    ctx->status = JES_DUPLICATE_KEY;
-  }
-  else
-  {
-    /* Transform the OBJECT into a KEY. */
-    key = object;
-    key->json_tlv.type = JES_KEY;
-    key->json_tlv.length = keyword_length;
-    key->json_tlv.value = keyword;
-
-#ifdef JES_ENABLE_FAST_KEY_SEARCH
-    jes_hash_table_add(ctx, GET_PARENT(ctx, key), key);
-#endif
-
-    JES_LOG_NODE("\n    > ", JES_NODE_INDEX(ctx, key), key->json_tlv.type,
-                  key->json_tlv.length, key->json_tlv.value,
-                  key->parent, key->sibling, key->first_child, key->last_child, "");
-  }
-
-  return key;
-}
-
 static inline void jes_parser_on_opening_brace(struct jes_context *ctx)
 {
   if ((ctx->state != JES_EXPECT_OBJECT) &&
@@ -56,24 +19,14 @@ static inline void jes_parser_on_opening_brace(struct jes_context *ctx)
     return;
   }
 
-  if (ctx->root == NULL) {
-    ctx->iter = jes_insert_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter),
-                            JES_ENTRY_OBJECT, ctx->token.length, &ctx->json_data[ctx->token.offset]);
-  }
-  /* Append an empty OBJECT node. */
+  /* Append node */
   ctx->iter = jes_insert_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter),
-                              JES_EMPTY_OBJECT, ctx->token.length, &ctx->json_data[ctx->token.offset]);
+                              JES_OBJECT, ctx->token.length, &ctx->json_data[ctx->token.offset]);
   ctx->state = JES_EXPECT_KEY;
 }
 
 static inline void jes_parser_on_closing_brace(struct jes_context *ctx)
 {
-#ifdef JES_PARSER_LOG
-          printf("\n                         state: %d", ctx->state);
-    JES_LOG_NODE("\n                          -->> ", JES_NODE_INDEX(ctx, ctx->iter), ctx->iter->json_tlv.type,
-                  ctx->iter->json_tlv.length, ctx->iter->json_tlv.value,
-                  ctx->iter->parent, ctx->iter->sibling, ctx->iter->first_child, ctx->iter->last_child, "");
-#endif
   if ((ctx->state != JES_EXPECT_KEY) &&
       (ctx->state != JES_HAVE_KEY_VALUE)) {
     ctx->status = JES_UNEXPECTED_TOKEN;
@@ -81,35 +34,37 @@ static inline void jes_parser_on_closing_brace(struct jes_context *ctx)
     return;
   }
 
-  /* '}' indicates the end of a key:value sequence (object).
-      An iteration in the direction of object's parent is required.
-   */
+  /* Delimiter tokens can trigger upward iteration in the direction of parent node.
+     A '}' indicates the end of a key:value sequence (object). */
 
-  /* {} is valid and indicates an empty OBJECT. */
-  if ((NODE_TYPE(ctx->iter) == JES_EMPTY_OBJECT) && (ctx->state == JES_EXPECT_KEY)) {
+  /* {} (empty object)is a special case that needs no iteration back to
+   the parent node. */
+  if ((ctx->iter->json_tlv.type == JES_OBJECT) && (ctx->state == JES_EXPECT_KEY)) {
+    /* An object in EXPECT_KEY state, can only be an empty object and must have no values */
     if (HAS_CHILD(ctx->iter)) {
-    /* A closing OBJECT in the EXPECT_KEY state, can only be an empty object and must have no children */
       ctx->status = JES_UNEXPECTED_TOKEN;
       ctx->ext_status = ctx->state;
       return;
     }
   }
-  else {
-    /* Getting the key node of the key:value sequence that is just closed. */
-    ctx->iter = GET_PARENT(ctx, ctx->iter);
+
+  /* The current node isn't an OBJECT? then iterate the parents to find a matching OBJECT. */
+  /* TODO: It's probably not a solid way to find the correct OBJECT. */
+  if (ctx->iter->json_tlv.type != JES_OBJECT) {
+    ctx->iter = jes_get_parent_node_of_type(ctx, ctx->iter, JES_OBJECT);
     assert(ctx->iter != NULL);
   }
 
+  /* Internal iterator now points to the object that is just closed. One more iteration
+     is needed to get the parent object or array for further insertions. */
+  ctx->iter = jes_get_parent_node_of_type_object_or_array(ctx, ctx->iter);
+
   if (ctx->iter) {
-    if (PARENT_TYPE(ctx, ctx->iter) == JES_ARRAY) {
+    if (ctx->iter->json_tlv.type == JES_ARRAY) {
       ctx->state = JES_HAVE_ARRAY_VALUE;
     }
-    else if (PARENT_TYPE(ctx, ctx->iter) == JES_KEY) {
+    else if (ctx->iter->json_tlv.type == JES_OBJECT) {
       ctx->state = JES_HAVE_KEY_VALUE;
-    }
-    else if (PARENT_TYPE(ctx, ctx->iter) == JES_ENTRY_OBJECT) {
-      ctx->state = JES_EXPECT_EOF;
-      ctx->iter = GET_PARENT(ctx, ctx->iter);
     }
     else {
       assert(0);
@@ -118,11 +73,6 @@ static inline void jes_parser_on_closing_brace(struct jes_context *ctx)
   else {
     ctx->state = JES_EXPECT_EOF;
   }
-#ifdef JES_PARSER_LOG
-      JES_LOG_NODE("\n                          <<-- ", JES_NODE_INDEX(ctx, ctx->iter), ctx->iter->json_tlv.type,
-                  ctx->iter->json_tlv.length, ctx->iter->json_tlv.value,
-                  ctx->iter->parent, ctx->iter->sibling, ctx->iter->first_child, ctx->iter->last_child, "");
-#endif
 }
 
 static inline void jes_parser_on_opening_bracket(struct jes_context *ctx)
@@ -141,12 +91,6 @@ static inline void jes_parser_on_opening_bracket(struct jes_context *ctx)
 
 static inline void jes_parser_on_closing_bracket(struct jes_context *ctx)
 {
-#ifdef JES_PARSER_LOG
-    printf("\n                          state: %d", ctx->state);
-    JES_LOG_NODE("\n                          -->> ", JES_NODE_INDEX(ctx, ctx->iter), ctx->iter->json_tlv.type,
-                  ctx->iter->json_tlv.length, ctx->iter->json_tlv.value,
-                  ctx->iter->parent, ctx->iter->sibling, ctx->iter->first_child, ctx->iter->last_child, "");
-#endif
   if ((ctx->state != JES_EXPECT_ARRAY_VALUE) &&
       (ctx->state != JES_HAVE_ARRAY_VALUE)) {
     ctx->status = JES_UNEXPECTED_TOKEN;
@@ -154,43 +98,44 @@ static inline void jes_parser_on_closing_bracket(struct jes_context *ctx)
     return;
   }
 
-  /* ']' indicates the end of an Array.
-      An iteration in the direction of object's parent is required.
+  /* Delimiter tokens can trigger upward iteration in the direction of parent node.
+     A ']' indicates the end of an Array or possibly the end of a key:value sequence.
   */
 
-  /* [] is valid and indicates an empty ARRAY */
-  if ((NODE_TYPE(ctx->iter) == JES_ARRAY) && (ctx->state == JES_EXPECT_ARRAY_VALUE)) {
+  /* [] (empty array) is a special case that needs no backward iteration in the
+     parent node direction.
+  */
+  if ((ctx->iter->json_tlv.type == JES_ARRAY) && (ctx->state == JES_EXPECT_ARRAY_VALUE)) {
+    /* An array in expecting state, can only be an empty and must have no values */
     if (HAS_CHILD(ctx->iter)) {
-    /* An array in expecting value state, can only be an empty and must have no values */
       ctx->status = JES_UNEXPECTED_TOKEN;
       ctx->ext_status = ctx->state;
       return;
     }
   }
-  else {
-    ctx->iter = GET_PARENT(ctx, ctx->iter);
+
+  if (ctx->iter->json_tlv.type != JES_ARRAY) {
+    ctx->iter = jes_get_parent_node_of_type(ctx, ctx->iter, JES_ARRAY);
     assert(ctx->iter != NULL);
   }
+  /* Iterator now points the array that is just closed. One more upward iteration
+     is required to get the parent object or array for new insertions. */
+  ctx->iter = jes_get_parent_node_of_type_object_or_array(ctx, ctx->iter);
 
   if (!ctx->iter) {
     ctx->status = JES_PARSING_FAILED;
     return;
   }
 
-  if (PARENT_TYPE(ctx, ctx->iter) == JES_ARRAY) {
+  if (ctx->iter->json_tlv.type == JES_ARRAY) {
     ctx->state = JES_HAVE_ARRAY_VALUE;
   }
-  else if (PARENT_TYPE(ctx, ctx->iter) == JES_KEY) {
+  else if (ctx->iter->json_tlv.type == JES_OBJECT) {
     ctx->state = JES_HAVE_KEY_VALUE;
   }
   else {
     assert(0);
   }
-#ifdef JES_PARSER_LOG
-    JES_LOG_NODE("\n                           <<-- ", JES_NODE_INDEX(ctx, ctx->iter), ctx->iter->json_tlv.type,
-                  ctx->iter->json_tlv.length, ctx->iter->json_tlv.value,
-                  ctx->iter->parent, ctx->iter->sibling, ctx->iter->first_child, ctx->iter->last_child, "");
-#endif
 }
 
 static inline void jes_parser_on_colon(struct jes_context *ctx)
@@ -207,18 +152,8 @@ static inline void jes_parser_on_colon(struct jes_context *ctx)
 
 static inline void jes_parser_on_comma(struct jes_context *ctx)
 {
-#ifdef JES_PARSER_LOG
-    printf("\n                          state: %d", ctx->state);
-    JES_LOG_NODE("\n                          -->> ", JES_NODE_INDEX(ctx, ctx->iter), ctx->iter->json_tlv.type,
-                  ctx->iter->json_tlv.length, ctx->iter->json_tlv.value,
-                  ctx->iter->parent, ctx->iter->sibling, ctx->iter->first_child, ctx->iter->last_child, "");
-#endif
   if (ctx->state == JES_HAVE_KEY_VALUE) {
     ctx->state = JES_EXPECT_KEY;
-    /* { "key1": { "key2": "value",... because we don't store OBJECT nodes,
-     * a new key3 shall be added as a child of key1. We need two iterations from value to key1.
-     * First iteration is the next. */
-    ctx->iter = GET_PARENT(ctx, ctx->iter);
   }
   else if (ctx->state == JES_HAVE_ARRAY_VALUE) {
     ctx->state = JES_EXPECT_ARRAY_VALUE;
@@ -235,31 +170,22 @@ static inline void jes_parser_on_comma(struct jes_context *ctx)
        - Otherwise, iterate back to the parent object.
   */
 
-    ctx->iter = GET_PARENT(ctx, ctx->iter);
-#ifdef JES_PARSER_LOG
-      JES_LOG_NODE("\n                          <<-- ", JES_NODE_INDEX(ctx, ctx->iter), ctx->iter->json_tlv.type,
-                  ctx->iter->json_tlv.length, ctx->iter->json_tlv.value,
-                  ctx->iter->parent, ctx->iter->sibling, ctx->iter->first_child, ctx->iter->last_child, "");
-#endif
+  if ((ctx->iter->json_tlv.type == JES_OBJECT) || (ctx->iter->json_tlv.type == JES_ARRAY)) {
+    if (!HAS_CHILD(ctx->iter)) {
+      ctx->status = JES_UNEXPECTED_TOKEN;
+      ctx->ext_status = ctx->state;
+    }
+  }
+  else {
+    ctx->iter = jes_get_parent_node_of_type_object_or_array(ctx, ctx->iter);
+  }
 }
 
 static inline void jes_parser_on_string(struct jes_context *ctx)
 {
-#ifdef JES_PARSER_LOG
-      printf("\n                          state: %d", ctx->state);
-        JES_LOG_NODE("\n                          -->> ", JES_NODE_INDEX(ctx, ctx->iter), ctx->iter->json_tlv.type,
-                  ctx->iter->json_tlv.length, ctx->iter->json_tlv.value,
-                  ctx->iter->parent, ctx->iter->sibling, ctx->iter->first_child, ctx->iter->last_child, "");
-#endif
   if (ctx->state == JES_EXPECT_KEY) {
-    if (ctx->iter->json_tlv.type == JES_EMPTY_OBJECT) {
-      ctx->iter = jes_transform_object_to_key(ctx, ctx->iter, &ctx->json_data[ctx->token.offset], ctx->token.length);
-    }
-    else {
-      /* Append the key */
-      ctx->iter = jes_insert_key_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter), ctx->token.length, &ctx->json_data[ctx->token.offset]);
-    }
-
+    /* Append the key */
+    ctx->iter = jes_insert_key_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter), ctx->token.length, &ctx->json_data[ctx->token.offset]);
     ctx->state = JES_EXPECT_COLON;
   }
   else if (ctx->state == JES_EXPECT_KEY_VALUE) {
@@ -276,11 +202,6 @@ static inline void jes_parser_on_string(struct jes_context *ctx)
     ctx->ext_status = ctx->state;
     return;
   }
-#ifdef JES_PARSER_LOG
-          JES_LOG_NODE("\n                          <<-- ", JES_NODE_INDEX(ctx, ctx->iter), ctx->iter->json_tlv.type,
-                  ctx->iter->json_tlv.length, ctx->iter->json_tlv.value,
-                  ctx->iter->parent, ctx->iter->sibling, ctx->iter->first_child, ctx->iter->last_child, "");
-#endif
 }
 
 static inline void jes_parser_on_value(struct jes_context *ctx, enum jes_type value_type)
@@ -374,12 +295,7 @@ void jes_parse(struct jes_context *ctx)
     }
   } while ((ctx->status == JES_NO_ERROR) && (ctx->token.type != JES_TOKEN_EOF));
 
-  if (ctx->status == JES_NO_ERROR) {
-    if ((ctx->iter == NULL) || (NODE_TYPE(ctx->iter) != JES_ENTRY_OBJECT)) {
-      ctx->status = JES_PARSING_FAILED;
-    }
-    else {
-      ctx->root = ctx->iter;
-    }
+  if ((ctx->status == JES_NO_ERROR) && (ctx->iter != NULL)) {
+      ctx->status = JES_UNEXPECTED_EOF;
   }
 }
