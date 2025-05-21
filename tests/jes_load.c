@@ -30,7 +30,8 @@ int main(void)
   const char json_str_positive_tests[][500] = {
         "{\"key\": \"value\"}",
         "{\"key\": [\"value\", {}]}",
-        "     {    \"key\"     :   \"value\"    }   "
+        "     {    \"key\"     :   \"value\"    }   ",
+        "{\"key\": {\"key\": [\"value1\", [{\"key\": \"value\"}, \"value\", [{}]]]}}",
         };
 
   const char json_str_negative_tests[][500] = {
@@ -46,6 +47,7 @@ int main(void)
         "\"key\": \"value\"",
         "{key: \"value\"}",                                   /* Missing Quotes Around Key */
         "{\"key\": \"value\",}",                              /* Trailing comma */
+
 #if 0
         "{\"key2\": \"val"
         "ue\"}",                                              /* Unescaped Control Character */
@@ -64,6 +66,7 @@ int main(void)
         "\"key\"",                                            /* Standalone string -Not Wrapped in an Object- */
         "{\"key\": []]}",                                     /* Unexpected closing bracket */
         "{\"key\": [[]}",                                     /* Missing closing Bracket */
+        "{\"key\": [{,}]}",                                   /* Unexpected Comma in object */
         "{\"key\": [,]}",                                     /* Unexpected Comma in array */
         "{\"key\": ][}",                                      /* Wrong order of Brackets */
         "{\"key\": [[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}", /* Extra closing Brackets */
