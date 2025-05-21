@@ -6,14 +6,6 @@
 
 /**
  * JES_USE_32BIT_NODE_DESCRIPTOR
- * Use 32-bit node descriptors (default: 16-bit)
- * Enable this to parse very large JSON files (up to 4,294,967,294 nodes)
- * With 16-bit descriptors, the parser can address up to 65,534 nodes
- * Using 32-bit descriptors, will double the memory used for node's parent,
- * first_child, last_child and sibling references.
- */
-/**
- * JES_USE_32BIT_NODE_DESCRIPTOR
  *
  * Configuration option to select between 16-bit or 32-bit node descriptors.
  *
