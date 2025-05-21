@@ -4,13 +4,56 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-/* Use 32-bit node descriptors (default: 16-bit)
+/**
+ * JES_USE_32BIT_NODE_DESCRIPTOR
+ * Use 32-bit node descriptors (default: 16-bit)
  * Enable this to parse very large JSON files (up to 4,294,967,294 nodes)
  * With 16-bit descriptors, the parser can address up to 65,534 nodes
+ * Using 32-bit descriptors, will double the memory used for node's parent,
+ * first_child, last_child and sibling references.
+ */
+/**
+ * JES_USE_32BIT_NODE_DESCRIPTOR
+ *
+ * Configuration option to select between 16-bit or 32-bit node descriptors.
+ *
+ * When defined, the parser will use 32-bit integers for node references instead of
+ * the default 16-bit integers. This affects all node reference fields: parent,
+ * first_child, last_child and sibling.
+ *
+ * Addressing Capacity:
+ * - With 16-bit descriptors (default): Parser can address up to 65,535 nodes
+ *   (2^16 - 1, reserving 0xFFFF for JES_INVALID_INDEX and potentially NULL)
+ * - With 32-bit descriptors: Parser can address up to 4,294,967,295 nodes
+ *   (2^32 - 1, similarly reserving special values)
+ *
+ * Memory impact:
+ * - Enabling 32-bit descriptors doubles the memory consumption for node reference
+ *   fields (parent, first_child, last_child, and sibling)
  */
 //#define JES_USE_32BIT_NODE_DESCRIPTOR
 
-#define JES_MAX_VALUE_LENGTH 0xFFFF
+/**
+ * JES_MAX_VALUE_LENGTH
+ *
+ * Maximum allowed length for string values and keys in JSON documents.
+ *
+ * This configuration option sets the maximum number of characters (bytes) allowed
+ * for individual string values and object keys during JSON parsing. The parser will
+ * reject any string that exceeds this limit, providing protection against memory
+ * exhaustion attacks and parsing extremely large or malformed JSON documents.
+ *
+ * Default value: 4096 bytes
+ *
+ * Customization guidelines:
+ * - Increase the limit for applications that legitimately handle large strings
+ *   (e.g., embedded Base64 data, large text fields)
+ * - Decrease the limit in memory-constrained environments or when processing
+ *   known small JSON documents
+ * - Consider the maximum expected string size in your JSON documents
+ *
+ */
+#define JES_MAX_VALUE_LENGTH 4096
 
 /**
  * JES_ENABLE_FAST_KEY_SEARCH
