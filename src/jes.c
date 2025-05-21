@@ -174,7 +174,7 @@ struct jes_element* jes_get_key(struct jes_context *ctx, struct jes_element *par
       keys = keys + key_len;
     }
 
-    if (iter->json_tlv.type == JES_KEY) {
+    if (NODE_TYPE(iter) == JES_KEY) {
       iter = GET_FIRST_CHILD(ctx, iter);
     }
     iter = ctx->find_key_fn(ctx, iter, key, key_len);
@@ -335,7 +335,7 @@ struct jes_element* jes_add_key(struct jes_context *ctx, struct jes_element *par
     if (object == NULL) {
       object = jes_insert_node(ctx, (struct jes_node*)parent, GET_LAST_CHILD(ctx, (struct jes_node*)parent), JES_OBJECT, 1, "{");
     }
-    else if (object->json_tlv.type != JES_OBJECT) {
+    else if (NODE_TYPE(object) != JES_OBJECT) {
       /* We should not land here */
       ctx->status = JES_UNEXPECTED_ELEMENT;
       return NULL;
@@ -376,11 +376,11 @@ struct jes_element* jes_add_key_before(struct jes_context *ctx, struct jes_eleme
 
   parent = GET_PARENT(ctx, key_node);
   assert(parent != NULL);
-  assert(parent->json_tlv.type == JES_OBJECT);
+  assert(NODE_TYPE(parent) == JES_OBJECT);
 
 
   for (iter = GET_FIRST_CHILD(ctx, parent); iter != NULL; iter = GET_SIBLING(ctx, iter)) {
-    assert(iter->json_tlv.type == JES_KEY);
+    assert(NODE_TYPE(iter) == JES_KEY);
     if (iter == key_node) {
       new_node = jes_insert_key_node(ctx, parent, before, keyword_length, keyword);
       break;
@@ -409,7 +409,7 @@ struct jes_element* jes_add_key_after(struct jes_context *ctx, struct jes_elemen
 
   parent = GET_PARENT(ctx, key_node);
   assert(parent != NULL);
-  assert(parent->json_tlv.type == JES_OBJECT);
+  assert(NODE_TYPE(parent) == JES_OBJECT);
 
   keyword_length = strnlen(keyword, JES_MAX_VALUE_LENGTH);
   if (keyword_length == JES_MAX_VALUE_LENGTH) {

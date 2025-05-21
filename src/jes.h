@@ -11,6 +11,7 @@
 //#define JES_USE_32BIT_NODE_DESCRIPTOR
 
 #define JES_MAX_VALUE_LENGTH 0xFFFF
+
 /**
  * JES_ENABLE_FAST_KEY_SEARCH
  * Enables hash table–based key lookup for faster access to keys in JSON objects.

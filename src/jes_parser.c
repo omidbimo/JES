@@ -42,7 +42,7 @@ static inline void jes_parser_on_closing_brace(struct jes_context *ctx)
   }
 
   /* Handle special case: empty object "{}" */
-  if ((ctx->iter->json_tlv.type == JES_OBJECT) && (ctx->state == JES_EXPECT_KEY)) {
+  if ((NODE_TYPE(ctx->iter) == JES_OBJECT) && (ctx->state == JES_EXPECT_KEY)) {
     /* An object in EXPECT_KEY state, can only be an empty object with no children */
     if (HAS_CHILD(ctx->iter)) {
       ctx->status = JES_UNEXPECTED_TOKEN;
@@ -52,7 +52,7 @@ static inline void jes_parser_on_closing_brace(struct jes_context *ctx)
   }
 
   /* If current node is not an OBJECT type, navigate up to find the parent OBJECT */
-  if (ctx->iter->json_tlv.type != JES_OBJECT) {
+  if (NODE_TYPE(ctx->iter) != JES_OBJECT) {
     ctx->iter = jes_get_parent_node_of_type(ctx, ctx->iter, JES_OBJECT);
     assert(ctx->iter != NULL);
   }
@@ -63,11 +63,11 @@ static inline void jes_parser_on_closing_brace(struct jes_context *ctx)
 
   /* Update parser state based on the type of parent container we've moved to */
   if (ctx->iter) {
-    if (ctx->iter->json_tlv.type == JES_ARRAY) {
+    if (NODE_TYPE(ctx->iter) == JES_ARRAY) {
       /* We're now inside an array, ready for the next value */
       ctx->state = JES_HAVE_ARRAY_VALUE;
     }
-    else if (ctx->iter->json_tlv.type == JES_OBJECT) {
+    else if (NODE_TYPE(ctx->iter) == JES_OBJECT) {
       /* We're now inside an object, just finished a key-value pair */
       ctx->state = JES_HAVE_KEY_VALUE;
     }
@@ -112,7 +112,7 @@ static inline void jes_parser_on_closing_bracket(struct jes_context *ctx)
   }
 
   /* Handle special case: empty array "[]" */
-  if ((ctx->iter->json_tlv.type == JES_ARRAY) && (ctx->state == JES_EXPECT_ARRAY_VALUE)) {
+  if ((NODE_TYPE(ctx->iter) == JES_ARRAY) && (ctx->state == JES_EXPECT_ARRAY_VALUE)) {
     /* An array in expecting state, can only be an empty and must have no values */
     if (HAS_CHILD(ctx->iter)) {
       ctx->status = JES_UNEXPECTED_TOKEN;
@@ -121,7 +121,7 @@ static inline void jes_parser_on_closing_bracket(struct jes_context *ctx)
     }
   }
 
-  if (ctx->iter->json_tlv.type != JES_ARRAY) {
+  if (NODE_TYPE(ctx->iter) != JES_ARRAY) {
     ctx->iter = jes_get_parent_node_of_type(ctx, ctx->iter, JES_ARRAY);
     assert(ctx->iter != NULL);
   }
@@ -134,10 +134,10 @@ static inline void jes_parser_on_closing_bracket(struct jes_context *ctx)
     return;
   }
 
-  if (ctx->iter->json_tlv.type == JES_ARRAY) {
+  if (NODE_TYPE(ctx->iter) == JES_ARRAY) {
     ctx->state = JES_HAVE_ARRAY_VALUE;
   }
-  else if (ctx->iter->json_tlv.type == JES_OBJECT) {
+  else if (NODE_TYPE(ctx->iter) == JES_OBJECT) {
     ctx->state = JES_HAVE_KEY_VALUE;
   }
   else {
@@ -181,7 +181,7 @@ static inline void jes_parser_on_comma(struct jes_context *ctx)
    * - For container nodes (objects/arrays), validate they have children
    * - For value nodes, move back up to the parent container
    */
-  if ((ctx->iter->json_tlv.type == JES_OBJECT) || (ctx->iter->json_tlv.type == JES_ARRAY)) {
+  if ((NODE_TYPE(ctx->iter) == JES_OBJECT) || (NODE_TYPE(ctx->iter) == JES_ARRAY)) {
     if (!HAS_CHILD(ctx->iter)) {
       ctx->status = JES_UNEXPECTED_TOKEN;
       ctx->ext_status = ctx->state;

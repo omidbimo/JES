@@ -109,7 +109,7 @@ struct jes_node* jes_get_parent_node_of_type(struct jes_context *ctx,
 
   parent = GET_PARENT(ctx, node);
   while (parent) {
-    if (parent->json_tlv.type == type) {
+    if (NODE_TYPE(parent) == type) {
       return parent;
     }
     parent = GET_PARENT(ctx, parent);
@@ -129,8 +129,8 @@ struct jes_node* jes_get_parent_node_of_type_object_or_array(struct jes_context 
 
   parent = GET_PARENT(ctx, node);
   while (parent) {
-    if ((parent->json_tlv.type == JES_OBJECT) ||
-        (parent->json_tlv.type == JES_ARRAY)) {
+    if ((NODE_TYPE(parent) == JES_OBJECT) ||
+        (NODE_TYPE(parent) == JES_ARRAY)) {
       return parent;
     }
     parent = GET_PARENT(ctx, parent);
@@ -193,7 +193,7 @@ struct jes_node* jes_insert_node(struct jes_context* ctx,
     new_node->json_tlv.length = length;
     new_node->json_tlv.value = value;
 
-    JES_LOG_NODE("\n    + ", JES_NODE_INDEX(ctx, new_node), new_node->json_tlv.type,
+    JES_LOG_NODE("\n    + ", JES_NODE_INDEX(ctx, new_node), NODE_TYPE(new_node),
                   new_node->json_tlv.length, new_node->json_tlv.value,
                   new_node->parent, new_node->sibling, new_node->first_child, new_node->last_child, "");
   }
@@ -208,7 +208,7 @@ struct jes_node* jes_insert_key_node(struct jes_context* ctx,
 {
   struct jes_node* new_node = NULL;
   if (parent_object) {
-    assert(parent_object->json_tlv.type == JES_OBJECT);
+    assert(NODE_TYPE(parent_object) == JES_OBJECT);
   }
   else {
     assert(anchor == NULL);
@@ -276,13 +276,13 @@ void jes_delete_node(struct jes_context* ctx, struct jes_node* node)
     /* Update parent's first_child to skip the node being deleted */
     parent->first_child = iter->sibling;
 
-    JES_LOG_NODE("\n    - ", JES_NODE_INDEX(ctx, iter), iter->json_tlv.type,
+    JES_LOG_NODE("\n    - ", JES_NODE_INDEX(ctx, iter), NODE_TYPE(iter),
                   iter->json_tlv.length, iter->json_tlv.value,
                   iter->parent, iter->sibling, iter->first_child, iter->last_child, "");
 
     /* Remove key from hash table if applicable */
 #ifdef JES_ENABLE_FAST_KEY_SEARCH
-    if (iter->json_tlv.type == JES_KEY) {
+    if (NODE_TYPE(iter) == JES_KEY) {
       jes_hash_table_remove(ctx, parent, iter);
     }
 #endif
@@ -321,13 +321,13 @@ void jes_delete_node(struct jes_context* ctx, struct jes_node* node)
     }
   }
 
-  JES_LOG_NODE("\n    - ", JES_NODE_INDEX(ctx, node), node->json_tlv.type,
+  JES_LOG_NODE("\n    - ", JES_NODE_INDEX(ctx, node), NODE_TYPE(node),
                 node->json_tlv.length, node->json_tlv.value,
                 node->parent, node->sibling, node->first_child, node->last_child, "");
 
 /* Remove from hash table if it's a key */
 #ifdef JES_ENABLE_FAST_KEY_SEARCH
-  if (node->json_tlv.type == JES_KEY) {
+  if (NODE_TYPE(node) == JES_KEY) {
     jes_hash_table_remove(ctx, parent, node);
   }
 #endif
@@ -344,16 +344,16 @@ struct jes_node* jes_find_key(struct jes_context* ctx,
 
   assert(parent_object != NULL);
 
-  if (parent_object->json_tlv.type != JES_OBJECT) {
+  if (NODE_TYPE(parent_object) != JES_OBJECT) {
     ctx->status = JES_UNEXPECTED_ELEMENT;
     return NULL;
   }
 
   iter = GET_FIRST_CHILD(ctx, iter);
 
-  while ((iter != NULL) && (iter->json_tlv.type == JES_KEY)) {
+  while ((iter != NULL) && (NODE_TYPE(iter) == JES_KEY)) {
                 JES_LOG_NODE("\n    ~ ", JES_NODE_INDEX(ctx, iter),
-                      iter->json_tlv.type, iter->json_tlv.length, iter->json_tlv.value,
+                      NODE_TYPE(iter), iter->json_tlv.length, iter->json_tlv.value,
                       iter->parent, iter->sibling, iter->first_child, iter->last_child, "");
     if ((iter->json_tlv.length == keyword_lenngth) &&
         (memcmp(iter->json_tlv.value, keyword, keyword_lenngth) == 0)) {
