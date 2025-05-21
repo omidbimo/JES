@@ -87,19 +87,9 @@ bool jes_validate_node(struct jes_context* ctx, struct jes_node* node)
   return false;
 }
 
-enum jes_type jes_get_parent_type(struct jes_context *ctx, struct jes_element *element)
-{
-  struct jes_element *parent = jes_get_parent(ctx, element);
-  if (parent) {
-    return parent->type;
-  }
-
-  return JES_UNKNOWN;
-}
-
-struct jes_node* jes_get_parent_node_of_type(struct jes_context *ctx,
-                                              struct jes_node *node,
-                                              enum jes_type type)
+struct jes_node* jes_tree_get_parent_node_by_type(struct jes_context* ctx,
+                                                  struct jes_node* node,
+                                                  enum jes_type type)
 {
   struct jes_node *parent = NULL;
 
@@ -107,41 +97,38 @@ struct jes_node* jes_get_parent_node_of_type(struct jes_context *ctx,
   assert(node != NULL);
   assert(ctx->cookie == JES_CONTEXT_COOKIE);
 
-  parent = GET_PARENT(ctx, node);
-  while (parent) {
-    if (NODE_TYPE(parent) == type) {
-      return parent;
-    }
-    parent = GET_PARENT(ctx, parent);
-  }
-
-  return NULL;
-}
-
-struct jes_node* jes_get_parent_node_of_type_object_or_array(struct jes_context *ctx,
-                                                             struct jes_node *node)
-{
-  struct jes_node *parent = NULL;
-
-  assert(ctx != NULL);
-  assert(node != NULL);
-  assert(ctx->cookie == JES_CONTEXT_COOKIE);
-
-  parent = GET_PARENT(ctx, node);
-  while (parent) {
-    if ((NODE_TYPE(parent) == JES_OBJECT) ||
-        (NODE_TYPE(parent) == JES_ARRAY)) {
-      return parent;
-    }
-    parent = GET_PARENT(ctx, parent);
+  /* Traverse up the tree until we find a parent of the requested type, or reach NULL */
+  for (parent = GET_PARENT(ctx, node);
+       parent != NULL && NODE_TYPE(parent) != type;
+       parent = GET_PARENT(ctx, parent)) {
+    /* Empty body - all work done in the loop control expression */
   }
 
   return parent;
 }
 
-struct jes_node* jes_insert_node(struct jes_context* ctx,
-                                 struct jes_node* parent, struct jes_node* anchor,
-                                 uint16_t type, uint16_t length, const char* value)
+struct jes_node* jes_tree_get_container_parent_node(struct jes_context* ctx,
+                                                    struct jes_node* node)
+{
+  struct jes_node* parent = NULL;
+
+  assert(ctx != NULL);
+  assert(node != NULL);
+  assert(ctx->cookie == JES_CONTEXT_COOKIE);
+
+  /* Traverse up the tree until we find an object or array parent, or reach NULL */
+  for (parent = GET_PARENT(ctx, node);
+       parent != NULL && NODE_TYPE(parent) != JES_OBJECT && NODE_TYPE(parent) != JES_ARRAY;
+       parent = GET_PARENT(ctx, parent)) {
+    /* Empty body - all work done in the loop control expression */
+  }
+
+  return parent;
+}
+
+struct jes_node* jes_tree_insert_node(struct jes_context* ctx,
+                                      struct jes_node* parent, struct jes_node* anchor,
+                                      uint16_t type, uint16_t length, const char* value)
 {
 
   struct jes_node *new_node = NULL;
@@ -201,7 +188,7 @@ struct jes_node* jes_insert_node(struct jes_context* ctx,
   return new_node;
 }
 
-struct jes_node* jes_insert_key_node(struct jes_context* ctx,
+struct jes_node* jes_tree_insert_key_node(struct jes_context* ctx,
                                      struct jes_node* parent_object,
                                      struct jes_node* anchor,
                                      uint16_t keyword_length, const char* keyword)
@@ -222,7 +209,7 @@ struct jes_node* jes_insert_key_node(struct jes_context* ctx,
   }
   else
   {
-    new_node = jes_insert_node(ctx, parent_object, anchor, JES_KEY, keyword_length, keyword);
+    new_node = jes_tree_insert_node(ctx, parent_object, anchor, JES_KEY, keyword_length, keyword);
   }
 
   if (new_node) {
@@ -238,7 +225,7 @@ struct jes_node* jes_insert_key_node(struct jes_context* ctx,
  *
  * This function performs a post-order traversal to delete a node and its entire subtree.
  */
-void jes_delete_node(struct jes_context* ctx, struct jes_node* node)
+void jes_tree_delete_node(struct jes_context* ctx, struct jes_node* node)
 {
   struct jes_node* iter = node;
   struct jes_node* parent = NULL;
@@ -334,10 +321,10 @@ void jes_delete_node(struct jes_context* ctx, struct jes_node* node)
   jes_free(ctx, node);
 }
 
-struct jes_node* jes_find_key(struct jes_context* ctx,
-                              struct jes_node* parent_object,
-                              const char* keyword,
-                              size_t keyword_lenngth)
+struct jes_node* jes_tree_find_key(struct jes_context* ctx,
+                                   struct jes_node* parent_object,
+                                   const char* keyword,
+                                   size_t keyword_lenngth)
 {
   struct jes_node* key = NULL;
   struct jes_node* iter = parent_object;

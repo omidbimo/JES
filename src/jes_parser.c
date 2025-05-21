@@ -20,7 +20,7 @@ static inline void jes_parser_on_opening_brace(struct jes_context *ctx)
   }
 
   /* Append node */
-  ctx->iter = jes_insert_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter),
+  ctx->iter = jes_tree_insert_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter),
                               JES_OBJECT, ctx->token.length, &ctx->json_data[ctx->token.offset]);
   ctx->state = JES_EXPECT_KEY;
 }
@@ -53,32 +53,37 @@ static inline void jes_parser_on_closing_brace(struct jes_context *ctx)
 
   /* If current node is not an OBJECT type, navigate up to find the parent OBJECT */
   if (NODE_TYPE(ctx->iter) != JES_OBJECT) {
-    ctx->iter = jes_get_parent_node_of_type(ctx, ctx->iter, JES_OBJECT);
+    ctx->iter = jes_tree_get_parent_node_by_type(ctx, ctx->iter, JES_OBJECT);
     assert(ctx->iter != NULL);
   }
 
-  /* Now that we've found the object being closed, move up one more level
-   * to the parent container (either an object or array) to continue parsing */
-  ctx->iter = jes_get_parent_node_of_type_object_or_array(ctx, ctx->iter);
-
-  /* Update parser state based on the type of parent container we've moved to */
-  if (ctx->iter) {
-    if (NODE_TYPE(ctx->iter) == JES_ARRAY) {
-      /* We're now inside an array, ready for the next value */
-      ctx->state = JES_HAVE_ARRAY_VALUE;
-    }
-    else if (NODE_TYPE(ctx->iter) == JES_OBJECT) {
-      /* We're now inside an object, just finished a key-value pair */
-      ctx->state = JES_HAVE_KEY_VALUE;
-    }
-    else {
-      /* This should never happen - parent should always be object or array */
-      assert(0);
-    }
+  if (ctx->iter != NULL) {
+    /* Now that we've found the object being closed, move up one more level
+     * to the parent container (either an object or array) to transition based on
+     * the parent type. */
+    ctx->iter = jes_tree_get_container_parent_node(ctx, ctx->iter);
   }
-  else {
+
+  if (ctx->iter == NULL) {
     /* We've reached the root level, expect end of file */
     ctx->state = JES_EXPECT_EOF;
+    return;
+  }
+
+  /* Update parser state based on the type of parent container we've moved to */
+  switch (NODE_TYPE(ctx->iter)) {
+    case JES_ARRAY:
+      /* We're now inside an array, ready for the next value or ARRAY closing */
+      ctx->state = JES_HAVE_ARRAY_VALUE;
+      break;
+    case JES_OBJECT:
+      /* We're now inside an object, just finished a key-value pair */
+      ctx->state = JES_HAVE_KEY_VALUE;
+      break;
+    default:
+      /* This should never happen - parent should always be object or array */
+      assert(0);
+      break;
   }
 }
 
@@ -91,7 +96,7 @@ static inline void jes_parser_on_opening_bracket(struct jes_context *ctx)
     return;
   }
 
-  ctx->iter = jes_insert_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter),
+  ctx->iter = jes_tree_insert_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter),
                               JES_ARRAY, ctx->token.length, &ctx->json_data[ctx->token.offset]);
   ctx->state = JES_EXPECT_ARRAY_VALUE;
 }
@@ -121,28 +126,38 @@ static inline void jes_parser_on_closing_bracket(struct jes_context *ctx)
     }
   }
 
+  /* If current node is not an ARRAY type, navigate up to find the parent ARRAY */
   if (NODE_TYPE(ctx->iter) != JES_ARRAY) {
-    ctx->iter = jes_get_parent_node_of_type(ctx, ctx->iter, JES_ARRAY);
+    ctx->iter = jes_tree_get_parent_node_by_type(ctx, ctx->iter, JES_ARRAY);
     assert(ctx->iter != NULL);
   }
-  /* Now that we've found the object being closed, move up one more level
-   * to the parent container (either an object or array) to continue parsing */
-  ctx->iter = jes_get_parent_node_of_type_object_or_array(ctx, ctx->iter);
 
-  if (!ctx->iter) {
+  if (ctx->iter != NULL) {
+    /* Now that we've found the object being closed, move up one more level
+     * to the parent container (either an object or array) to continue parsing */
+    ctx->iter = jes_tree_get_container_parent_node(ctx, ctx->iter);
+  }
+
+  if (ctx->iter == NULL) {
+    /* We've reached the root level, This should never inside an array happen */
     ctx->status = JES_PARSING_FAILED;
     return;
   }
 
-  if (NODE_TYPE(ctx->iter) == JES_ARRAY) {
-    ctx->state = JES_HAVE_ARRAY_VALUE;
-  }
-  else if (NODE_TYPE(ctx->iter) == JES_OBJECT) {
-    ctx->state = JES_HAVE_KEY_VALUE;
-  }
-  else {
-    /* This should never happen - parent should always be object or array */
-    assert(0);
+  /* Update parser state based on the type of parent container we've moved to */
+  switch (NODE_TYPE(ctx->iter)) {
+    case JES_ARRAY:
+      /* We're now inside an array, ready for the next value or ARRAY closing */
+      ctx->state = JES_HAVE_ARRAY_VALUE;
+      break;
+    case JES_OBJECT:
+      /* We're now inside an object, just finished a key-value pair */
+      ctx->state = JES_HAVE_KEY_VALUE;
+      break;
+    default:
+      /* This should never happen - parent should always be object or array */
+      assert(0);
+      break;
   }
 }
 
@@ -189,7 +204,7 @@ static inline void jes_parser_on_comma(struct jes_context *ctx)
   }
   else {
     /* Current node is a value - navigate up to the parent container (object or array) */
-    ctx->iter = jes_get_parent_node_of_type_object_or_array(ctx, ctx->iter);
+    ctx->iter = jes_tree_get_container_parent_node(ctx, ctx->iter);
   }
 }
 
@@ -197,16 +212,16 @@ static inline void jes_parser_on_string(struct jes_context *ctx)
 {
   if (ctx->state == JES_EXPECT_KEY) {
     /* Append the key */
-    ctx->iter = jes_insert_key_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter), ctx->token.length, &ctx->json_data[ctx->token.offset]);
+    ctx->iter = jes_tree_insert_key_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter), ctx->token.length, &ctx->json_data[ctx->token.offset]);
     ctx->state = JES_EXPECT_COLON;
   }
   else if (ctx->state == JES_EXPECT_KEY_VALUE) {
     /* Append value node */
-    ctx->iter = jes_insert_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter), JES_STRING, ctx->token.length, &ctx->json_data[ctx->token.offset]);
+    ctx->iter = jes_tree_insert_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter), JES_STRING, ctx->token.length, &ctx->json_data[ctx->token.offset]);
     ctx->state = JES_HAVE_KEY_VALUE;
   }
   else if (ctx->state == JES_EXPECT_ARRAY_VALUE) {
-    ctx->iter = jes_insert_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter), JES_STRING, ctx->token.length, &ctx->json_data[ctx->token.offset]);
+    ctx->iter = jes_tree_insert_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter), JES_STRING, ctx->token.length, &ctx->json_data[ctx->token.offset]);
     ctx->state = JES_HAVE_ARRAY_VALUE;
   }
   else {
@@ -230,7 +245,7 @@ static inline void jes_parser_on_value(struct jes_context *ctx, enum jes_type va
     return;
   }
 
-  ctx->iter = jes_insert_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter), value_type, ctx->token.length, &ctx->json_data[ctx->token.offset]);
+  ctx->iter = jes_tree_insert_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter), value_type, ctx->token.length, &ctx->json_data[ctx->token.offset]);
 }
 
 void jes_parse(struct jes_context *ctx)

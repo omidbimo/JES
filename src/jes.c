@@ -31,7 +31,7 @@ struct jes_context* jes_init(void *buffer, uint32_t buffer_size)
                  ? (jes_node_descriptor)(ctx->pool_size / sizeof(struct jes_node))
                  : JES_INVALID_INDEX -1;
   ctx->hash_table = NULL;
-  ctx->find_key_fn = jes_find_key;
+  ctx->find_key_fn = jes_tree_find_key;
 #else
   {
     size_t usable_size = buffer_size - sizeof(struct jes_context) - sizeof(struct jes_hash_table);
@@ -72,6 +72,17 @@ struct jes_element* jes_get_root(struct jes_context *ctx)
     return &ctx->root->json_tlv;
   }
   return NULL;
+}
+
+enum jes_type jes_get_parent_type(struct jes_context *ctx, struct jes_element *element)
+{
+  /* TODO: add missing parameter checks */
+  struct jes_element *parent = jes_get_parent(ctx, element);
+  if (parent) {
+    return parent->type;
+  }
+
+  return JES_UNKNOWN;
 }
 
 struct jes_element* jes_get_parent(struct jes_context *ctx, struct jes_element *element)
@@ -129,7 +140,7 @@ jes_status jes_delete_element(struct jes_context *ctx, struct jes_element *eleme
   }
 
   ctx->status = JES_NO_ERROR;
-  jes_delete_node(ctx, (struct jes_node*)element);
+  jes_tree_delete_node(ctx, (struct jes_node*)element);
   return ctx->status;
 }
 
@@ -297,7 +308,7 @@ struct jes_element* jes_add_element(struct jes_context *ctx, struct jes_element 
     }
   }
 
-  new_node = jes_insert_node(ctx, (struct jes_node*)parent, GET_LAST_CHILD(ctx, (struct jes_node*)parent),
+  new_node = jes_tree_insert_node(ctx, (struct jes_node*)parent, GET_LAST_CHILD(ctx, (struct jes_node*)parent),
                              type, value_length, value);
 
   return (struct jes_element*)new_node;
@@ -333,7 +344,7 @@ struct jes_element* jes_add_key(struct jes_context *ctx, struct jes_element *par
     /* The key must be added to an existing key and must be embedded in an OBJECT */
     object = GET_FIRST_CHILD(ctx, (struct jes_node*)parent);
     if (object == NULL) {
-      object = jes_insert_node(ctx, (struct jes_node*)parent, GET_LAST_CHILD(ctx, (struct jes_node*)parent), JES_OBJECT, 1, "{");
+      object = jes_tree_insert_node(ctx, (struct jes_node*)parent, GET_LAST_CHILD(ctx, (struct jes_node*)parent), JES_OBJECT, 1, "{");
     }
     else if (NODE_TYPE(object) != JES_OBJECT) {
       /* We should not land here */
@@ -345,7 +356,7 @@ struct jes_element* jes_add_key(struct jes_context *ctx, struct jes_element *par
     object = (struct jes_node*)parent;
   }
   /* Append the key */
-  new_node = jes_insert_key_node(ctx, object, GET_LAST_CHILD(ctx, object), keyword_length, keyword);
+  new_node = jes_tree_insert_key_node(ctx, object, GET_LAST_CHILD(ctx, object), keyword_length, keyword);
 
   return (struct jes_element*)new_node;
 }
@@ -382,7 +393,7 @@ struct jes_element* jes_add_key_before(struct jes_context *ctx, struct jes_eleme
   for (iter = GET_FIRST_CHILD(ctx, parent); iter != NULL; iter = GET_SIBLING(ctx, iter)) {
     assert(NODE_TYPE(iter) == JES_KEY);
     if (iter == key_node) {
-      new_node = jes_insert_key_node(ctx, parent, before, keyword_length, keyword);
+      new_node = jes_tree_insert_key_node(ctx, parent, before, keyword_length, keyword);
       break;
     }
     before = iter;
@@ -417,7 +428,7 @@ struct jes_element* jes_add_key_after(struct jes_context *ctx, struct jes_elemen
     return NULL;
   }
 
-  new_node = jes_insert_key_node(ctx, parent, (struct jes_node*)key, keyword_length, keyword);
+  new_node = jes_tree_insert_key_node(ctx, parent, (struct jes_node*)key, keyword_length, keyword);
 
   return (struct jes_element*)new_node;
 }
@@ -452,7 +463,7 @@ struct jes_element* jes_update_key_value(struct jes_context *ctx, struct jes_ele
   struct jes_element *key_value = NULL;
 
   /* First delete the old value of the key if exists. */
-  jes_delete_node(ctx, GET_FIRST_CHILD(ctx, (struct jes_node*)key));
+  jes_tree_delete_node(ctx, GET_FIRST_CHILD(ctx, (struct jes_node*)key));
   key_value = jes_add_element(ctx, key, type, value);
 
   return key_value;
@@ -523,7 +534,7 @@ struct jes_element* jes_update_array_value(struct jes_context *ctx, struct jes_e
   if (target_node) {
     /* We'll not delete the target_node to keep the original array order. Just update its JSON TLV.
      * The rest of the branch however must be removed. */
-    jes_delete_node(ctx, GET_FIRST_CHILD(ctx, target_node));
+    jes_tree_delete_node(ctx, GET_FIRST_CHILD(ctx, target_node));
     target_node->json_tlv.type = type;
     target_node->json_tlv.length = value_length;
     target_node->json_tlv.value = value;
@@ -557,7 +568,7 @@ struct jes_element* jes_append_array_value(struct jes_context *ctx, struct jes_e
     return NULL;
   }
 
-  new_node = jes_insert_node(ctx, (struct jes_node*)array, GET_LAST_CHILD(ctx, (struct jes_node*)array), type, value_length, value);
+  new_node = jes_tree_insert_node(ctx, (struct jes_node*)array, GET_LAST_CHILD(ctx, (struct jes_node*)array), type, value_length, value);
 
   return (struct jes_element*)new_node;
 }
@@ -610,7 +621,7 @@ struct jes_element* jes_add_array_value(struct jes_context *ctx, struct jes_elem
     return NULL;
   }
 
-  new_node = jes_insert_node(ctx, (struct jes_node*)array, anchor_node, type, value_length, value);
+  new_node = jes_tree_insert_node(ctx, (struct jes_node*)array, anchor_node, type, value_length, value);
 
   return (struct jes_element*)new_node;
 }
