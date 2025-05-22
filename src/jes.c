@@ -12,11 +12,12 @@
 
 struct jes_context* jes_init(void *buffer, uint32_t buffer_size)
 {
+  struct jes_context *ctx = buffer;
+
   if (buffer_size < sizeof(struct jes_context)) {
     return NULL;
   }
 
-  struct jes_context *ctx = buffer;
   memset(ctx, 0, sizeof(*ctx));
 
   ctx->status = JES_NO_ERROR;
@@ -25,6 +26,7 @@ struct jes_context* jes_init(void *buffer, uint32_t buffer_size)
   ctx->json_data = NULL;
   ctx->json_size = 0;
   ctx->node_pool = (struct jes_node*)(ctx + 1);
+
 #ifndef JES_ENABLE_FAST_KEY_SEARCH
   ctx->pool_size = buffer_size - (uint32_t)(sizeof(struct jes_context));
   ctx->capacity = (ctx->pool_size / sizeof(struct jes_node)) < JES_INVALID_INDEX
@@ -44,7 +46,7 @@ struct jes_context* jes_init(void *buffer, uint32_t buffer_size)
     ctx->hash_table = jes_init_hash_table(ctx, (uint8_t*)ctx->node_pool + ctx->pool_size, buffer_size - sizeof(struct jes_context) - ctx->pool_size);
   }
 #endif
-  jes_init_tokenizer(ctx);
+  jes_tokenizer_init(ctx);
   ctx->iter = NULL;
   ctx->root = NULL;
   ctx->free = NULL;
@@ -59,7 +61,7 @@ void jes_reset(struct jes_context *ctx)
     ctx->status = JES_NO_ERROR;
     ctx->node_count = 0;
     ctx->json_data = NULL;
-    jes_init_tokenizer(ctx);
+    jes_tokenizer_init(ctx);
     ctx->iter = NULL;
     ctx->root = NULL;
     ctx->free = NULL;
@@ -278,6 +280,29 @@ struct jes_element* jes_get_array_value(struct jes_context *ctx, struct jes_elem
   ctx->status = JES_BROKEN_TREE;
   assert(0);
   return NULL;
+}
+
+static bool jes_validate_tlv(struct jes_context *ctx, enum jes_type type, size_t length, const char *value)
+{
+  bool is_valid = false;
+  switch (type) {
+    case JES_KEY:
+    case JES_STRING:
+      break;
+    case JES_NUMBER:
+      break;
+    case JES_OBJECT:
+    case JES_ARRAY:
+    case JES_TRUE:
+    case JES_FALSE:
+    case JES_NULL:
+      is_valid = true;
+      break;
+    default:
+      break;
+  }
+
+  return is_valid;
 }
 
 struct jes_element* jes_add_element(struct jes_context *ctx, struct jes_element *parent, enum jes_type type, const char *value)
@@ -651,7 +676,7 @@ struct jes_element* jes_load(struct jes_context *ctx, const char *json_data, uin
 
   ctx->json_data = json_data;
   ctx->json_size = json_length;
-
   jes_parse(ctx);
+
   return ctx->status == JES_NO_ERROR ? (struct jes_element*)ctx->root : NULL;
 }

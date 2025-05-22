@@ -23,7 +23,7 @@
  * - Enabling 32-bit descriptors doubles the memory consumption for node reference
  *   fields (parent, first_child, last_child, and sibling)
  */
-//#define JES_USE_32BIT_NODE_DESCRIPTOR
+#define JES_USE_32BIT_NODE_DESCRIPTOR
 
 /**
  * JES_MAX_VALUE_LENGTH
@@ -63,7 +63,7 @@
  * for the JES context to accommodate the internal hash table structure.
  * Insufficient memory may lead to parsing failures.
  */
-//#define JES_ENABLE_FAST_KEY_SEARCH
+#define JES_ENABLE_FAST_KEY_SEARCH
 
 typedef enum jes_status {
   JES_NO_ERROR = 0,

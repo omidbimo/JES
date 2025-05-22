@@ -21,7 +21,7 @@ static inline void jes_parser_on_opening_brace(struct jes_context *ctx)
 
   /* Append node */
   ctx->iter = jes_tree_insert_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter),
-                              JES_OBJECT, ctx->token.length, &ctx->json_data[ctx->token.offset]);
+                              JES_OBJECT, ctx->token.length, ctx->token.value);
   ctx->state = JES_EXPECT_KEY;
 }
 
@@ -97,7 +97,7 @@ static inline void jes_parser_on_opening_bracket(struct jes_context *ctx)
   }
 
   ctx->iter = jes_tree_insert_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter),
-                              JES_ARRAY, ctx->token.length, &ctx->json_data[ctx->token.offset]);
+                              JES_ARRAY, ctx->token.length, ctx->token.value);
   ctx->state = JES_EXPECT_ARRAY_VALUE;
 }
 
@@ -212,16 +212,19 @@ static inline void jes_parser_on_string(struct jes_context *ctx)
 {
   if (ctx->state == JES_EXPECT_KEY) {
     /* Append the key */
-    ctx->iter = jes_tree_insert_key_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter), ctx->token.length, &ctx->json_data[ctx->token.offset]);
+    ctx->iter = jes_tree_insert_key_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter),
+                         ctx->token.length, ctx->token.value);
     ctx->state = JES_EXPECT_COLON;
   }
   else if (ctx->state == JES_EXPECT_KEY_VALUE) {
     /* Append value node */
-    ctx->iter = jes_tree_insert_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter), JES_STRING, ctx->token.length, &ctx->json_data[ctx->token.offset]);
+    ctx->iter = jes_tree_insert_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter),
+             JES_STRING, ctx->token.length, ctx->token.value);
     ctx->state = JES_HAVE_KEY_VALUE;
   }
   else if (ctx->state == JES_EXPECT_ARRAY_VALUE) {
-    ctx->iter = jes_tree_insert_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter), JES_STRING, ctx->token.length, &ctx->json_data[ctx->token.offset]);
+    ctx->iter = jes_tree_insert_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter),
+             JES_STRING, ctx->token.length, ctx->token.value);
     ctx->state = JES_HAVE_ARRAY_VALUE;
   }
   else {
@@ -245,7 +248,8 @@ static inline void jes_parser_on_value(struct jes_context *ctx, enum jes_type va
     return;
   }
 
-  ctx->iter = jes_tree_insert_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter), value_type, ctx->token.length, &ctx->json_data[ctx->token.offset]);
+  ctx->iter = jes_tree_insert_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter),
+             value_type, ctx->token.length, ctx->token.value);
 }
 
 void jes_parse(struct jes_context *ctx)
@@ -255,9 +259,9 @@ void jes_parse(struct jes_context *ctx)
   assert(ctx->json_size != 0);
 
   ctx->state = JES_EXPECT_OBJECT;
-
+  ctx->tokenizer_pos = ctx->json_data;
   do {
-    if (jes_get_token(ctx) != JES_NO_ERROR) break;
+    if (jes_tokenizer_get_token(ctx) != JES_NO_ERROR) break;
 
     switch (ctx->token.type) {
 

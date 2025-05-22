@@ -73,8 +73,8 @@ enum jes_token_type {
 
 struct jes_token {
   enum jes_token_type type;
-  uint16_t length;
-  uint32_t offset;
+  size_t length;
+  const char* value;
 };
 
 struct jes_node {
@@ -108,11 +108,11 @@ struct jes_context {
   /* Number of nodes in the current JSON */
   uint32_t node_count;
   /* JSON data to be parsed */
-  const char *json_data;
+  const char* json_data;
   /* Length of JSON data in bytes. */
   uint32_t  json_size;
-  /* Offset of the next symbol in the input JSON data Tokenizer is going to consume. */
-  uint32_t  offset;
+  /* */
+  const char* tokenizer_pos;
   uint32_t  line_number;
   /* To dynamically switch tokenizer functions when detecting Integers, fractions and exponents */
   bool (*number_tokenizer_fn) (struct jes_context* ctx, char ch, struct jes_token* token);
