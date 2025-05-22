@@ -20,15 +20,15 @@ static struct jes_node* jes_allocate(struct jes_context* ctx)
   assert(ctx != NULL);
 
   if (ctx->node_count < ctx->capacity) {
-    if (ctx->free) {
+    if (ctx->freed) {
       /* Pop the first node from free list */
-      new_node = (struct jes_node*)ctx->free;
-      ctx->free = ctx->free->next;
+      new_node = (struct jes_node*)ctx->freed;
+      ctx->freed = ctx->freed->next;
     }
     else {
-      assert(ctx->index < ctx->capacity);
-      new_node = &ctx->node_pool[ctx->index];
-      ctx->index++;
+      assert(ctx->next_free < ctx->capacity);
+      new_node = &ctx->node_pool[ctx->next_free];
+      ctx->next_free++;
     }
     /* Setting node descriptors to their default values. */
     memset(((struct jes_element*)new_node) + 1, 0xFF, sizeof(jes_node_descriptor) * 4);
@@ -43,7 +43,7 @@ static struct jes_node* jes_allocate(struct jes_context* ctx)
 
 static void jes_free(struct jes_context* ctx, struct jes_node* node)
 {
-  struct jes_free_node* free_node = (struct jes_free_node*)node;
+  struct jes_freed_node* free_node = (struct jes_freed_node*)node;
 
   assert(ctx != NULL);
   assert(node != NULL);
@@ -56,10 +56,10 @@ static void jes_free(struct jes_context* ctx, struct jes_node* node)
     free_node->next = NULL;
     ctx->node_count--;
     /* prepend the node to the free LIFO */
-    if (ctx->free) {
-      free_node->next = ctx->free->next;
+    if (ctx->freed) {
+      free_node->next = ctx->freed->next;
     }
-    ctx->free = free_node;
+    ctx->freed = free_node;
   }
 }
 

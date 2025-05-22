@@ -322,6 +322,6 @@ jes_status jes_tokenizer_get_token(struct jes_context *ctx)
 
 void jes_tokenizer_init(struct jes_context* ctx)
 {
-  ctx->index = 0;
+  ctx->next_free = 0;
   ctx->number_tokenizer_fn = jes_tokenizer_get_integer_token;
 }

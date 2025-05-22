@@ -49,7 +49,7 @@ struct jes_context* jes_init(void *buffer, uint32_t buffer_size)
   jes_tokenizer_init(ctx);
   ctx->iter = NULL;
   ctx->root = NULL;
-  ctx->free = NULL;
+  ctx->freed = NULL;
 
   ctx->cookie = JES_CONTEXT_COOKIE;
   return ctx;
@@ -64,7 +64,7 @@ void jes_reset(struct jes_context *ctx)
     jes_tokenizer_init(ctx);
     ctx->iter = NULL;
     ctx->root = NULL;
-    ctx->free = NULL;
+    ctx->freed = NULL;
   }
 }
 

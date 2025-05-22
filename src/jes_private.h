@@ -93,8 +93,8 @@ struct jes_node {
   jes_node_descriptor last_child;
 };
 
-struct jes_free_node {
-  struct jes_free_node* next;
+struct jes_freed_node {
+  struct jes_freed_node* next;
 };
 
 struct jes_context {
@@ -125,17 +125,16 @@ struct jes_context {
   /* Number of nodes that can be allocated on the given buffer. The value will
      be limited to 65535 in case of 16-bit node descriptors. */
   uint32_t capacity;
-  /* Index of the last allocated node */
-  jes_node_descriptor index;
+  /* Index of the pool's next free node */
+  jes_node_descriptor next_free;
   /* Holds the last token delivered by tokenizer. */
   struct jes_token token;
   /* Internal node iterator */
   struct jes_node* iter;
   /* Holds the main object node */
   struct jes_node* root;
-  /* Singly Linked list of freed nodes. This way the deleted nodes can be recycled
-     by the allocator. */
-  struct jes_free_node* free;
+  /* Singly Linked list of previously freed nodes to be recycled by the allocator. */
+  struct jes_freed_node* freed;
 
   struct jes_node* (*find_key_fn) (struct jes_context* ctx, struct jes_node* parent, const char* key, size_t key_len);
 
