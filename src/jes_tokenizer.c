@@ -203,14 +203,14 @@ jes_status jes_tokenizer_get_token(struct jes_context *ctx)
 
     char_ptr = JES_TOKENIZER_GET_CHAR(ctx->tokenizer_pos, ctx->json_data + ctx->json_size);
 
-    if ((char_ptr == NULL) && (token.type)) { /* TODO: improve */
-      ctx->status = JES_UNEXPECTED_EOF;
-      break;
-    }
-
     if (!token.type) {
 
-      if (jes_tokenizer_set_delimiter_token(char_ptr, &token)) {
+      if (char_ptr == NULL) {
+        UPDATE_TOKEN(token, JES_TOKEN_EOF, 0, char_ptr);
+        break;
+      }
+
+      if (jes_tokenizer_set_delimiter_token(&token, char_ptr)) {
         break;
       }
 
@@ -270,7 +270,10 @@ jes_status jes_tokenizer_get_token(struct jes_context *ctx)
       UPDATE_TOKEN(token, JES_TOKEN_INVALID, 1, char_ptr);
       break;
     }
-
+    else if (char_ptr == NULL) {
+      ctx->status = JES_UNEXPECTED_EOF;
+      break;
+    }
     else if (token.type == JES_TOKEN_STRING) {
       if (*char_ptr == '\"') { /* End of STRING. '\"' symbol isn't a part of token. */
         break;

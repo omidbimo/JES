@@ -667,7 +667,7 @@ struct jes_element* jes_load(struct jes_context *ctx, const char *json_data, uin
     return NULL;
   }
 
-  if (json_data == NULL) {
+  if ((json_data == NULL) || (json_length == 0)) {
     ctx->status = JES_INVALID_PARAMETER;
     return NULL;
   }
