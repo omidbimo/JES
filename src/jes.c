@@ -10,7 +10,7 @@
 #include "jes_tree.h"
 #include "jes_parser.h"
 
-struct jes_context* jes_init(void *buffer, uint32_t buffer_size)
+struct jes_context* jes_init(void *buffer, size_t buffer_size)
 {
   struct jes_context *ctx = buffer;
 
@@ -24,25 +24,12 @@ struct jes_context* jes_init(void *buffer, uint32_t buffer_size)
 
   ctx->json_data = NULL;
   ctx->json_size = 0;
-  jes_tree_init(ctx);
+  jes_tree_init(ctx, (struct jes_context*)buffer + 1, buffer_size - sizeof(*ctx));
 #ifndef JES_ENABLE_FAST_KEY_SEARCH
-  ctx->pool_size = buffer_size - (uint32_t)(sizeof(struct jes_context));
-  ctx->capacity = (ctx->pool_size / sizeof(struct jes_node)) < JES_INVALID_INDEX
-                 ? (jes_node_descriptor)(ctx->pool_size / sizeof(struct jes_node))
-                 : JES_INVALID_INDEX -1;
-  ctx->hash_table = NULL;
   ctx->find_key_fn = jes_tree_find_key;
 #else
-  {
-    size_t usable_size = buffer_size - sizeof(struct jes_context) - sizeof(struct jes_hash_table);
-    size_t node_count = usable_size / (sizeof(struct jes_node) + sizeof(struct jes_hash_entry));
+  jes_hash_table_init(ctx);
 
-    ctx->capacity = node_count < JES_INVALID_INDEX
-                   ? (jes_node_descriptor)node_count
-                   : JES_INVALID_INDEX -1;
-    ctx->pool_size = ctx->capacity * sizeof(struct jes_node);
-    ctx->hash_table = jes_init_hash_table(ctx, (uint8_t*)ctx->node_pool + ctx->pool_size, buffer_size - sizeof(struct jes_context) - ctx->pool_size);
-  }
 #endif
   jes_tokenizer_init(ctx);
   ctx->iter = NULL;
@@ -57,7 +44,8 @@ void jes_reset(struct jes_context *ctx)
   if (JES_IS_INITIATED(ctx)) {
     ctx->status = JES_NO_ERROR;
     ctx->json_data = NULL;
-    jes_tree_init(ctx);
+    jes_tree_init(ctx, ctx->node_pool.pool, ctx->node_pool.size + ctx->hash_table.size);
+    jes_hash_table_init(ctx);
     jes_tokenizer_init(ctx);
     ctx->iter = NULL;
     ctx->root = NULL;
@@ -397,8 +385,6 @@ struct jes_element* jes_add_key(struct jes_context *ctx, struct jes_element *par
     return NULL;
   }
 
-
-
   if (!jes_tokenizer_validate_string(ctx, keyword, keyword_length)) {
     ctx->status = JES_INVALID_PARAMETER;
     return NULL;
@@ -709,7 +695,7 @@ struct jes_element* jes_add_array_value(struct jes_context *ctx, struct jes_elem
 
 size_t jes_get_element_count(struct jes_context *ctx)
 {
-  return ctx->node_count;
+  return ctx->node_pool.node_count;
 }
 
 jes_status jes_get_status(struct jes_context *ctx)

@@ -63,7 +63,7 @@
  * for the JES context to accommodate the internal hash table structure.
  * Insufficient memory may lead to parsing failures.
  */
-//#define JES_ENABLE_FAST_KEY_SEARCH
+#define JES_ENABLE_FAST_KEY_SEARCH
 
 typedef enum jes_status {
   JES_NO_ERROR = 0,
@@ -116,7 +116,7 @@ struct jes_context;
  *
  * return pointer to context or NULL in case of a failure.
  */
-struct jes_context* jes_init(void *buffer, uint32_t buffer_size);
+struct jes_context* jes_init(void *buffer, size_t buffer_size);
 
 void jes_reset(struct jes_context *ctx);
 

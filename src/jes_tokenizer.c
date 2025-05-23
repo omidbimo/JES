@@ -390,7 +390,6 @@ bool jes_tokenizer_validate_string(struct jes_context* ctx, const char* value, s
 
 void jes_tokenizer_init(struct jes_context* ctx)
 {
-  ctx->next_free = 0;
   ctx->typed_tokenizer_fn = NULL;
   ctx->line_number = 1;
 }

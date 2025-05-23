@@ -15,24 +15,26 @@
 
 static struct jes_node* jes_allocate(struct jes_context* ctx)
 {
+  struct jes_node_pool_context* pool_ctx = NULL;
   struct jes_node* new_node = NULL;
 
   assert(ctx != NULL);
+  pool_ctx = &ctx->node_pool;
 
-  if (ctx->node_count < ctx->capacity) {
-    if (ctx->freed) {
+  if (pool_ctx->node_count < pool_ctx->capacity) {
+    if (pool_ctx->freed) {
       /* Pop the first node from free list */
-      new_node = (struct jes_node*)ctx->freed;
-      ctx->freed = ctx->freed->next;
+      new_node = (struct jes_node*)pool_ctx->freed;
+      pool_ctx->freed = pool_ctx->freed->next;
     }
     else {
-      assert(ctx->next_free < ctx->capacity);
-      new_node = &ctx->node_pool[ctx->next_free];
-      ctx->next_free++;
+      assert(pool_ctx->next_free < pool_ctx->capacity);
+      new_node = &pool_ctx->pool[pool_ctx->next_free];
+      pool_ctx->next_free++;
     }
     /* Setting node descriptors to their default values. */
     memset(((struct jes_element*)new_node) + 1, 0xFF, sizeof(jes_node_descriptor) * 4);
-    ctx->node_count++;
+    pool_ctx->node_count++;
   }
   else {
     ctx->status = JES_OUT_OF_MEMORY;
@@ -43,42 +45,48 @@ static struct jes_node* jes_allocate(struct jes_context* ctx)
 
 static void jes_free(struct jes_context* ctx, struct jes_node* node)
 {
+  struct jes_node_pool_context* pool_ctx = NULL;
   struct jes_freed_node* free_node = (struct jes_freed_node*)node;
 
   assert(ctx != NULL);
   assert(node != NULL);
-  assert(node >= ctx->node_pool);
-  assert(node < (ctx->node_pool + ctx->capacity));
-  assert(ctx->node_count > 0);
 
-  if (ctx->node_count > 0) {
+  pool_ctx = &ctx->node_pool;
+
+  assert(node >= pool_ctx->pool);
+  assert(node < (pool_ctx->pool + pool_ctx->capacity));
+  assert(pool_ctx->node_count > 0);
+
+  if (pool_ctx->node_count > 0) {
     node->json_tlv.type = JES_UNKNOWN; /* This prevents reuse of deleted nodes. */
     free_node->next = NULL;
-    ctx->node_count--;
+    pool_ctx->node_count--;
     /* prepend the node to the free LIFO */
-    if (ctx->freed) {
-      free_node->next = ctx->freed->next;
+    if (pool_ctx->freed) {
+      free_node->next = pool_ctx->freed->next;
     }
-    ctx->freed = free_node;
+    pool_ctx->freed = free_node;
   }
 }
 
 bool jes_validate_node(struct jes_context* ctx, struct jes_node* node)
 {
+  struct jes_node_pool_context* pool_ctx = NULL;
+
   assert(ctx != NULL);
   assert(node != NULL);
-  assert(ctx->node_pool != NULL);
   assert(ctx->cookie == JES_CONTEXT_COOKIE);
 
-  if (((void*)node >= (void*)ctx->node_pool) &&
-      (((void*)node + sizeof(*node)) <= ((void*)ctx->node_pool + ctx->pool_size))) {
+  pool_ctx = &ctx->node_pool;
+  if (((void*)node >= (void*)(pool_ctx->pool)) &&
+      (((void*)node + sizeof(*node)) <= ((void*)(pool_ctx->pool) + pool_ctx->size))) {
     /* Check if the node is correctly aligned */
-    if ((((void*)node - (void*)ctx->node_pool) % sizeof(*node)) == 0) {
+    if ((((void*)node - (void*)(pool_ctx->pool)) % sizeof(*node)) == 0) {
       /* Check if the node links are in bound */
-      if (((node->parent == JES_INVALID_INDEX) || (node->parent <= ctx->capacity)) &&
-          ((node->first_child == JES_INVALID_INDEX) || (node->first_child <= ctx->capacity)) &&
-          ((node->last_child == JES_INVALID_INDEX) || (node->last_child <= ctx->capacity)) &&
-          ((node->sibling == JES_INVALID_INDEX) || (node->sibling <= ctx->capacity))) {
+      if (((node->parent == JES_INVALID_INDEX) || (node->parent <= pool_ctx->capacity)) &&
+          ((node->first_child == JES_INVALID_INDEX) || (node->first_child <= pool_ctx->capacity)) &&
+          ((node->last_child == JES_INVALID_INDEX) || (node->last_child <= pool_ctx->capacity)) &&
+          ((node->sibling == JES_INVALID_INDEX) || (node->sibling <= pool_ctx->capacity))) {
         return true;
       }
     }
@@ -194,6 +202,7 @@ struct jes_node* jes_tree_insert_key_node(struct jes_context* ctx,
                                      uint16_t keyword_length, const char* keyword)
 {
   struct jes_node* new_node = NULL;
+
   if (parent_object) {
     assert(NODE_TYPE(parent_object) == JES_OBJECT);
   }
@@ -273,7 +282,6 @@ void jes_tree_delete_node(struct jes_context* ctx, struct jes_node* node)
       jes_hash_table_remove(ctx, parent, iter);
     }
 #endif
-
     jes_free(ctx, iter);
     iter = parent;
   }
@@ -350,10 +358,21 @@ struct jes_node* jes_tree_find_key(struct jes_context* ctx,
   return key;
 }
 
-void jes_tree_init(struct jes_context* ctx)
+void jes_tree_init(struct jes_context* ctx, void *buffer, size_t buffer_size)
 {
-  ctx->node_pool = (struct jes_node*)(ctx + 1);
-  ctx->node_count = 0;
-  ctx->next_free = 0;
-  ctx->freed = NULL;
+  struct jes_node_pool_context* pool_ctx = &ctx->node_pool;
+
+  pool_ctx->pool = buffer;
+  pool_ctx->size = buffer_size;
+
+  pool_ctx->capacity = (pool_ctx->size / sizeof(struct jes_node)) < JES_INVALID_INDEX
+                     ? pool_ctx->size / sizeof(struct jes_node)
+                     : JES_INVALID_INDEX -1;
+#ifndef NDEBUG
+  printf("\nCreated node pool");
+  printf("\n  Node Pool: size=%d bytes, capacity=%d nodes", ctx->node_pool.size, ctx->node_pool.capacity);
+#endif
+  pool_ctx->node_count = 0;
+  pool_ctx->next_free = 0;
+  pool_ctx->freed = NULL;
 }

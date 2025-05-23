@@ -1,7 +1,7 @@
 #ifndef JES_TREE_H
 #define JES_TREE_H
 
-void jes_tree_init(struct jes_context* ctx);
+void jes_tree_init(struct jes_context* ctx, void *buffer, size_t buffer_size);
 
 bool jes_validate_node(struct jes_context* ctx, struct jes_node* node);
 

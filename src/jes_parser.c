@@ -210,7 +210,9 @@ static inline void jes_parser_on_comma(struct jes_context *ctx)
 
 static inline void jes_parser_on_string(struct jes_context *ctx)
 {
+
   if (ctx->state == JES_EXPECT_KEY) {
+
     /* Append the key */
     ctx->iter = jes_tree_insert_key_node(ctx, ctx->iter, GET_LAST_CHILD(ctx, ctx->iter),
                          ctx->token.length, ctx->token.value);

@@ -83,7 +83,7 @@ void jes_log_node(const char *pre_msg,
                   int32_t last_child_id,
                   const char *post_msg)
 {
-  printf("%sJES.Node: [%d] \"%.*s\" <%s>,    parent:[%d], right:[%d], first_child:[%d], last_child:[%d]%s",
+  printf("%sJES.Node: [%d] \"%.*s\" <%s>,    parent:[%d], right:[%d], first_child:[%d], last_child:[%d], %s",
     pre_msg, node_id, node_length, node_value, jes_node_type_str[node_type],
     parent_id == JES_INVALID_INDEX ? -1 : parent_id,
     right_id == JES_INVALID_INDEX ? -1 : right_id,
