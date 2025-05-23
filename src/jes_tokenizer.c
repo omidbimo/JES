@@ -161,10 +161,8 @@ static inline bool jes_tokenizer_process_string_token(struct jes_context* ctx,
   if (ch == '\"') { /* End of STRING. '\"' symbol isn't a part of token. */
     tokenizing_completed = true;
   }
-  else if ((ch =='\b') || (ch =='\f') || (ch =='\n') || (ch =='\r') || (ch =='\t')) {
-#if 0
-    // more symbols to check \", \\, \/, \b, \f, \n, \r, \t,
-#endif
+  else if ((ch =='\b') || (ch =='\f') || (ch =='\n') || (ch =='\r') ||
+           (ch =='\t') || (ch =='\\')) {
     ctx->status = JES_UNEXPECTED_SYMBOL;
     tokenizing_completed = true;
   }
