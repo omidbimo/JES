@@ -339,9 +339,6 @@ struct jes_node* jes_tree_find_key(struct jes_context* ctx,
   iter = GET_FIRST_CHILD(ctx, iter);
 
   while ((iter != NULL) && (NODE_TYPE(iter) == JES_KEY)) {
-                JES_LOG_NODE("\n    ~ ", JES_NODE_INDEX(ctx, iter),
-                      NODE_TYPE(iter), iter->json_tlv.length, iter->json_tlv.value,
-                      iter->parent, iter->sibling, iter->first_child, iter->last_child, "");
     if ((iter->json_tlv.length == keyword_lenngth) &&
         (memcmp(iter->json_tlv.value, keyword, keyword_lenngth) == 0)) {
       key = iter;
@@ -351,4 +348,12 @@ struct jes_node* jes_tree_find_key(struct jes_context* ctx,
   }
 
   return key;
+}
+
+void jes_tree_init(struct jes_context* ctx)
+{
+  ctx->node_pool = (struct jes_node*)(ctx + 1);
+  ctx->node_count = 0;
+  ctx->next_free = 0;
+  ctx->freed = NULL;
 }
