@@ -129,6 +129,8 @@ jes_status jes_delete_element(struct jes_context *ctx, struct jes_element *eleme
     return JES_INVALID_CONTEXT;
   }
 
+  ctx->status = JES_NO_ERROR;
+
   if (element == NULL) {
     return JES_NO_ERROR;
   }
@@ -228,6 +230,8 @@ uint16_t jes_get_array_size(struct jes_context *ctx, struct jes_element *array)
     return 0;
   }
 
+  ctx->status = JES_NO_ERROR;
+
   if ((array == NULL) || (!jes_validate_node(ctx, (struct jes_node*)array)) || (array->type != JES_ARRAY)) {
     ctx->status = JES_INVALID_PARAMETER;
     return 0;
@@ -311,6 +315,8 @@ struct jes_element* jes_add_element(struct jes_context *ctx, struct jes_element 
     return NULL;
   }
 
+  ctx->status = JES_NO_ERROR;
+
   if ((parent == NULL) && (ctx->root != NULL)) {
     /* JSON is not empty. Invalid request. */
     ctx->status = JES_INVALID_PARAMETER;
@@ -373,6 +379,8 @@ struct jes_element* jes_add_key(struct jes_context *ctx, struct jes_element *par
     return NULL;
   }
 
+  ctx->status = JES_NO_ERROR;
+
   if ((parent == NULL) || (!jes_validate_node(ctx, (struct jes_node*)parent)) || (keyword == NULL)) {
     ctx->status = JES_INVALID_PARAMETER;
     return NULL;
@@ -388,6 +396,8 @@ struct jes_element* jes_add_key(struct jes_context *ctx, struct jes_element *par
     ctx->status = JES_INVALID_PARAMETER;
     return NULL;
   }
+
+
 
   if (!jes_tokenizer_validate_string(ctx, keyword, keyword_length)) {
     ctx->status = JES_INVALID_PARAMETER;
@@ -428,6 +438,8 @@ struct jes_element* jes_add_key_before(struct jes_context *ctx, struct jes_eleme
     return NULL;
   }
 
+  ctx->status = JES_NO_ERROR;
+
   if ((key == NULL) || !jes_validate_node(ctx, key_node) || (key->type != JES_KEY) || (keyword == NULL)) {
     ctx->status = JES_INVALID_PARAMETER;
     return NULL;
@@ -467,6 +479,8 @@ struct jes_element* jes_add_key_after(struct jes_context *ctx, struct jes_elemen
     return NULL;
   }
 
+  ctx->status = JES_NO_ERROR;
+
   if ((key == NULL) || !jes_validate_node(ctx, key_node) || (key->type != JES_KEY) || (keyword == NULL)) {
     ctx->status = JES_INVALID_PARAMETER;
     return NULL;
@@ -494,6 +508,8 @@ enum jes_status jes_update_key(struct jes_context *ctx, struct jes_element *key,
   if ((ctx == NULL) || !JES_IS_INITIATED(ctx)) {
     return JES_INVALID_CONTEXT;
   }
+
+  ctx->status = JES_NO_ERROR;
 
   if (!jes_validate_node(ctx, (struct jes_node*)key) || (key->type != JES_KEY) || (keyword == NULL)) {
     ctx->status = JES_INVALID_PARAMETER;
@@ -563,6 +579,8 @@ struct jes_element* jes_update_array_value(struct jes_context *ctx, struct jes_e
     return NULL;
   }
 
+  ctx->status = JES_NO_ERROR;
+
   if ((array == NULL) || !jes_validate_node(ctx, (struct jes_node*)array) || (array->type != JES_ARRAY) || (value == NULL)) {
     ctx->status = JES_INVALID_PARAMETER;
     return NULL;
@@ -616,6 +634,8 @@ struct jes_element* jes_append_array_value(struct jes_context *ctx, struct jes_e
     return NULL;
   }
 
+  ctx->status = JES_NO_ERROR;
+
   if ((array == NULL) || !jes_validate_node(ctx, (struct jes_node*)array) || (array->type != JES_ARRAY) || (value == NULL)) {
     ctx->status = JES_INVALID_PARAMETER;
     return NULL;
@@ -643,6 +663,8 @@ struct jes_element* jes_add_array_value(struct jes_context *ctx, struct jes_elem
   if (!ctx || !JES_IS_INITIATED(ctx)) {
     return NULL;
   }
+
+  ctx->status = JES_NO_ERROR;
 
   if ((array == NULL) || !jes_validate_node(ctx, (struct jes_node*)array) || (array->type != JES_ARRAY) || (value == NULL)) {
     ctx->status = JES_INVALID_PARAMETER;
