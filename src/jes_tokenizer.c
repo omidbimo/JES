@@ -52,10 +52,10 @@ static inline bool jes_is_delimiter_token(char ch)
 }
 
 /* Token type is NUMBER. Try to feed it with more symbols. */
-static inline bool jes_tokenizer_get_exponent_token(struct jes_context* ctx,
-                                                    struct jes_token* token,
-                                                    const char* current,
-                                                    const char* end)
+static inline bool jes_tokenizer_process_exponent_token(struct jes_context* ctx,
+                                                        struct jes_token* token,
+                                                        const char* current,
+                                                        const char* end)
 {
   bool end_of_token = false;
   char ch = *current;
@@ -83,10 +83,10 @@ static inline bool jes_tokenizer_get_exponent_token(struct jes_context* ctx,
 }
 
 /* Token type is NUMBER. Try to feed it with more symbols. */
-static inline bool jes_tokenizer_get_decimal_fraction_token(struct jes_context* ctx,
-                                                            struct jes_token* token,
-                                                            const char* current,
-                                                            const char* end)
+static inline bool jes_tokenizer_process_decimal_fraction_token(struct jes_context* ctx,
+                                                                struct jes_token* token,
+                                                                const char* current,
+                                                                const char* end)
 {
   bool end_of_token = false;
   char ch = *current;
@@ -102,7 +102,7 @@ static inline bool jes_tokenizer_get_decimal_fraction_token(struct jes_context* 
   }
   else if ((ch == 'e') || (ch == 'E')) {
     token->length++;
-    ctx->typed_tokenizer_fn = jes_tokenizer_get_exponent_token;
+    ctx->typed_tokenizer_fn = jes_tokenizer_process_exponent_token;
   }
   else {
     token->type = JES_TOKEN_INVALID;
@@ -113,10 +113,10 @@ static inline bool jes_tokenizer_get_decimal_fraction_token(struct jes_context* 
 }
 
 /* Token type is NUMBER. Try to feed it with more symbols. */
-static inline bool jes_tokenizer_get_integer_token(struct jes_context* ctx,
-                                                   struct jes_token* token,
-                                                   const char* current,
-                                                   const char* end)
+static inline bool jes_tokenizer_process_integer_token(struct jes_context* ctx,
+                                                       struct jes_token* token,
+                                                       const char* current,
+                                                       const char* end)
 {
   bool end_of_token = false;
   char ch = *current;
@@ -137,11 +137,11 @@ static inline bool jes_tokenizer_get_integer_token(struct jes_context* ctx,
   }
   else if (ch == '.') {
     token->length++;
-    ctx->typed_tokenizer_fn = jes_tokenizer_get_decimal_fraction_token;
+    ctx->typed_tokenizer_fn = jes_tokenizer_process_decimal_fraction_token;
   }
   else if ((ch == 'e') || (ch == 'E')) {
     token->length++;
-    ctx->typed_tokenizer_fn = jes_tokenizer_get_exponent_token;
+    ctx->typed_tokenizer_fn = jes_tokenizer_process_exponent_token;
   }
   else {
     token->type = JES_TOKEN_INVALID;
@@ -151,10 +151,10 @@ static inline bool jes_tokenizer_get_integer_token(struct jes_context* ctx,
   return end_of_token;
 }
 
-static inline bool jes_tokenizer_get_string_token(struct jes_context* ctx,
-                                                  struct jes_token* token,
-                                                  const char* current,
-                                                  const char* end)
+static inline bool jes_tokenizer_process_string_token(struct jes_context* ctx,
+                                                      struct jes_token* token,
+                                                      const char* current,
+                                                      const char* end)
 {
   bool tokenizing_completed = false;
   char ch = *current;
@@ -163,6 +163,9 @@ static inline bool jes_tokenizer_get_string_token(struct jes_context* ctx,
     tokenizing_completed = true;
   }
   else if ((ch =='\b') || (ch =='\f') || (ch =='\n') || (ch =='\r') || (ch =='\t')) {
+#if 0
+    // more symbols to check \", \\, \/, \b, \f, \n, \r, \t,
+#endif
     ctx->status = JES_UNEXPECTED_SYMBOL;
     tokenizing_completed = true;
   }
@@ -174,10 +177,10 @@ static inline bool jes_tokenizer_get_string_token(struct jes_context* ctx,
 }
 
 
-static inline bool jes_tokenizer_get_token_by_value(struct jes_context* ctx,
-                                                    struct jes_token* token,
-                                                    char* str,
-                                                    uint16_t str_len)
+static inline bool jes_tokenizer_process_literal_token(struct jes_context* ctx,
+                                                       struct jes_token* token,
+                                                       char* str,
+                                                       uint16_t str_len)
 {
   bool tokenizing_completed = false;
   token->length++;
@@ -199,13 +202,13 @@ static inline bool jes_tokenizer_get_null_true_false(struct jes_context* ctx,
 
   switch (token->type) {
     case JES_TOKEN_NULL:
-      tokenizing_completed = jes_tokenizer_get_token_by_value(ctx, token, "null", sizeof("null") - 1);
+      tokenizing_completed = jes_tokenizer_process_literal_token(ctx, token, "null", sizeof("null") - 1);
       break;
     case JES_TOKEN_TRUE:
-      tokenizing_completed = jes_tokenizer_get_token_by_value(ctx, token, "true", sizeof("true") - 1);
+      tokenizing_completed = jes_tokenizer_process_literal_token(ctx, token, "true", sizeof("true") - 1);
       break;
     case JES_TOKEN_FALSE:
-      tokenizing_completed = jes_tokenizer_get_token_by_value(ctx, token, "false", sizeof("false") - 1);
+      tokenizing_completed = jes_tokenizer_process_literal_token(ctx, token, "false", sizeof("false") - 1);
       break;
     default:
       assert(0);
@@ -236,7 +239,7 @@ jes_status jes_tokenizer_get_token(struct jes_context *ctx)
 
       if (*char_ptr == '\"') {
         UPDATE_TOKEN(token, JES_TOKEN_STRING, 0, char_ptr);
-        ctx->typed_tokenizer_fn = jes_tokenizer_get_string_token;
+        ctx->typed_tokenizer_fn = jes_tokenizer_process_string_token;
         /* '\"' won't be a part of token. Use next symbol if available */
         if (JES_TOKENIZER_LOOK_AHEAD(char_ptr, ctx->json_data + ctx->json_size) != '\0') {
           token.value++;
@@ -247,7 +250,7 @@ jes_status jes_tokenizer_get_token(struct jes_context *ctx)
       if (IS_DIGIT(*char_ptr)) {
         char ch = JES_TOKENIZER_LOOK_AHEAD(char_ptr, ctx->json_data + ctx->json_size);
         UPDATE_TOKEN(token, JES_TOKEN_NUMBER, 1, char_ptr);
-        ctx->typed_tokenizer_fn = jes_tokenizer_get_integer_token;
+        ctx->typed_tokenizer_fn = jes_tokenizer_process_integer_token;
         /* Unlike STRINGs, there are symbols for NUMBERs to indicate the
            end of number data. To avoid consuming non-NUMBER characters, take a look ahead
            and stop the process if found of non-numeric symbols. */
@@ -258,7 +261,7 @@ jes_status jes_tokenizer_get_token(struct jes_context *ctx)
       if (*char_ptr == '-') {
         if (IS_DIGIT(JES_TOKENIZER_LOOK_AHEAD(char_ptr, ctx->json_data + ctx->json_size))) {
           UPDATE_TOKEN(token, JES_TOKEN_NUMBER, 1, char_ptr);
-          ctx->typed_tokenizer_fn = jes_tokenizer_get_integer_token;
+          ctx->typed_tokenizer_fn = jes_tokenizer_process_integer_token;
           continue;
         }
         token.type = JES_TOKEN_INVALID;
@@ -328,7 +331,7 @@ bool jes_tokenizer_validate_number(struct jes_context* ctx, const char* value, s
 
   if (IS_DIGIT(*char_ptr) || (*char_ptr == '-')) {
     UPDATE_TOKEN(token, JES_TOKEN_NUMBER, 1, char_ptr);
-    ctx->typed_tokenizer_fn = jes_tokenizer_get_integer_token;
+    ctx->typed_tokenizer_fn = jes_tokenizer_process_integer_token;
 
     while (char_ptr = JES_TOKENIZER_GET_CHAR(value, end)) {
       if (ctx->typed_tokenizer_fn(ctx, &token, char_ptr, end)) {
@@ -363,7 +366,7 @@ bool jes_tokenizer_validate_string(struct jes_context* ctx, const char* value, s
   end = value + length;
 
   while (char_ptr = JES_TOKENIZER_GET_CHAR(value, end)) {
-    (void)jes_tokenizer_get_string_token(ctx, &token, char_ptr, end);
+    (void)jes_tokenizer_process_string_token(ctx, &token, char_ptr, end);
     /* The function will not return true until finding a double quoute symbol
        which we don't have in this case. Ignore the return value and rely on the
        token size instead. */
