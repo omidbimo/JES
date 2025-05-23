@@ -151,45 +151,6 @@ static inline bool jes_tokenizer_get_integer_token(struct jes_context* ctx,
   return end_of_token;
 }
 
-static inline bool jes_tokenizer_validate_string_token(struct jes_context* ctx,
-                                                       struct jes_token* token,
-                                                       const char* value_start,
-                                                       const char* value_end)
-{
-
-}
-
-bool jes_tokenizer_validate_number(struct jes_context* ctx,
-                                   const char* value,
-                                   size_t length)
-{
-  struct jes_token token = { 0 };
-  const char* end = NULL;
-  const char* char_ptr = NULL;
-
-  assert(ctx != NULL);
-  assert(value != NULL);
-
-  end = value + length;
-  char_ptr = JES_TOKENIZER_GET_CHAR(value, end);
-
-  if (IS_DIGIT(*char_ptr) || (*char_ptr == '-')) {
-    UPDATE_TOKEN(token, JES_TOKEN_NUMBER, 1, char_ptr);
-    ctx->typed_tokenizer_fn = jes_tokenizer_get_integer_token;
-
-    while (true) {
-      char_ptr = JES_TOKENIZER_GET_CHAR(value, end);
-      if (ctx->typed_tokenizer_fn(ctx, &token, char_ptr, end)) {
-        /* There are no more symbols to consume as a number. Deliver the token. */
-        break;
-      }
-      continue;
-    }
-  }
-
-  return true;
-}
-
 static inline bool jes_tokenizer_get_string_token(struct jes_context* ctx,
                                                   struct jes_token* token,
                                                   const char* current,
@@ -350,6 +311,69 @@ jes_status jes_tokenizer_get_token(struct jes_context *ctx)
 
   ctx->token = token;
   return ctx->status;
+}
+
+bool jes_tokenizer_validate_number(struct jes_context* ctx, const char* value, size_t length)
+{
+  struct jes_token token = { 0 };
+  const char* end = NULL;
+  const char* char_ptr = NULL;
+  bool is_valid = false;
+
+  assert(ctx != NULL);
+  assert(value != NULL);
+
+  end = value + length;
+  char_ptr = JES_TOKENIZER_GET_CHAR(value, end);
+
+  if (IS_DIGIT(*char_ptr) || (*char_ptr == '-')) {
+    UPDATE_TOKEN(token, JES_TOKEN_NUMBER, 1, char_ptr);
+    ctx->typed_tokenizer_fn = jes_tokenizer_get_integer_token;
+
+    while (char_ptr = JES_TOKENIZER_GET_CHAR(value, end)) {
+      if (ctx->typed_tokenizer_fn(ctx, &token, char_ptr, end)) {
+        /* There are no more symbols to consume as a number. */
+        if ((token.length == length) && (ctx->status == JES_NO_ERROR)) {
+          is_valid = true;
+        }
+        break;
+      }
+      continue;
+    }
+  }
+
+  return is_valid;
+}
+
+bool jes_tokenizer_validate_string(struct jes_context* ctx, const char* value, size_t length)
+{
+  struct jes_token token = { 0 };
+  const char* end = NULL;
+  const char* char_ptr = NULL;
+  bool is_valid = false;
+
+  assert(ctx != NULL);
+  assert(value != NULL);
+
+  if (length == 0) {
+    /* We consider a string with zero length a valid string */
+    return true;
+  }
+
+  end = value + length;
+
+  while (char_ptr = JES_TOKENIZER_GET_CHAR(value, end)) {
+    (void)jes_tokenizer_get_string_token(ctx, &token, char_ptr, end);
+    /* The function will not return true until finding a double quoute symbol
+       which we don't have in this case. Ignore the return value and rely on the
+       token size instead. */
+    if ((token.length == length) && (ctx->status == JES_NO_ERROR)) {
+      is_valid = true;
+      break;
+    }
+  }
+
+  return is_valid;
 }
 
 void jes_tokenizer_init(struct jes_context* ctx)

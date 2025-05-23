@@ -229,7 +229,7 @@ struct jes_element* jes_add_key_after(struct jes_context *ctx, struct jes_elemen
 /* Update the name of a key element.
  * note: The keyword will not be copied and must be non-retentive for the life cycle of jes_context.
  * return a status code of type enum jes_status */
-uint32_t jes_update_key(struct jes_context *ctx, struct jes_element *key, const char *keyword);
+enum jes_status jes_update_key(struct jes_context *ctx, struct jes_element *key, const char *keyword);
 
 /* Update a key value
  * note: The new value will not be copied and must be non-retentive for the life cycle of jes_context.

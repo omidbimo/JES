@@ -330,6 +330,33 @@ struct jes_element* jes_add_element(struct jes_context *ctx, struct jes_element 
     }
   }
 
+  switch (type) {
+    case JES_NUMBER:
+      if (!jes_tokenizer_validate_number(ctx, value, value_length)) {
+        ctx->status = JES_INVALID_PARAMETER;
+        return NULL;
+      }
+      break;
+    case JES_KEY: /* Fall through is intended */
+    case JES_STRING:
+      if (!jes_tokenizer_validate_string(ctx, value, value_length)) {
+        ctx->status = JES_INVALID_PARAMETER;
+        return NULL;
+      }
+      break;
+
+    case JES_OBJECT:
+    case JES_ARRAY:
+    case JES_TRUE:
+    case JES_FALSE:
+    case JES_NULL:
+      break;
+
+    default:
+      ctx->status = JES_INVALID_PARAMETER;
+      return NULL;
+  }
+
   new_node = jes_tree_insert_node(ctx, (struct jes_node*)parent, GET_LAST_CHILD(ctx, (struct jes_node*)parent),
                              type, value_length, value);
 
@@ -358,6 +385,11 @@ struct jes_element* jes_add_key(struct jes_context *ctx, struct jes_element *par
 
   keyword_length = strnlen(keyword, JES_MAX_VALUE_LENGTH);
   if (keyword_length == JES_MAX_VALUE_LENGTH) {
+    ctx->status = JES_INVALID_PARAMETER;
+    return NULL;
+  }
+
+  if (!jes_tokenizer_validate_string(ctx, keyword, keyword_length)) {
     ctx->status = JES_INVALID_PARAMETER;
     return NULL;
   }
@@ -455,7 +487,7 @@ struct jes_element* jes_add_key_after(struct jes_context *ctx, struct jes_elemen
   return (struct jes_element*)new_node;
 }
 
-uint32_t jes_update_key(struct jes_context *ctx, struct jes_element *key, const char *keyword)
+enum jes_status jes_update_key(struct jes_context *ctx, struct jes_element *key, const char *keyword)
 {
   uint32_t keyword_length = 0;
 
@@ -470,6 +502,11 @@ uint32_t jes_update_key(struct jes_context *ctx, struct jes_element *key, const 
 
   keyword_length = strnlen(keyword, JES_MAX_VALUE_LENGTH);
   if (keyword_length == JES_MAX_VALUE_LENGTH) {
+    ctx->status = JES_INVALID_PARAMETER;
+    return ctx->status;
+  }
+
+  if (!jes_tokenizer_validate_string(ctx, keyword, keyword_length)) {
     ctx->status = JES_INVALID_PARAMETER;
     return ctx->status;
   }
@@ -674,8 +711,6 @@ struct jes_element* jes_load(struct jes_context *ctx, const char *json_data, uin
   ctx->json_data = json_data;
   ctx->json_size = json_length;
   jes_parse(ctx);
-
-
 
   return ctx->status == JES_NO_ERROR ? (struct jes_element*)ctx->root : NULL;
 }
