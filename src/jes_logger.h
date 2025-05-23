@@ -6,8 +6,9 @@
 
 /* */
 void jes_log_token(uint16_t token_type,
-                   uint32_t token_pos,
-                   uint32_t token_len,
+                   size_t line_numebr,
+                   size_t token_pos,
+                   size_t token_len,
                    const char* token_value);
 /* */
 void jes_log_node(const char *pre_msg,

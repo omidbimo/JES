@@ -13,7 +13,6 @@
   tok.value = value_;
 
 #define IS_SPACE(c) ((c==' ') || (c=='\t') || (c=='\r') || (c=='\n') || (c=='\f'))
-#define IS_NEW_LINE(c) ((c=='\r') || (c=='\n'))
 #define IS_DIGIT(c) ((c >= '0') && (c <= '9'))
 #define IS_ESCAPE(c) ((c=='\\') || (c=='\"') || (c=='\/') || (c=='\b') || \
                       (c=='\f') || (c=='\n') || (c=='\r') || (c=='\t') || (c == '\u'))
@@ -288,9 +287,21 @@ jes_status jes_tokenizer_get_token(struct jes_context *ctx)
 
       /* Skipping space symbols including: space, tab, carriage return */
       if (IS_SPACE(*char_ptr)) {
-        if (IS_NEW_LINE(*char_ptr)) {
+        /* Handling different newline conventions \r, \n or \r\n */
+        if (*char_ptr == '\n') {
+          /* Unix-style LF */
           ctx->line_number++;
         }
+        else if (*char_ptr == '\r') {
+          /* Could be Mac-style CR or first part of Windows CRLF */
+          char ch = JES_TOKENIZER_LOOK_AHEAD(char_ptr, ctx->json_data + ctx->json_size);
+          if (ch != '\n') {
+            /* Mac-style standalone CR */
+            ctx->line_number++;
+          }
+          /* If next is \n, we'll handle the line increment when we process the next character */
+        }
+
         continue;
       }
 
@@ -310,7 +321,7 @@ jes_status jes_tokenizer_get_token(struct jes_context *ctx)
     }
   }
 
-  JES_LOG_TOKEN(token.type, token.value - ctx->json_data, token.length, token.value);
+  JES_LOG_TOKEN(token.type, ctx->line_number, ctx->tokenizer_pos - ctx->json_data, token.length, token.value);
 
   ctx->token = token;
   return ctx->status;
@@ -383,4 +394,5 @@ void jes_tokenizer_init(struct jes_context* ctx)
 {
   ctx->next_free = 0;
   ctx->typed_tokenizer_fn = NULL;
+  ctx->line_number = 1;
 }
