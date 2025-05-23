@@ -115,7 +115,7 @@ struct jes_context {
   const char* tokenizer_pos;
   uint32_t  line_number;
   /* To dynamically switch tokenizer functions when detecting Integers, fractions and exponents */
-  bool (*typed_tokenizer_fn) (struct jes_context* ctx, struct jes_token* token, const char* char_ptr);
+  bool (*typed_tokenizer_fn) (struct jes_context* ctx, struct jes_token* token, const char* current, const char* end);
   /* Part of the buffer given by the user at the time of the context initialization.
    * The buffer will be used to allocate the context structure at first.
    * The remaining memory will be used as a pool of nodes (max. 65535 nodes). */

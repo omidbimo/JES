@@ -21,12 +21,10 @@ struct jes_context* jes_init(void *buffer, uint32_t buffer_size)
   memset(ctx, 0, sizeof(*ctx));
 
   ctx->status = JES_NO_ERROR;
-  ctx->node_count = 0;
 
   ctx->json_data = NULL;
   ctx->json_size = 0;
-  ctx->node_pool = (struct jes_node*)(ctx + 1);
-
+  jes_tree_init(ctx);
 #ifndef JES_ENABLE_FAST_KEY_SEARCH
   ctx->pool_size = buffer_size - (uint32_t)(sizeof(struct jes_context));
   ctx->capacity = (ctx->pool_size / sizeof(struct jes_node)) < JES_INVALID_INDEX
@@ -49,7 +47,6 @@ struct jes_context* jes_init(void *buffer, uint32_t buffer_size)
   jes_tokenizer_init(ctx);
   ctx->iter = NULL;
   ctx->root = NULL;
-  ctx->freed = NULL;
 
   ctx->cookie = JES_CONTEXT_COOKIE;
   return ctx;
@@ -59,12 +56,12 @@ void jes_reset(struct jes_context *ctx)
 {
   if (JES_IS_INITIATED(ctx)) {
     ctx->status = JES_NO_ERROR;
-    ctx->node_count = 0;
     ctx->json_data = NULL;
+    jes_tree_init(ctx);
     jes_tokenizer_init(ctx);
     ctx->iter = NULL;
     ctx->root = NULL;
-    ctx->freed = NULL;
+
   }
 }
 
@@ -677,6 +674,8 @@ struct jes_element* jes_load(struct jes_context *ctx, const char *json_data, uin
   ctx->json_data = json_data;
   ctx->json_size = json_length;
   jes_parse(ctx);
+
+
 
   return ctx->status == JES_NO_ERROR ? (struct jes_element*)ctx->root : NULL;
 }
