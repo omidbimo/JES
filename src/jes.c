@@ -41,7 +41,6 @@ void jes_reset(struct jes_context *ctx)
     ctx->status = JES_NO_ERROR;
     ctx->json_data = NULL;
     jes_tree_init(ctx, (struct jes_context*)ctx->workspace + 1, ctx->workspace_size - sizeof(*ctx));
-
     jes_tokenizer_init(ctx);
     ctx->iter = NULL;
     ctx->root = NULL;

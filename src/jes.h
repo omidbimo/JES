@@ -63,9 +63,9 @@
  * for the JES context to accommodate the internal hash table structure.
  * Insufficient memory may lead to parsing failures.
  */
-#define JES_ENABLE_FAST_KEY_SEARCH
+//#define JES_ENABLE_FAST_KEY_SEARCH
 
-#define JES_ENABLE_FALL_BACK_TO_LINEAR_SEARCH
+//#define JES_ENABLE_FALL_BACK_TO_LINEAR_SEARCH
 
 typedef enum jes_status {
   JES_NO_ERROR = 0,
