@@ -221,7 +221,7 @@ jes_status jes_tokenizer_get_token(struct jes_context *ctx)
 
   while (true) {
 
-    char_ptr = JES_TOKENIZER_GET_CHAR(ctx->tokenizer_pos, ctx->json_data + ctx->json_size);
+    char_ptr = JES_TOKENIZER_GET_CHAR(ctx->cursor, ctx->json_data + ctx->json_size);
 
     if (!token.type) {
 
@@ -319,7 +319,7 @@ jes_status jes_tokenizer_get_token(struct jes_context *ctx)
     }
   }
 
-  JES_LOG_TOKEN(token.type, ctx->line_number, ctx->tokenizer_pos - ctx->json_data, token.length, token.value);
+  JES_LOG_TOKEN(token.type, ctx->line_number, ctx->cursor - ctx->json_data, token.length, token.value);
 
   ctx->token = token;
   return ctx->status;

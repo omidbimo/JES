@@ -36,9 +36,6 @@ struct jes_node* jes_tree_get_parent_node_by_type(struct jes_context* ctx,
 struct jes_node* jes_tree_get_container_parent_node(struct jes_context* ctx,
                                                     struct jes_node* node);
 
-struct jes_node* jes_tree_find_key(struct jes_context* ctx,
-                                   struct jes_node* parent_object,
-                                   const char* keyword,
-                                   size_t keyword_lenngth);
+
 
 #endif

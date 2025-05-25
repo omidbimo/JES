@@ -18,15 +18,15 @@
 #define HAS_SIBLING(node_ptr) (((node_ptr) != NULL) ? (node_ptr)->sibling < JES_INVALID_INDEX : false)
 #define HAS_CHILD(node_ptr) (((node_ptr) != NULL) ? (node_ptr)->last_child < JES_INVALID_INDEX : false)
 
-#define GET_PARENT(ctx_, node_ptr) (HAS_PARENT(node_ptr) ? &ctx_->node_pool.pool[(node_ptr)->parent] : NULL)
-#define GET_SIBLING(ctx_, node_ptr) (HAS_SIBLING(node_ptr) ? &ctx_->node_pool.pool[(node_ptr)->sibling] : NULL)
-#define GET_FIRST_CHILD(ctx_, node_ptr) (HAS_CHILD(node_ptr) ? &ctx_->node_pool.pool[(node_ptr)->first_child] : NULL)
-#define GET_LAST_CHILD(ctx_, node_ptr) (HAS_CHILD(node_ptr) ? &ctx_->node_pool.pool[(node_ptr)->last_child] : NULL)
+#define GET_PARENT(ctx_, node_ptr) (HAS_PARENT(node_ptr) ? &ctx_->node_mng.pool[(node_ptr)->parent] : NULL)
+#define GET_SIBLING(ctx_, node_ptr) (HAS_SIBLING(node_ptr) ? &ctx_->node_mng.pool[(node_ptr)->sibling] : NULL)
+#define GET_FIRST_CHILD(ctx_, node_ptr) (HAS_CHILD(node_ptr) ? &ctx_->node_mng.pool[(node_ptr)->first_child] : NULL)
+#define GET_LAST_CHILD(ctx_, node_ptr) (HAS_CHILD(node_ptr) ? &ctx_->node_mng.pool[(node_ptr)->last_child] : NULL)
 
 #define NODE_TYPE(node_ptr) ((node_ptr != NULL) ? node_ptr->json_tlv.type : JES_UNKNOWN)
-#define PARENT_TYPE(ctx_, node_ptr) (HAS_PARENT(node_ptr) ? ctx_->node_pool.pool[(node_ptr)->parent].json_tlv.type : JES_UNKNOWN)
+#define PARENT_TYPE(ctx_, node_ptr) (HAS_PARENT(node_ptr) ? ctx_->node_mng.pool[(node_ptr)->parent].json_tlv.type : JES_UNKNOWN)
 
-#define JES_NODE_INDEX(ctx_, node_ptr) ((node_ptr != NULL) ? (jes_node_descriptor)((node_ptr) - ctx_->node_pool.pool) : JES_INVALID_INDEX)
+#define JES_NODE_INDEX(ctx_, node_ptr) ((node_ptr != NULL) ? (jes_node_descriptor)((node_ptr) - ctx_->node_mng.pool) : JES_INVALID_INDEX)
 
 #define JES_CONTEXT_COOKIE 0xABC09DEF
 #define JES_IS_INITIATED(ctx_) (ctx_->cookie == JES_CONTEXT_COOKIE)
@@ -97,12 +97,12 @@ struct jes_freed_node {
   struct jes_freed_node* next;
 };
 
-struct jes_node_pool_context {
+struct jes_node_mng_context {
   /* Part of the buffer given by the user at the time of the context initialization.
    * The buffer will be used to allocate the context structure at first.
    * The remaining memory will be used as a pool of nodes (max. 65535 nodes). */
    struct jes_node* pool;
-  /* node_pool size in bytes. (buffer size - context size) */
+  /* Node pool size in bytes. (buffer size - context size) */
   size_t size;
   /* Number of nodes that can be allocated on the given buffer. The value will
      be limited to 65535 in case of 16-bit node descriptors. */
@@ -113,6 +113,8 @@ struct jes_node_pool_context {
   struct jes_freed_node* freed;
   /* Number of nodes in the current JSON */
   size_t node_count;
+  /* Key search function pointer. The function might switch to linear or lookup table search based on compile-time configurations. */
+  struct jes_node* (*find_key_fn) (struct jes_context* ctx, struct jes_node* parent, const char* key, size_t key_len);
 };
 
 struct jes_hash_table_context {
@@ -122,6 +124,8 @@ struct jes_hash_table_context {
 
   /* */
   size_t (*hash_fn) (uint32_t parent_id, const char* key, size_t keyword_length);
+  jes_status (*add_fn) (struct jes_context* ctx, struct jes_node* parent, struct jes_node* key);
+  void (*remove_fn) (struct jes_context* ctx, struct jes_node* parent, struct jes_node* key);
 };
 
 struct jes_context {
@@ -132,13 +136,17 @@ struct jes_context {
   uint32_t ext_status;
   /* State of the parser state machine or the serializer state machine */
   enum jes_state state;
-
   /* JSON data to be parsed */
   const char* json_data;
   /* Length of JSON data in bytes. */
   uint32_t  json_size;
-  /* */
-  const char* tokenizer_pos;
+  /* The buffer provided during the initialization as the workspace for jes */
+  void* workspace;
+  /* Size of the buffer provided during the initialization as the workspace for jes */
+  size_t workspace_size;
+  /* Points to the next character in JSON document to be tokenized */
+  const char* cursor;
+  /* The current line number in the JSON input that is being processed */
   uint32_t  line_number;
   /* To dynamically switch tokenizer functions when detecting Integers, fractions and exponents */
   bool (*typed_tokenizer_fn) (struct jes_context* ctx, struct jes_token* token, const char* current, const char* end);
@@ -149,8 +157,8 @@ struct jes_context {
   /* Holds the main object node */
   struct jes_node* root;
 
-  struct jes_node* (*find_key_fn) (struct jes_context* ctx, struct jes_node* parent, const char* key, size_t key_len);
-  struct jes_node_pool_context node_pool;
+  struct jes_node_mng_context node_mng;
+
 #ifdef JES_ENABLE_FAST_KEY_SEARCH
   struct jes_hash_table_context hash_table;
 #endif

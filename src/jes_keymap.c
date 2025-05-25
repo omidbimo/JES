@@ -11,6 +11,12 @@
 #define JES_FNV_PRIME_32BIT         16777619
 #define JES_FNV_OFFSET_BASIS_32BIT  2166136261
 
+#ifndef NDEBUG
+  #define JES_LOG(...)  printf(__VA_ARGS__)
+#else
+  #define JES_LOG(...)
+#endif
+
 /**
  * @brief Generates a compound hash using the FNV-1a algorithm.
  *
@@ -58,10 +64,10 @@ static size_t jes_fnv1a_compound_hash(uint32_t parent_id, const char* keyword, s
  * of the parent object's index and the key string to locate entries, and handles
  * hash collisions using linear probing.
  */
-static struct jes_node* jes_find_key_lookup_table(struct jes_context* ctx,
-                                                  struct jes_node* parent_object,
-                                                  const char* keyword,
-                                                  size_t keyword_length)
+struct jes_node* jes_find_key_lookup_table(struct jes_context* ctx,
+                                           struct jes_node* parent_object,
+                                           const char* keyword,
+                                           size_t keyword_length)
 {
   struct jes_hash_table_context* table = &ctx->hash_table;
   struct jes_node* key = NULL;
@@ -88,7 +94,7 @@ static struct jes_node* jes_find_key_lookup_table(struct jes_context* ctx,
   return key;
 }
 
-jes_status jes_hash_table_add(struct jes_context* ctx, struct jes_node* parent_object, struct jes_node* key)
+static jes_status jes_hash_table_add(struct jes_context* ctx, struct jes_node* parent_object, struct jes_node* key)
 {
   struct jes_hash_table_context* table = &ctx->hash_table;
   size_t hash = table->hash_fn(JES_NODE_INDEX(ctx, parent_object), key->json_tlv.value, key->json_tlv.length);
@@ -122,7 +128,7 @@ jes_status jes_hash_table_add(struct jes_context* ctx, struct jes_node* parent_o
   return ctx->status;
 }
 
-void jes_hash_table_remove(struct jes_context* ctx, struct jes_node* parent_object, struct jes_node* key)
+static void jes_hash_table_remove(struct jes_context* ctx, struct jes_node* parent_object, struct jes_node* key)
 {
   struct jes_hash_table_context* table = &ctx->hash_table;
   struct jes_hash_entry* lookup_entries = table->pool;
@@ -151,46 +157,56 @@ static enum jes_status jes_hash_table_resize(struct jes_context* ctx)
 {
   if (ctx->hash_table.size == 0) {
 #if 0
-    ctx->hash_table.pool = ctx->node_pool.pool + ctx->node_pool.size;
+    ctx->hash_table.pool = ctx->node_mng.pool + ctx->node_mng.size;
 #else
-    ctx->hash_table.pool = (struct jes_hash_entry*)(ctx->node_pool.pool + ctx->node_pool.size);
+    ctx->hash_table.pool = (struct jes_hash_entry*)(ctx->node_mng.pool + ctx->node_mng.size);
 #endif
-    ctx->hash_table.size = ctx->node_pool.size / 4;
-    ctx->node_pool.size -= ctx->hash_table.size;
-    ctx->node_pool.capacity = ctx->node_pool.size / sizeof(*ctx->node_pool.pool);
+    ctx->hash_table.size = ctx->node_mng.size / 4;
+    ctx->node_mng.size -= ctx->hash_table.size;
+    ctx->node_mng.capacity = ctx->node_mng.size / sizeof(*ctx->node_mng.pool);
     ctx->hash_table.capacity = ctx->hash_table.size / sizeof(*ctx->hash_table.pool);
-    ctx->hash_table.pool = (struct jes_hash_entry*)((uint8_t*)ctx->node_pool.pool + ctx->node_pool.size);
-#ifndef NDEBUG
-    printf("\nResized node pool and hashed key pool.");
-    printf("\n  Node Pool: size=%d bytes, capacity=%d nodes", ctx->node_pool.size, ctx->node_pool.capacity);
-    printf("\n  hashed key Pool: size=%d bytes, capacity=%d entries", ctx->hash_table.size, ctx->hash_table.capacity);
-#endif
+    ctx->hash_table.pool = (struct jes_hash_entry*)((uint8_t*)ctx->node_mng.pool + ctx->node_mng.size);
+
+    JES_LOG("\n Node pool restructured. Extended hash table.");
+    JES_LOG("\n    Node Pool: size=%d bytes, capacity=%d nodes", ctx->node_mng.size, ctx->node_mng.capacity);
+    JES_LOG("\n    hashed key Pool: size=%d bytes, capacity=%d entries", ctx->hash_table.size, ctx->hash_table.capacity);
   }
-  return 0;
+  return JES_NO_ERROR;
 }
 
 enum jes_status jes_hash_table_init(struct jes_context* ctx)
 {
   struct jes_hash_table_context* hash_table_ctx = &ctx->hash_table;
-  jes_hash_table_resize(ctx);
+  enum jes_status status = JES_NO_ERROR;
+  ctx->hash_table.size = 0;
+  ctx->hash_table.capacity = 0;
+  status = jes_hash_table_resize(ctx);
   hash_table_ctx->hash_fn = jes_fnv1a_compound_hash;
-  ctx->find_key_fn = jes_find_key_lookup_table;
+
   memset(hash_table_ctx->pool, 0, hash_table_ctx->size);
-#if 0
 
 
+  hash_table_ctx->add_fn = jes_hash_table_add;
+  hash_table_ctx->remove_fn = jes_hash_table_remove;
 
-    size_t usable_size = buffer_size - sizeof(struct jes_context) - sizeof(struct jes_hash_table_context);
-    size_t node_count = usable_size / (sizeof(struct jes_node) + sizeof(struct jes_hash_entry));
-
-    ctx->capacity = node_count < JES_INVALID_INDEX
-                   ? (jes_node_descriptor)node_count
-                   : JES_INVALID_INDEX -1;
-    ctx->pool_size = ctx->capacity * sizeof(struct jes_node);
-    ctx->hash_table = jes_init_hash_table(ctx, (uint8_t*)ctx->node_pool + ctx->pool_size, buffer_size - sizeof(struct jes_context) - ctx->pool_size);
-#endif
-  return 0;
+  return JES_NO_ERROR;
 }
 
+static jes_status jes_hash_table_add_noop(struct jes_context* ctx, struct jes_node* parent_object, struct jes_node* key)
+{
+  /* Hash table add function is bypassed due to fallback to linear search. */
+  return JES_NO_ERROR;
+}
+
+static void jes_hash_table_remove_noop(struct jes_context* ctx, struct jes_node* parent_object, struct jes_node* key)
+{
+  /* Hash table remove function is bypassed due to fallback to linear search. */
+}
+
+void jes_hash_table_turn_off(struct jes_context* ctx)
+{
+  ctx->hash_table.add_fn = jes_hash_table_add_noop;
+  ctx->hash_table.remove_fn = jes_hash_table_remove_noop;
+}
 
 

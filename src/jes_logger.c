@@ -110,9 +110,9 @@ char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len)
                 ctx->status,
                 jes_token_type_str[ctx->token.type],
                 ctx->line_number,
-                ctx->tokenizer_pos - ctx->json_data,
+                ctx->cursor - ctx->json_data,
                 ctx->token.length,
-                ctx->tokenizer_pos,
+                ctx->cursor,
                 jes_state_str[ctx->state],
                 ctx->iter != NULL ? jes_node_type_str[ctx->iter->json_tlv.type] : "");
       break;
@@ -123,9 +123,9 @@ char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len)
                 ctx->status,
                 jes_token_type_str[ctx->token.type],
                 ctx->line_number,
-                ctx->tokenizer_pos - ctx->json_data,
+                ctx->cursor - ctx->json_data,
                 ctx->token.length,
-                ctx->tokenizer_pos,
+                ctx->cursor,
                 jes_state_str[ctx->state],
                 ctx->iter != NULL ? jes_node_type_str[ctx->iter->json_tlv.type] : "");
       break;
@@ -137,9 +137,9 @@ char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len)
                 ctx->status,
                 jes_token_type_str[ctx->token.type],
                 ctx->line_number,
-                ctx->tokenizer_pos - ctx->json_data,
+                ctx->cursor - ctx->json_data,
                 ctx->token.length,
-                ctx->tokenizer_pos);
+                ctx->cursor);
       break;
     case JES_UNEXPECTED_ELEMENT:
       snprintf( msg, msg_len, "%s(#%d) - %s: \"%.*s\" @state: %s",
@@ -166,9 +166,9 @@ char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len)
                 ctx->status,
                 jes_token_type_str[ctx->token.type],
                 ctx->line_number,
-                ctx->tokenizer_pos - ctx->json_data,
+                ctx->cursor - ctx->json_data,
                 ctx->token.length,
-                ctx->tokenizer_pos,
+                ctx->cursor,
                 jes_state_str[ctx->state],
                 ctx->iter != NULL ? jes_node_type_str[ctx->iter->json_tlv.type] : "");
       break;

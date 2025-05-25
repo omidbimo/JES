@@ -261,7 +261,7 @@ void jes_parse(struct jes_context *ctx)
   assert(ctx->json_size != 0);
 
   ctx->state = JES_EXPECT_OBJECT;
-  ctx->tokenizer_pos = ctx->json_data;
+  ctx->cursor = ctx->json_data;
   do {
     if (jes_tokenizer_get_token(ctx) != JES_NO_ERROR) break;
 

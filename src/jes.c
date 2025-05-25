@@ -10,7 +10,7 @@
 #include "jes_tree.h"
 #include "jes_parser.h"
 
-struct jes_context* jes_init(void *buffer, size_t buffer_size)
+struct jes_context* jes_init(void* buffer, size_t buffer_size)
 {
   struct jes_context *ctx = buffer;
 
@@ -24,13 +24,9 @@ struct jes_context* jes_init(void *buffer, size_t buffer_size)
 
   ctx->json_data = NULL;
   ctx->json_size = 0;
-  jes_tree_init(ctx, (struct jes_context*)buffer + 1, buffer_size - sizeof(*ctx));
-#ifndef JES_ENABLE_FAST_KEY_SEARCH
-  ctx->find_key_fn = jes_tree_find_key;
-#else
-  jes_hash_table_init(ctx);
-
-#endif
+  ctx->workspace = buffer;
+  ctx->workspace_size = buffer_size;
+  jes_tree_init(ctx, (struct jes_context*)ctx->workspace + 1, ctx->workspace_size - sizeof(*ctx));
   jes_tokenizer_init(ctx);
   ctx->iter = NULL;
   ctx->root = NULL;
@@ -44,12 +40,11 @@ void jes_reset(struct jes_context *ctx)
   if (JES_IS_INITIATED(ctx)) {
     ctx->status = JES_NO_ERROR;
     ctx->json_data = NULL;
-    jes_tree_init(ctx, ctx->node_pool.pool, ctx->node_pool.size + ctx->hash_table.size);
-    jes_hash_table_init(ctx);
+    jes_tree_init(ctx, (struct jes_context*)ctx->workspace + 1, ctx->workspace_size - sizeof(*ctx));
+
     jes_tokenizer_init(ctx);
     ctx->iter = NULL;
     ctx->root = NULL;
-
   }
 }
 
@@ -177,7 +172,7 @@ struct jes_element* jes_get_key(struct jes_context *ctx, struct jes_element *par
     if (NODE_TYPE(iter) == JES_KEY) {
       iter = GET_FIRST_CHILD(ctx, iter);
     }
-    iter = ctx->find_key_fn(ctx, iter, key, key_len);
+    iter = ctx->node_mng.find_key_fn(ctx, iter, key, key_len);
 
     if ((iter != NULL) && (*keys == '\0')) {
       target_key = (struct jes_element*)iter;
@@ -695,7 +690,7 @@ struct jes_element* jes_add_array_value(struct jes_context *ctx, struct jes_elem
 
 size_t jes_get_element_count(struct jes_context *ctx)
 {
-  return ctx->node_pool.node_count;
+  return ctx->node_mng.node_count;
 }
 
 jes_status jes_get_status(struct jes_context *ctx)

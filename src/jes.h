@@ -65,6 +65,8 @@
  */
 #define JES_ENABLE_FAST_KEY_SEARCH
 
+#define JES_ENABLE_FALL_BACK_TO_LINEAR_SEARCH
+
 typedef enum jes_status {
   JES_NO_ERROR = 0,
   JES_PARSING_FAILED,

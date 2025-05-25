@@ -31,7 +31,7 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
   ctx->status = JES_NO_ERROR;
 
   do {
-    JES_LOG_NODE("\n   ", ctx->iter - ctx->node_pool.pool, ctx->iter->json_tlv.type,
+    JES_LOG_NODE("\n   ", ctx->iter - ctx->node_mng.pool, ctx->iter->json_tlv.type,
                   ctx->iter->json_tlv.length, ctx->iter->json_tlv.value,
                   ctx->iter->parent, ctx->iter->sibling, ctx->iter->first_child, ctx->iter->last_child, "");
 

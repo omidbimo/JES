@@ -9,32 +9,51 @@
 
 #ifndef NDEBUG
   #define JES_LOG_NODE  jes_log_node
+  #define JES_LOG(...) printf(__VA_ARGS__)
 #else
   #define JES_LOG_NODE(...)
+  #define JES_LOG(...)
 #endif
+
+static struct jes_node* jes_tree_find_key(struct jes_context*, struct jes_node*, const char*, size_t);
 
 static struct jes_node* jes_allocate(struct jes_context* ctx)
 {
-  struct jes_node_pool_context* pool_ctx = NULL;
+  struct jes_node_mng_context* mng_ctx = NULL;
   struct jes_node* new_node = NULL;
 
   assert(ctx != NULL);
-  pool_ctx = &ctx->node_pool;
+  mng_ctx = &ctx->node_mng;
 
-  if (pool_ctx->node_count < pool_ctx->capacity) {
-    if (pool_ctx->freed) {
+#ifdef JES_ENABLE_FAST_KEY_SEARCH
+  #ifdef JES_ENABLE_FALL_BACK_TO_LINEAR_SEARCH
+  if ((mng_ctx->node_count >= mng_ctx->capacity) && (mng_ctx->find_key_fn != jes_tree_find_key)) {
+    /* Reclaim the original buffer size provided to jes */
+    mng_ctx->size = ctx->workspace_size - sizeof(*ctx);
+    mng_ctx->capacity = (mng_ctx->size / sizeof(struct jes_node)) < JES_INVALID_INDEX
+                       ? mng_ctx->size / sizeof(struct jes_node)
+                       : JES_INVALID_INDEX -1;
+    jes_hash_table_turn_off(ctx);
+    mng_ctx->find_key_fn = jes_tree_find_key;
+    JES_LOG("\n !!! Insufficient memory in node pool! Falling back to Linear search (performance degraded).");
+  }
+  #endif
+#endif
+
+  if (mng_ctx->node_count < mng_ctx->capacity) {
+    if (mng_ctx->freed) {
       /* Pop the first node from free list */
-      new_node = (struct jes_node*)pool_ctx->freed;
-      pool_ctx->freed = pool_ctx->freed->next;
+      new_node = (struct jes_node*)mng_ctx->freed;
+      mng_ctx->freed = mng_ctx->freed->next;
     }
     else {
-      assert(pool_ctx->next_free < pool_ctx->capacity);
-      new_node = &pool_ctx->pool[pool_ctx->next_free];
-      pool_ctx->next_free++;
+      assert(mng_ctx->next_free < mng_ctx->capacity);
+      new_node = &mng_ctx->pool[mng_ctx->next_free];
+      mng_ctx->next_free++;
     }
     /* Setting node descriptors to their default values. */
     memset(((struct jes_element*)new_node) + 1, 0xFF, sizeof(jes_node_descriptor) * 4);
-    pool_ctx->node_count++;
+    mng_ctx->node_count++;
   }
   else {
     ctx->status = JES_OUT_OF_MEMORY;
@@ -45,48 +64,48 @@ static struct jes_node* jes_allocate(struct jes_context* ctx)
 
 static void jes_free(struct jes_context* ctx, struct jes_node* node)
 {
-  struct jes_node_pool_context* pool_ctx = NULL;
+  struct jes_node_mng_context* mng_ctx = NULL;
   struct jes_freed_node* free_node = (struct jes_freed_node*)node;
 
   assert(ctx != NULL);
   assert(node != NULL);
 
-  pool_ctx = &ctx->node_pool;
+  mng_ctx = &ctx->node_mng;
 
-  assert(node >= pool_ctx->pool);
-  assert(node < (pool_ctx->pool + pool_ctx->capacity));
-  assert(pool_ctx->node_count > 0);
+  assert(node >= mng_ctx->pool);
+  assert(node < (mng_ctx->pool + mng_ctx->capacity));
+  assert(mng_ctx->node_count > 0);
 
-  if (pool_ctx->node_count > 0) {
+  if (mng_ctx->node_count > 0) {
     node->json_tlv.type = JES_UNKNOWN; /* This prevents reuse of deleted nodes. */
     free_node->next = NULL;
-    pool_ctx->node_count--;
+    mng_ctx->node_count--;
     /* prepend the node to the free LIFO */
-    if (pool_ctx->freed) {
-      free_node->next = pool_ctx->freed->next;
+    if (mng_ctx->freed) {
+      free_node->next = mng_ctx->freed->next;
     }
-    pool_ctx->freed = free_node;
+    mng_ctx->freed = free_node;
   }
 }
 
 bool jes_validate_node(struct jes_context* ctx, struct jes_node* node)
 {
-  struct jes_node_pool_context* pool_ctx = NULL;
+  struct jes_node_mng_context* mng_ctx = NULL;
 
   assert(ctx != NULL);
   assert(node != NULL);
   assert(ctx->cookie == JES_CONTEXT_COOKIE);
 
-  pool_ctx = &ctx->node_pool;
-  if (((void*)node >= (void*)(pool_ctx->pool)) &&
-      (((void*)node + sizeof(*node)) <= ((void*)(pool_ctx->pool) + pool_ctx->size))) {
+  mng_ctx = &ctx->node_mng;
+  if (((void*)node >= (void*)(mng_ctx->pool)) &&
+      (((void*)node + sizeof(*node)) <= ((void*)(mng_ctx->pool) + mng_ctx->size))) {
     /* Check if the node is correctly aligned */
-    if ((((void*)node - (void*)(pool_ctx->pool)) % sizeof(*node)) == 0) {
+    if ((((void*)node - (void*)(mng_ctx->pool)) % sizeof(*node)) == 0) {
       /* Check if the node links are in bound */
-      if (((node->parent == JES_INVALID_INDEX) || (node->parent <= pool_ctx->capacity)) &&
-          ((node->first_child == JES_INVALID_INDEX) || (node->first_child <= pool_ctx->capacity)) &&
-          ((node->last_child == JES_INVALID_INDEX) || (node->last_child <= pool_ctx->capacity)) &&
-          ((node->sibling == JES_INVALID_INDEX) || (node->sibling <= pool_ctx->capacity))) {
+      if (((node->parent == JES_INVALID_INDEX) || (node->parent <= mng_ctx->capacity)) &&
+          ((node->first_child == JES_INVALID_INDEX) || (node->first_child <= mng_ctx->capacity)) &&
+          ((node->last_child == JES_INVALID_INDEX) || (node->last_child <= mng_ctx->capacity)) &&
+          ((node->sibling == JES_INVALID_INDEX) || (node->sibling <= mng_ctx->capacity))) {
         return true;
       }
     }
@@ -210,9 +229,8 @@ struct jes_node* jes_tree_insert_key_node(struct jes_context* ctx,
     assert(anchor == NULL);
   }
 
-
   /* No duplicate keys in the same object are allowed. */
-  struct jes_node* node = ctx->find_key_fn(ctx, parent_object, keyword, keyword_length);
+  struct jes_node* node = ctx->node_mng.find_key_fn(ctx, parent_object, keyword, keyword_length);
   if (node) {
     ctx->status = JES_DUPLICATE_KEY;
   }
@@ -223,7 +241,8 @@ struct jes_node* jes_tree_insert_key_node(struct jes_context* ctx,
 
   if (new_node) {
 #ifdef JES_ENABLE_FAST_KEY_SEARCH
-    jes_hash_table_add(ctx, parent_object, new_node);
+    assert(ctx->hash_table.add_fn != NULL);
+    ctx->hash_table.add_fn(ctx, parent_object, new_node);
 #endif
   }
   return new_node;
@@ -279,7 +298,8 @@ void jes_tree_delete_node(struct jes_context* ctx, struct jes_node* node)
     /* Remove key from hash table if applicable */
 #ifdef JES_ENABLE_FAST_KEY_SEARCH
     if (NODE_TYPE(iter) == JES_KEY) {
-      jes_hash_table_remove(ctx, parent, iter);
+      assert(ctx->hash_table.remove_fn != NULL);
+      ctx->hash_table.remove_fn(ctx, parent, iter);
     }
 #endif
     jes_free(ctx, iter);
@@ -323,16 +343,17 @@ void jes_tree_delete_node(struct jes_context* ctx, struct jes_node* node)
 /* Remove from hash table if it's a key */
 #ifdef JES_ENABLE_FAST_KEY_SEARCH
   if (NODE_TYPE(node) == JES_KEY) {
-    jes_hash_table_remove(ctx, parent, node);
+    assert(ctx->hash_table.remove_fn != NULL);
+    ctx->hash_table.remove_fn(ctx, parent, node);
   }
 #endif
   jes_free(ctx, node);
 }
 
-struct jes_node* jes_tree_find_key(struct jes_context* ctx,
-                                   struct jes_node* parent_object,
-                                   const char* keyword,
-                                   size_t keyword_lenngth)
+static struct jes_node* jes_tree_find_key(struct jes_context* ctx,
+                                          struct jes_node* parent_object,
+                                          const char* keyword,
+                                          size_t keyword_lenngth)
 {
   struct jes_node* key = NULL;
   struct jes_node* iter = parent_object;
@@ -360,19 +381,26 @@ struct jes_node* jes_tree_find_key(struct jes_context* ctx,
 
 void jes_tree_init(struct jes_context* ctx, void *buffer, size_t buffer_size)
 {
-  struct jes_node_pool_context* pool_ctx = &ctx->node_pool;
+  struct jes_node_mng_context* mng_ctx = &ctx->node_mng;
 
-  pool_ctx->pool = buffer;
-  pool_ctx->size = buffer_size;
+  mng_ctx->pool = buffer;
+  mng_ctx->size = buffer_size;
 
-  pool_ctx->capacity = (pool_ctx->size / sizeof(struct jes_node)) < JES_INVALID_INDEX
-                     ? pool_ctx->size / sizeof(struct jes_node)
+  mng_ctx->capacity = (mng_ctx->size / sizeof(struct jes_node)) < JES_INVALID_INDEX
+                     ? mng_ctx->size / sizeof(struct jes_node)
                      : JES_INVALID_INDEX -1;
-#ifndef NDEBUG
-  printf("\nCreated node pool");
-  printf("\n  Node Pool: size=%d bytes, capacity=%d nodes", ctx->node_pool.size, ctx->node_pool.capacity);
+
+  JES_LOG("\n Setup node pool. size=%d bytes, capacity=%d nodes", ctx->node_mng.size, ctx->node_mng.capacity);
+#ifndef JES_ENABLE_FAST_KEY_SEARCH
+  mng_ctx->find_key_fn = jes_tree_find_key;
+
+#else
+  jes_hash_table_init(ctx);
+  mng_ctx->find_key_fn = jes_find_key_lookup_table;
 #endif
-  pool_ctx->node_count = 0;
-  pool_ctx->next_free = 0;
-  pool_ctx->freed = NULL;
+
+  mng_ctx->node_count = 0;
+  mng_ctx->next_free = 0;
+  mng_ctx->freed = NULL;
+
 }
