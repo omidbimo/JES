@@ -699,6 +699,11 @@ jes_status jes_get_status(struct jes_context *ctx)
   return ctx->status;
 }
 
+size_t jes_get_element_capacity(struct jes_context *ctx)
+{
+  return ctx->node_mng.capacity;
+}
+
 struct jes_element* jes_load(struct jes_context *ctx, const char *json_data, uint32_t json_length)
 {
   if ((ctx == NULL) || !JES_IS_INITIATED(ctx)) {
@@ -718,3 +723,4 @@ struct jes_element* jes_load(struct jes_context *ctx, const char *json_data, uin
 
   return ctx->status == JES_NO_ERROR ? (struct jes_element*)ctx->node_mng.root : NULL;
 }
+

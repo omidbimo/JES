@@ -189,6 +189,9 @@ jes_status jes_delete_element(struct jes_context *ctx, struct jes_element *eleme
 /* Number of JSON tree element count */
 size_t jes_get_element_count(struct jes_context *ctx);
 
+/* Get maximum number of JSON elements that can be allocated */
+size_t jes_get_element_capacity(struct jes_context *ctx);
+
 /* Delivers the root element of the JSON tree (which is always an OBJECT)
  * A NULL represents an empty tree.
  */
