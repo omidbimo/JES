@@ -320,7 +320,7 @@ jes_status jes_tokenizer_get_token(struct jes_context *ctx)
     }
   }
 
-  JES_LOG_TOKEN(token.type, token_ctx->tokenizer.line_number, token_ctx->cursor - ctx->json_data, token.length, token.value);
+  JES_LOG_TOKEN(token.type, token_ctx->line_number, token_ctx->cursor - ctx->json_data, token.length, token.value);
 
   token_ctx->token = token;
   return ctx->status;

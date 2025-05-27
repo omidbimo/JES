@@ -397,7 +397,7 @@ void jes_tree_init(struct jes_context* ctx, void *buffer, size_t buffer_size)
 
 #else
   jes_hash_table_init(ctx);
-  mng_ctx->find_key_fn = jes_find_key_lookup_table;
+  mng_ctx->find_key_fn = jes_hash_table_find_key;
 #endif
 
   mng_ctx->node_count = 0;

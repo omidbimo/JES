@@ -66,10 +66,10 @@ static uint32_t jes_fnv1a_compound_hash(uint32_t parent_id, const char* keyword,
  * of the parent object's index and the key string to locate entries, and handles
  * hash collisions using linear probing.
  */
-struct jes_node* jes_find_key_lookup_table(struct jes_context* ctx,
-                                           struct jes_node* parent_object,
-                                           const char* keyword,
-                                           size_t keyword_length)
+struct jes_node* jes_hash_table_find_key(struct jes_context* ctx,
+                                         struct jes_node* parent_object,
+                                         const char* keyword,
+                                         size_t keyword_length)
 {
   struct jes_hash_table_context* table = &ctx->hash_table;
   struct jes_node* key = NULL;
