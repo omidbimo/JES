@@ -384,6 +384,7 @@ struct jes_element* jes_add_key(struct jes_context *ctx, struct jes_element *par
     return NULL;
   }
 
+
   if (parent->type == JES_KEY) {
     /* The key must be added to an existing key and must be embedded in an OBJECT */
     object = GET_FIRST_CHILD(ctx, (struct jes_node*)parent);
@@ -399,6 +400,7 @@ struct jes_element* jes_add_key(struct jes_context *ctx, struct jes_element *par
   else { /* parent is an OBJECT */
     object = (struct jes_node*)parent;
   }
+
   /* Append the key */
   new_node = jes_tree_insert_key_node(ctx, object, GET_LAST_CHILD(ctx, object), keyword_length, keyword);
 

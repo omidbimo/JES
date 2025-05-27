@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 #ifdef JES_ENABLE_FAST_KEY_SEARCH
-  #include "jes_keymap.h"
+  #include "jes_hash_table.h"
 #endif
 
 #ifdef JES_USE_32BIT_NODE_DESCRIPTOR
@@ -123,7 +123,7 @@ struct jes_hash_table_context {
   size_t capacity;
 
   /* */
-  size_t (*hash_fn) (uint32_t parent_id, const char* key, size_t keyword_length);
+  uint32_t (*hash_fn) (uint32_t parent_id, const char* key, size_t keyword_length);
   jes_status (*add_fn) (struct jes_context* ctx, struct jes_node* parent, struct jes_node* key);
   void (*remove_fn) (struct jes_context* ctx, struct jes_node* parent, struct jes_node* key);
 };

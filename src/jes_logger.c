@@ -116,6 +116,25 @@ char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len)
                 jes_state_str[ctx->state],
                 ctx->iter != NULL ? jes_node_type_str[ctx->iter->json_tlv.type] : "");
       break;
+
+    case JES_OUT_OF_MEMORY:
+#ifdef JES_ENABLE_FAST_KEY_SEARCH
+      snprintf( msg, msg_len, "%s(#%d) - element capacity: %d, hash table capacity: %d, node count: %d",
+                jes_status_str[ctx->status],
+                ctx->status,
+                ctx->node_mng.capacity,
+                ctx->hash_table.capacity,
+                ctx->node_mng.node_count
+                );
+#else
+      snprintf( msg, msg_len, "%s(#%d) - element capacity: %lu, node count: %lu",
+                jes_status_str[ctx->status],
+                ctx->status,
+                ctx->node_mng.capacity,
+                ctx->node_mng.node_count
+                );
+#endif
+      break;
     case JES_UNEXPECTED_TOKEN:
       snprintf( msg, msg_len,
                 "%s(#%d): Token<%s> @[line:%d, pos:%d] (\"%.*s\") state:<%s> after <%s> element",
@@ -172,6 +191,18 @@ char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len)
                 jes_state_str[ctx->state],
                 ctx->iter != NULL ? jes_node_type_str[ctx->iter->json_tlv.type] : "");
       break;
+#if 0
+    case JES_DUPLICATE_KEY:
+      snprintf( msg, msg_len,
+                "%s(#%d): Found duplicate key: \"%.*s\" inside \"%.*s\"",
+                jes_status_str[ctx->status],
+                ctx->status,
+                ctx->iter->json_tlv.length,
+                ctx->iter->json_tlv.value,
+                ctx->iter->json_tlv.length,
+                ctx->iter->json_tlv.value);
+      break;
+#endif
     default:
       snprintf(msg, msg_len, "%s(#%d)", jes_status_str[ctx->status], ctx->status);
       break;

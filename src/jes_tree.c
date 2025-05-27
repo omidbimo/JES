@@ -231,6 +231,7 @@ struct jes_node* jes_tree_insert_key_node(struct jes_context* ctx,
 
   /* No duplicate keys in the same object are allowed. */
   struct jes_node* node = ctx->node_mng.find_key_fn(ctx, parent_object, keyword, keyword_length);
+
   if (node) {
     ctx->status = JES_DUPLICATE_KEY;
   }

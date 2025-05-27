@@ -6,7 +6,7 @@
 
 #include "jes.h"
 #include "jes_private.h"
-#include "jes_keymap.h"
+#include "jes_hash_table.h"
 
 #define JES_FNV_PRIME_32BIT         16777619
 #define JES_FNV_OFFSET_BASIS_32BIT  2166136261
@@ -14,8 +14,10 @@
 #ifndef NDEBUG
   #define JES_LOG(...)  printf(__VA_ARGS__)
 #else
-  #define JES_LOG(...)
+  #define JES_LOG(...) //printf(__VA_ARGS__)
 #endif
+
+#define REVERSE_TABLE
 
 /**
  * @brief Generates a compound hash using the FNV-1a algorithm.
@@ -36,9 +38,9 @@
  *
  * @return size_t The calculated hash value
  */
-static size_t jes_fnv1a_compound_hash(uint32_t parent_id, const char* keyword, size_t keyword_length) {
+static uint32_t jes_fnv1a_compound_hash(uint32_t parent_id, const char* keyword, size_t keyword_length) {
   uint8_t* parent_id_bytes = (uint8_t*)&parent_id;
-  size_t hash = JES_FNV_OFFSET_BASIS_32BIT;
+  uint32_t hash = JES_FNV_OFFSET_BASIS_32BIT;
   size_t index;
 
   assert(keyword != NULL);
@@ -77,8 +79,14 @@ struct jes_node* jes_find_key_lookup_table(struct jes_context* ctx,
   assert(parent_object != NULL);
 
   hash = table->hash_fn(JES_NODE_INDEX(ctx, parent_object), keyword, keyword_length);
-  index = hash % table->capacity;
 
+#ifdef REVERSE_TABLE
+    index = table->capacity - (hash % table->capacity) - 1;
+#else
+    index = hash % table->capacity;
+#endif
+
+  size_t start_index = index;
   /* Linear probing to handle collisions */
   while (table->pool[index].key_element != NULL) {
 
@@ -88,7 +96,12 @@ struct jes_node* jes_find_key_lookup_table(struct jes_context* ctx,
       key = (struct jes_node*)table->pool[index].key_element;
       break;
     }
+#ifdef REVERSE_TABLE
+    index =  ((index - 1) % table->capacity) ;
+#else
     index = (index + 1) % table->capacity;
+#endif
+    if (start_index == index) break;
   }
 
   return key;
@@ -98,9 +111,16 @@ static jes_status jes_hash_table_add(struct jes_context* ctx, struct jes_node* p
 {
   struct jes_hash_table_context* table = &ctx->hash_table;
   size_t hash = table->hash_fn(JES_NODE_INDEX(ctx, parent_object), key->json_tlv.value, key->json_tlv.length);
-  size_t index = hash % table->capacity;
+  size_t index = table->capacity - (hash % table->capacity);
   size_t start_index = index;
+  size_t iterations = 0;
 
+#ifdef REVERSE_TABLE
+    index = table->capacity - (hash % table->capacity) - 1;
+#else
+    index = hash % table->capacity;
+#endif
+  start_index = index;
   ctx->status = JES_OUT_OF_MEMORY;
 
   /* Linear probing to find a free slot */
@@ -122,7 +142,11 @@ static jes_status jes_hash_table_add(struct jes_context* ctx, struct jes_node* p
       break;
     }
     /* Move to next slot */
+#ifdef REVERSE_TABLE
+    index =  ((index - 1) % table->capacity);
+#else
     index = (index + 1) % table->capacity;
+#endif
   } while (index != start_index);
 
   return ctx->status;
@@ -138,7 +162,12 @@ static void jes_hash_table_remove(struct jes_context* ctx, struct jes_node* pare
   assert(parent_object != NULL);
 
   hash = table->hash_fn(JES_NODE_INDEX(ctx, parent_object), key->json_tlv.value, key->json_tlv.length);
-  index = hash % table->capacity;
+
+#ifdef REVERSE_TABLE
+    index = table->capacity - ((index + 1) % table->capacity) - 1;
+#else
+    index = hash % table->capacity;
+#endif
 
   /* Linear probing to find the key */
   while (lookup_entries[index].key_element != NULL) {
@@ -149,7 +178,11 @@ static void jes_hash_table_remove(struct jes_context* ctx, struct jes_node* pare
       lookup_entries[index].key_element = NULL;
       break;
     }
+#ifdef REVERSE_TABLE
+    index =  ((index - 1) % table->capacity);
+#else
     index = (index + 1) % table->capacity;
+#endif
   }
 }
 
@@ -163,8 +196,12 @@ static enum jes_status jes_hash_table_resize(struct jes_context* ctx)
 #endif
     ctx->hash_table.size = ctx->node_mng.size / 4;
     ctx->node_mng.size -= ctx->hash_table.size;
-    ctx->node_mng.capacity = ctx->node_mng.size / sizeof(*ctx->node_mng.pool);
-    ctx->hash_table.capacity = ctx->hash_table.size / sizeof(*ctx->hash_table.pool);
+    ctx->node_mng.capacity = (ctx->node_mng.size / sizeof(*ctx->node_mng.pool)) < JES_INVALID_INDEX
+                           ? ctx->node_mng.size / sizeof(struct jes_node)
+                           : JES_INVALID_INDEX -1;
+    ctx->hash_table.capacity = (ctx->hash_table.size / sizeof(*ctx->hash_table.pool)) < JES_INVALID_INDEX
+                             ? ctx->hash_table.size / sizeof(*ctx->hash_table.pool)
+                             : JES_INVALID_INDEX -1;
     ctx->hash_table.pool = (struct jes_hash_entry*)((uint8_t*)ctx->node_mng.pool + ctx->node_mng.size);
 
     JES_LOG("\n Node pool restructured. Extended hash table.");
