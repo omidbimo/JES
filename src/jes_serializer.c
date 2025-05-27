@@ -22,26 +22,26 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
     return 0;
   }
 
-  if (!ctx->root) {
+  if (!ctx->node_mng.root) {
     return 0;
   }
 
-  ctx->iter = ctx->root;
-  ctx->state = JES_EXPECT_OBJECT;
+  ctx->serdes.iter = ctx->node_mng.root;
+  ctx->serdes.state = JES_EXPECT_OBJECT;
   ctx->status = JES_NO_ERROR;
 
   do {
-    JES_LOG_NODE("\n   ", ctx->iter - ctx->node_mng.pool, ctx->iter->json_tlv.type,
-                  ctx->iter->json_tlv.length, ctx->iter->json_tlv.value,
-                  ctx->iter->parent, ctx->iter->sibling, ctx->iter->first_child, ctx->iter->last_child, "");
+    JES_LOG_NODE("\n   ", ctx->serdes.iter - ctx->node_mng.pool, ctx->serdes.iter->json_tlv.type,
+                  ctx->serdes.iter->json_tlv.length, ctx->serdes.iter->json_tlv.value,
+                  ctx->serdes.iter->parent, ctx->serdes.iter->sibling, ctx->serdes.iter->first_child, ctx->serdes.iter->last_child, "");
 
-    switch (ctx->iter->json_tlv.type) {
+    switch (ctx->serdes.iter->json_tlv.type) {
 
       case JES_OBJECT:
-        if ((ctx->state == JES_EXPECT_OBJECT) ||
-            (ctx->state == JES_EXPECT_KEY_VALUE)  ||
-            (ctx->state == JES_EXPECT_ARRAY_VALUE)) {
-          ctx->state = JES_EXPECT_KEY;
+        if ((ctx->serdes.state == JES_EXPECT_OBJECT) ||
+            (ctx->serdes.state == JES_EXPECT_KEY_VALUE)  ||
+            (ctx->serdes.state == JES_EXPECT_ARRAY_VALUE)) {
+          ctx->serdes.state = JES_EXPECT_KEY;
         }
         else {
           ctx->status = JES_UNEXPECTED_ELEMENT;
@@ -50,7 +50,7 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
 
         json_len += sizeof("{") - 1;
         if (!compact) {
-          if (PARENT_TYPE(ctx, ctx->iter) == JES_ARRAY) {
+          if (PARENT_TYPE(ctx, ctx->serdes.iter) == JES_ARRAY) {
             json_len += sizeof("\n") - 1;
             json_len += indention;
           }
@@ -59,15 +59,15 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
         break;
 
       case JES_KEY:
-        if (ctx->state == JES_EXPECT_KEY) {
-          ctx->state = JES_EXPECT_KEY_VALUE;
+        if (ctx->serdes.state == JES_EXPECT_KEY) {
+          ctx->serdes.state = JES_EXPECT_KEY_VALUE;
         }
         else {
           ctx->status = JES_UNEXPECTED_ELEMENT;
           return 0;
         }
 
-        json_len += (ctx->iter->json_tlv.length + sizeof("\"\":") - 1);
+        json_len += (ctx->serdes.iter->json_tlv.length + sizeof("\"\":") - 1);
         if (!compact) {
             json_len += sizeof("\n ") - 1;
             json_len += indention;
@@ -75,8 +75,8 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
         break;
 
       case JES_ARRAY:
-        if ((ctx->state == JES_EXPECT_KEY_VALUE) || (ctx->state == JES_EXPECT_ARRAY_VALUE)) {
-          ctx->state = JES_EXPECT_ARRAY_VALUE;
+        if ((ctx->serdes.state == JES_EXPECT_KEY_VALUE) || (ctx->serdes.state == JES_EXPECT_ARRAY_VALUE)) {
+          ctx->serdes.state = JES_EXPECT_ARRAY_VALUE;
         }
         else {
           ctx->status = JES_UNEXPECTED_ELEMENT;
@@ -85,7 +85,7 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
 
         json_len += sizeof("[") - 1;
         if (!compact) {
-          if (PARENT_TYPE(ctx, ctx->iter) == JES_ARRAY) {
+          if (PARENT_TYPE(ctx, ctx->serdes.iter) == JES_ARRAY) {
             json_len += sizeof("\n") - 1;
             json_len += indention;
           }
@@ -94,20 +94,20 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
         break;
 
       case JES_STRING:
-        if (ctx->state == JES_EXPECT_KEY_VALUE) {
-          ctx->state = JES_HAVE_KEY_VALUE;
+        if (ctx->serdes.state == JES_EXPECT_KEY_VALUE) {
+          ctx->serdes.state = JES_HAVE_KEY_VALUE;
         }
-        else if (ctx->state == JES_EXPECT_ARRAY_VALUE) {
-          ctx->state = JES_HAVE_ARRAY_VALUE;
+        else if (ctx->serdes.state == JES_EXPECT_ARRAY_VALUE) {
+          ctx->serdes.state = JES_HAVE_ARRAY_VALUE;
         }
         else {
           ctx->status = JES_UNEXPECTED_ELEMENT;
           return 0;
         }
 
-        json_len += (ctx->iter->json_tlv.length + sizeof("\"\"") - 1);
+        json_len += (ctx->serdes.iter->json_tlv.length + sizeof("\"\"") - 1);
         if (!compact) {
-          if (PARENT_TYPE(ctx, ctx->iter) != JES_KEY) {
+          if (PARENT_TYPE(ctx, ctx->serdes.iter) != JES_KEY) {
             json_len += sizeof("\n") - 1;
             json_len += indention;
           }
@@ -118,20 +118,20 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
       case JES_TRUE:
       case JES_FALSE:
       case JES_NULL:
-        if (ctx->state == JES_EXPECT_KEY_VALUE) {
-          ctx->state = JES_HAVE_KEY_VALUE;
+        if (ctx->serdes.state == JES_EXPECT_KEY_VALUE) {
+          ctx->serdes.state = JES_HAVE_KEY_VALUE;
         }
-        else if (ctx->state == JES_EXPECT_ARRAY_VALUE) {
-          ctx->state = JES_HAVE_ARRAY_VALUE;
+        else if (ctx->serdes.state == JES_EXPECT_ARRAY_VALUE) {
+          ctx->serdes.state = JES_HAVE_ARRAY_VALUE;
         }
         else {
           ctx->status = JES_UNEXPECTED_ELEMENT;
            return 0;
         }
 
-        json_len += ctx->iter->json_tlv.length;
+        json_len += ctx->serdes.iter->json_tlv.length;
         if (!compact) {
-          if (PARENT_TYPE(ctx, ctx->iter) != JES_KEY) {
+          if (PARENT_TYPE(ctx, ctx->serdes.iter) != JES_KEY) {
             json_len += sizeof("\n") - 1;
             json_len += indention;
           }
@@ -144,20 +144,20 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
     }
 
     /* Iterate this branch down to the last child */
-    if (HAS_CHILD(ctx->iter)) {
-      ctx->iter = GET_FIRST_CHILD(ctx, ctx->iter);
+    if (HAS_CHILD(ctx->serdes.iter)) {
+      ctx->serdes.iter = GET_FIRST_CHILD(ctx, ctx->serdes.iter);
       continue;
     }
 
     /* Node has no child. if it's an object or array, forge a closing delimiter. */
-    if (ctx->iter->json_tlv.type == JES_OBJECT) {
+    if (ctx->serdes.iter->json_tlv.type == JES_OBJECT) {
       /* This covers empty objects */
       json_len += sizeof("}") - 1;
       if (!compact) {
         indention -= 2;
       }
     }
-    else if (ctx->iter->json_tlv.type == JES_ARRAY) {
+    else if (ctx->serdes.iter->json_tlv.type == JES_ARRAY) {
       /* This covers empty array */
       json_len += sizeof("]") - 1;
       if (!compact) {
@@ -167,58 +167,58 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
 
     /* If the last child has a sibling then we've an array. Get the sibling and iterate the branch.
        Siblings must always be separated using a comma. */
-    if (HAS_SIBLING(ctx->iter)) {
-      if ((ctx->iter->json_tlv.type == JES_KEY) &&
-          ((ctx->state != JES_EXPECT_ARRAY_VALUE) || (ctx->state != JES_HAVE_ARRAY_VALUE))) {
+    if (HAS_SIBLING(ctx->serdes.iter)) {
+      if ((ctx->serdes.iter->json_tlv.type == JES_KEY) &&
+          ((ctx->serdes.state != JES_EXPECT_ARRAY_VALUE) || (ctx->serdes.state != JES_HAVE_ARRAY_VALUE))) {
         ctx->status = JES_UNEXPECTED_ELEMENT;
         return 0;
       }
       json_len += sizeof(",") - 1;
-      ctx->iter = GET_SIBLING(ctx, ctx->iter);
-      ctx->state = JES_EXPECT_ARRAY_VALUE;
+      ctx->serdes.iter = GET_SIBLING(ctx, ctx->serdes.iter);
+      ctx->serdes.state = JES_EXPECT_ARRAY_VALUE;
       continue;
     }
 
     /* Node doesn't have any children or siblings. Iterate backward to the parent. */
-    if (ctx->iter->json_tlv.type == JES_KEY) {
+    if (ctx->serdes.iter->json_tlv.type == JES_KEY) {
       break;
     }
 
-    while ((ctx->iter = GET_PARENT(ctx, ctx->iter))) {
-      if (ctx->iter->json_tlv.type == JES_KEY) {
-        ctx->state = JES_HAVE_KEY_VALUE;
+    while ((ctx->serdes.iter = GET_PARENT(ctx, ctx->serdes.iter))) {
+      if (ctx->serdes.iter->json_tlv.type == JES_KEY) {
+        ctx->serdes.state = JES_HAVE_KEY_VALUE;
       }
       /* If the parent is an object or array, forge a closing delimiter. */
-      else if (ctx->iter->json_tlv.type == JES_OBJECT) {
+      else if (ctx->serdes.iter->json_tlv.type == JES_OBJECT) {
         if (!compact) {
           indention -= 2;
           json_len += indention + sizeof("\n") - 1;
         }
         json_len += sizeof("}") - 1;
       }
-      else if (ctx->iter->json_tlv.type == JES_ARRAY) {
+      else if (ctx->serdes.iter->json_tlv.type == JES_ARRAY) {
         if (!compact) {
           indention -= 2;
           json_len += indention + sizeof("\n") - 1;
         }
         json_len += sizeof("]") - 1;
       }
-      else if ((ctx->iter->json_tlv.type == JES_KEY) && (ctx->state != JES_HAVE_KEY_VALUE)) {
+      else if ((ctx->serdes.iter->json_tlv.type == JES_KEY) && (ctx->serdes.state != JES_HAVE_KEY_VALUE)) {
         ctx->status = JES_UNEXPECTED_ELEMENT;
         return 0;
       }
 
       /* If the parent has a sibling, take it and iterate the branch down.
          Siblings must always be separated using a comma. */
-      if (HAS_SIBLING(ctx->iter)) {
-        ctx->iter = GET_SIBLING(ctx, ctx->iter);
+      if (HAS_SIBLING(ctx->serdes.iter)) {
+        ctx->serdes.iter = GET_SIBLING(ctx, ctx->serdes.iter);
         json_len += sizeof(",") - 1;
 
-        if (PARENT_TYPE(ctx, ctx->iter) == JES_OBJECT) {
-          ctx->state = JES_EXPECT_KEY;
+        if (PARENT_TYPE(ctx, ctx->serdes.iter) == JES_OBJECT) {
+          ctx->serdes.state = JES_EXPECT_KEY;
         }
-        else if (PARENT_TYPE(ctx, ctx->iter) == JES_ARRAY) {
-          ctx->state = JES_EXPECT_ARRAY_VALUE;
+        else if (PARENT_TYPE(ctx, ctx->serdes.iter) == JES_ARRAY) {
+          ctx->serdes.state = JES_EXPECT_ARRAY_VALUE;
         }
         else {
           ctx->status = JES_UNEXPECTED_ELEMENT;
@@ -228,14 +228,14 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
       }
     }
 
-  } while (ctx->iter && (ctx->iter != ctx->root));
+  } while (ctx->serdes.iter && (ctx->serdes.iter != ctx->node_mng.root));
 
-  if (ctx->state == JES_EXPECT_KEY_VALUE) {
+  if (ctx->serdes.state == JES_EXPECT_KEY_VALUE) {
     ctx->status = JES_RENDER_FAILED;
     json_len = 0;
   }
   else {
-    ctx->iter = ctx->root;
+    ctx->serdes.iter = ctx->node_mng.root;
   }
   return json_len;
 }
@@ -243,7 +243,7 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
 uint32_t jes_render(struct jes_context *ctx, char *buffer, uint32_t length, bool compact)
 {
   char *dst = buffer;
-  struct jes_node *iter = ctx->root;
+  struct jes_node *iter = ctx->node_mng.root;
   uint32_t required_buffer = 0;
   uint32_t indention = 0;
 
@@ -417,6 +417,6 @@ uint32_t jes_render(struct jes_context *ctx, char *buffer, uint32_t length, bool
     }
   }
 
-  ctx->iter = ctx->root;
+  ctx->serdes.iter = ctx->node_mng.root;
   return dst - buffer;
 }

@@ -28,8 +28,8 @@ struct jes_context* jes_init(void* buffer, size_t buffer_size)
   ctx->workspace_size = buffer_size;
   jes_tree_init(ctx, (struct jes_context*)ctx->workspace + 1, ctx->workspace_size - sizeof(*ctx));
   jes_tokenizer_init(ctx);
-  ctx->iter = NULL;
-  ctx->root = NULL;
+  ctx->serdes.iter = NULL;
+  ctx->node_mng.root = NULL;
 
   ctx->cookie = JES_CONTEXT_COOKIE;
   return ctx;
@@ -42,15 +42,15 @@ void jes_reset(struct jes_context *ctx)
     ctx->json_data = NULL;
     jes_tree_init(ctx, (struct jes_context*)ctx->workspace + 1, ctx->workspace_size - sizeof(*ctx));
     jes_tokenizer_init(ctx);
-    ctx->iter = NULL;
-    ctx->root = NULL;
+    ctx->serdes.iter = NULL;
+    ctx->node_mng.root = NULL;
   }
 }
 
 struct jes_element* jes_get_root(struct jes_context *ctx)
 {
   if ((ctx != NULL) && JES_IS_INITIATED(ctx)) {
-    return &ctx->root->json_tlv;
+    return &ctx->node_mng.root->json_tlv;
   }
   return NULL;
 }
@@ -299,7 +299,7 @@ struct jes_element* jes_add_element(struct jes_context *ctx, struct jes_element 
 
   ctx->status = JES_NO_ERROR;
 
-  if ((parent == NULL) && (ctx->root != NULL)) {
+  if ((parent == NULL) && (ctx->node_mng.root != NULL)) {
     /* JSON is not empty. Invalid request. */
     ctx->status = JES_INVALID_PARAMETER;
     return NULL;
@@ -716,5 +716,5 @@ struct jes_element* jes_load(struct jes_context *ctx, const char *json_data, uin
   ctx->json_size = json_length;
   jes_parse(ctx);
 
-  return ctx->status == JES_NO_ERROR ? (struct jes_element*)ctx->root : NULL;
+  return ctx->status == JES_NO_ERROR ? (struct jes_element*)ctx->node_mng.root : NULL;
 }

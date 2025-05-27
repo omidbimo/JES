@@ -108,13 +108,13 @@ char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len)
                 "%s(#%d): Token<%s> @[line:%d, pos:%d] (\"%.*s\") state:<%s> after <%s> element",
                 jes_status_str[ctx->status],
                 ctx->status,
-                jes_token_type_str[ctx->token.type],
-                ctx->line_number,
-                ctx->cursor - ctx->json_data,
-                ctx->token.length,
-                ctx->cursor,
-                jes_state_str[ctx->state],
-                ctx->iter != NULL ? jes_node_type_str[ctx->iter->json_tlv.type] : "");
+                jes_token_type_str[ctx->tokenizer.token.type],
+                ctx->tokenizer.line_number,
+                ctx->tokenizer.cursor - ctx->json_data,
+                ctx->tokenizer.token.length,
+                ctx->tokenizer.cursor,
+                jes_state_str[ctx->serdes.state],
+                ctx->serdes.iter != NULL ? jes_node_type_str[ctx->serdes.iter->json_tlv.type] : "");
       break;
 
     case JES_OUT_OF_MEMORY:
@@ -140,13 +140,13 @@ char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len)
                 "%s(#%d): Token<%s> @[line:%d, pos:%d] (\"%.*s\") state:<%s> after <%s> element",
                 jes_status_str[ctx->status],
                 ctx->status,
-                jes_token_type_str[ctx->token.type],
-                ctx->line_number,
-                ctx->cursor - ctx->json_data,
-                ctx->token.length,
-                ctx->cursor,
-                jes_state_str[ctx->state],
-                ctx->iter != NULL ? jes_node_type_str[ctx->iter->json_tlv.type] : "");
+                jes_token_type_str[ctx->tokenizer.token.type],
+                ctx->tokenizer.line_number,
+                ctx->tokenizer.cursor - ctx->json_data,
+                ctx->tokenizer.token.length,
+                ctx->tokenizer.cursor,
+                jes_state_str[ctx->serdes.state],
+                ctx->serdes.iter != NULL ? jes_node_type_str[ctx->serdes.iter->json_tlv.type] : "");
       break;
 
     case JES_PARSING_FAILED:
@@ -154,42 +154,42 @@ char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len)
                 "%s(#%d): Token<%s> @[line:%d, pos:%d] (\"%.*s\")",
                 jes_status_str[ctx->status],
                 ctx->status,
-                jes_token_type_str[ctx->token.type],
-                ctx->line_number,
-                ctx->cursor - ctx->json_data,
-                ctx->token.length,
-                ctx->cursor);
+                jes_token_type_str[ctx->tokenizer.token.type],
+                ctx->tokenizer.line_number,
+                ctx->tokenizer.cursor - ctx->json_data,
+                ctx->tokenizer.token.length,
+                ctx->tokenizer.cursor);
       break;
     case JES_UNEXPECTED_ELEMENT:
       snprintf( msg, msg_len, "%s(#%d) - %s: \"%.*s\" @state: %s",
                 jes_status_str[ctx->status],
                 ctx->status,
-                jes_node_type_str[ctx->iter->json_tlv.type],
-                ctx->iter->json_tlv.length,
-                ctx->iter->json_tlv.value,
-                jes_state_str[ctx->state]);
+                jes_node_type_str[ctx->serdes.iter->json_tlv.type],
+                ctx->serdes.iter->json_tlv.length,
+                ctx->serdes.iter->json_tlv.value,
+                jes_state_str[ctx->serdes.state]);
       break;
     case JES_RENDER_FAILED:
       snprintf( msg, msg_len, "%s(#%d) - %s: \"%.*s\" @state: %s",
                 jes_status_str[ctx->status],
                 ctx->status,
-                jes_node_type_str[ctx->iter->json_tlv.type],
-                ctx->iter->json_tlv.length,
-                ctx->iter->json_tlv.value,
-                jes_state_str[ctx->state]);
+                jes_node_type_str[ctx->serdes.iter->json_tlv.type],
+                ctx->serdes.iter->json_tlv.length,
+                ctx->serdes.iter->json_tlv.value,
+                jes_state_str[ctx->serdes.state]);
       break;
     case JES_UNEXPECTED_EOF:
       snprintf( msg, msg_len,
                 "%s(#%d): Token<%s> @[line:%d, pos:%d] (\"%.*s\") state:<%s> after <%s> element",
                 jes_status_str[ctx->status],
                 ctx->status,
-                jes_token_type_str[ctx->token.type],
-                ctx->line_number,
-                ctx->cursor - ctx->json_data,
-                ctx->token.length,
-                ctx->cursor,
-                jes_state_str[ctx->state],
-                ctx->iter != NULL ? jes_node_type_str[ctx->iter->json_tlv.type] : "");
+                jes_token_type_str[ctx->tokenizer.token.type],
+                ctx->tokenizer.line_number,
+                ctx->tokenizer.cursor - ctx->json_data,
+                ctx->tokenizer.token.length,
+                ctx->tokenizer.cursor,
+                jes_state_str[ctx->serdes.state],
+                ctx->serdes.iter != NULL ? jes_node_type_str[ctx->serdes.iter->json_tlv.type] : "");
       break;
 #if 0
     case JES_DUPLICATE_KEY:
@@ -197,10 +197,10 @@ char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len)
                 "%s(#%d): Found duplicate key: \"%.*s\" inside \"%.*s\"",
                 jes_status_str[ctx->status],
                 ctx->status,
-                ctx->iter->json_tlv.length,
-                ctx->iter->json_tlv.value,
-                ctx->iter->json_tlv.length,
-                ctx->iter->json_tlv.value);
+                ctx->serdes.iter->json_tlv.length,
+                ctx->serdes.iter->json_tlv.value,
+                ctx->serdes.iter->json_tlv.length,
+                ctx->serdes.iter->json_tlv.value);
       break;
 #endif
     default:

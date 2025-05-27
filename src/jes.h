@@ -63,8 +63,27 @@
  * for the JES context to accommodate the internal hash table structure.
  * Insufficient memory may lead to parsing failures.
  */
-//#define JES_ENABLE_FAST_KEY_SEARCH
+#define JES_ENABLE_FAST_KEY_SEARCH
 
+/**
+ * JES_ENABLE_FALL_BACK_TO_LINEAR_SEARCH
+ *
+ * Enables automatic fallback to linear search with hash table buffer reclamation
+ * when the node buffer becomes full. This mechanism sacrifices hash table performance
+ * to free up workspace memory dedicated to hash table for continued JSON parsing.
+ *
+ * BEHAVIOR WHEN DEFINED:
+ * - When the node buffer pool becomes exhausted during parsing, and fast
+ *   key searching feature is enabled, the hash table buffer is reclaimed and
+ *   added back to the available workspace memory
+ * - Hash table operations are disabled and all key searches will fall back from
+ *   O(1) to O(n) - linear search through object properties
+ * - The hash table cannot be re-enabled after fallback occurs and all the
+ *   Hash table entries will be lost
+ *
+ * BEHAVIOR WHEN NOT DEFINED:
+ * - Node buffer exhaustion results in parsing failure
+ */
 //#define JES_ENABLE_FALL_BACK_TO_LINEAR_SEARCH
 
 typedef enum jes_status {

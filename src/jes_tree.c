@@ -199,8 +199,8 @@ struct jes_node* jes_tree_insert_node(struct jes_context* ctx,
       }
     }
     else {
-      assert(!ctx->root);
-      ctx->root = new_node;
+      assert(!ctx->node_mng.root);
+      ctx->node_mng.root = new_node;
     }
 
     new_node->json_tlv.type = type;
