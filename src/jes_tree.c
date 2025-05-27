@@ -102,10 +102,10 @@ bool jes_validate_node(struct jes_context* ctx, struct jes_node* node)
     /* Check if the node is correctly aligned */
     if ((((void*)node - (void*)(mng_ctx->pool)) % sizeof(*node)) == 0) {
       /* Check if the node links are in bound */
-      if (((node->parent == JES_INVALID_INDEX) || (node->parent <= mng_ctx->capacity)) &&
+      if (((node->parent == JES_INVALID_INDEX)      || (node->parent <= mng_ctx->capacity))      &&
           ((node->first_child == JES_INVALID_INDEX) || (node->first_child <= mng_ctx->capacity)) &&
-          ((node->last_child == JES_INVALID_INDEX) || (node->last_child <= mng_ctx->capacity)) &&
-          ((node->sibling == JES_INVALID_INDEX) || (node->sibling <= mng_ctx->capacity))) {
+          ((node->last_child == JES_INVALID_INDEX)  || (node->last_child <= mng_ctx->capacity))  &&
+          ((node->sibling == JES_INVALID_INDEX)     || (node->sibling <= mng_ctx->capacity))) {
         return true;
       }
     }

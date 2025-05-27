@@ -14,7 +14,7 @@ struct jes_context* jes_init(void* buffer, size_t buffer_size)
 {
   struct jes_context *ctx = buffer;
 
-  if (buffer_size < sizeof(struct jes_context)) {
+  if ((buffer == NULL) || buffer_size < sizeof(struct jes_context)) {
     return NULL;
   }
 
@@ -37,7 +37,7 @@ struct jes_context* jes_init(void* buffer, size_t buffer_size)
 
 void jes_reset(struct jes_context *ctx)
 {
-  if (JES_IS_INITIATED(ctx)) {
+  if ((ctx != NULL) && JES_IS_INITIATED(ctx)) {
     ctx->status = JES_NO_ERROR;
     ctx->json_data = NULL;
     jes_tree_init(ctx, (struct jes_context*)ctx->workspace + 1, ctx->workspace_size - sizeof(*ctx));
@@ -57,13 +57,23 @@ struct jes_element* jes_get_root(struct jes_context *ctx)
 
 enum jes_type jes_get_parent_type(struct jes_context *ctx, struct jes_element *element)
 {
-  /* TODO: add missing parameter checks */
+  enum jes_type parent_type = JES_UNKNOWN;
+
+  if ((ctx == NULL) || !JES_IS_INITIATED(ctx)) {
+    return JES_UNKNOWN;
+  }
+
+  if ((element == NULL) || !jes_validate_node(ctx, (struct jes_node*)element)) {
+    ctx->status = JES_INVALID_PARAMETER;
+    return JES_UNKNOWN;
+  }
+
   struct jes_element *parent = jes_get_parent(ctx, element);
   if (parent) {
     return parent->type;
   }
 
-  return JES_UNKNOWN;
+  return parent_type;
 }
 
 struct jes_element* jes_get_parent(struct jes_context *ctx, struct jes_element *element)
@@ -691,17 +701,26 @@ struct jes_element* jes_add_array_value(struct jes_context *ctx, struct jes_elem
 
 size_t jes_get_element_count(struct jes_context *ctx)
 {
-  return ctx->node_mng.node_count;
+  if ((ctx != NULL) && JES_IS_INITIATED(ctx)) {
+    return ctx->node_mng.node_count;
+  }
+  return 0;
 }
 
 jes_status jes_get_status(struct jes_context *ctx)
 {
-  return ctx->status;
+  if ((ctx != NULL) && JES_IS_INITIATED(ctx)) {
+    return ctx->status;
+  }
+  return JES_INVALID_CONTEXT;
 }
 
 size_t jes_get_element_capacity(struct jes_context *ctx)
 {
-  return ctx->node_mng.capacity;
+  if ((ctx != NULL) && JES_IS_INITIATED(ctx)) {
+    return ctx->node_mng.capacity;
+  }
+  return 0;
 }
 
 struct jes_element* jes_load(struct jes_context *ctx, const char *json_data, uint32_t json_length)
