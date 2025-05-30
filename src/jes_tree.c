@@ -114,6 +114,27 @@ bool jes_validate_node(struct jes_context* ctx, struct jes_node* node)
   return false;
 }
 
+struct jes_node* jes_tree_get_parent_node(struct jes_context* ctx,
+                                          struct jes_node* node)
+{
+  assert(ctx != NULL);
+  return GET_PARENT(ctx, node);
+}
+
+struct jes_node* jes_tree_get_child_node(struct jes_context* ctx,
+                                          struct jes_node* node)
+{
+  assert(ctx != NULL);
+  return GET_FIRST_CHILD(ctx, node);
+}
+
+struct jes_node* jes_tree_get_sibling_node(struct jes_context* ctx,
+                                          struct jes_node* node)
+{
+  assert(ctx != NULL);
+  return GET_SIBLING(ctx, node);
+}
+
 struct jes_node* jes_tree_get_parent_node_by_type(struct jes_context* ctx,
                                                   struct jes_node* node,
                                                   enum jes_type type)

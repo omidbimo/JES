@@ -209,9 +209,6 @@ struct jes_element* jes_get_child(struct jes_context *ctx, struct jes_element *e
  */
 struct jes_element* jes_get_sibling(struct jes_context *ctx, struct jes_element *element);
 
-/* Delivers the type of element's parent. */
-enum jes_type jes_get_parent_type(struct jes_context *ctx, struct jes_element *element);
-
 /* Returns a Key element inside the given object.
  * param [in] ctx
  * param [in] parent is a JSON element of type JES_OBJECT or JES_KEY

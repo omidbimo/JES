@@ -36,6 +36,14 @@ struct jes_node* jes_tree_get_parent_node_by_type(struct jes_context* ctx,
 struct jes_node* jes_tree_get_container_parent_node(struct jes_context* ctx,
                                                     struct jes_node* node);
 
+struct jes_node* jes_tree_get_parent_node(struct jes_context* ctx,
+                                          struct jes_node* node);
+
+struct jes_node* jes_tree_get_child_node(struct jes_context* ctx,
+                                          struct jes_node* node);
+
+struct jes_node* jes_tree_get_sibling_node(struct jes_context* ctx,
+                                          struct jes_node* node);
 
 
 #endif
