@@ -26,6 +26,80 @@
   #define JES_LOG_TOKEN(...)
 #endif
 
+
+/**
+ * JSON grammar in Backus-Naur Form based on the ECMA-404 standard
+
+<json>         ::= <element>
+
+<element>      ::= <ws> <value> <ws>
+
+<value>        ::= <object>
+                | <array>
+                | <string>
+                | <number>
+                | "true"
+                | "false"
+                | "null"
+
+<object>       ::= "{" <ws> "}"
+                | "{" <members> "}"
+
+<members>      ::= <member>
+                | <member> <ws> "," <members>
+
+<member>       ::= <ws> <string> <ws> ":" <element>
+
+<array>        ::= "[" <ws> "]"
+                | "[" <elements> "]"
+
+<elements>     ::= <element>
+                | <element> <ws> "," <elements>
+
+<string>       ::= "\"" <characters> "\""
+
+<characters>   ::= ε
+                | <character> <characters>
+
+<character>    ::= any Unicode character except " or \ or control characters
+                | "\\" <escape>
+
+<escape>       ::= "\""
+                | "/"
+                | "b"
+                | "f"
+                | "n"
+                | "r"
+                | "t"
+                | "u" <hex> <hex> <hex> <hex>
+
+<hex>          ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7"
+                | "8" | "9" | "A" | "B" | "C" | "D" | "E" | "F"
+                | "a" | "b" | "c" | "d" | "e" | "f"
+
+<number>       ::= <int> <frac>? <exp>?
+
+<int>          ::= "-"? <digit>
+                | "-"? <onenine> <digits>
+
+<digits>       ::= <digit>
+                | <digit> <digits>
+
+<digit>        ::= "0" | <onenine>
+
+<onenine>      ::= "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+
+<frac>         ::= "." <digits>
+
+<exp>          ::= ("e" | "E") ("+" | "-")? <digits>
+
+<ws>           ::= ε
+                | <whitespace> <ws>
+
+<whitespace>   ::= " " | "\n" | "\r" | "\t"
+
+*/
+
 static inline bool jes_tokenizer_set_delimiter_token(struct jes_token *token,
                                                      const char* char_ptr)
 {
