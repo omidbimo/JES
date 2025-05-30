@@ -9,7 +9,7 @@
 #include "jes_tokenizer.h"
 #include "jes_tree.h"
 
-static inline void jes_parser_on_opening_brace(struct jes_context *ctx)
+static inline void jes_parser_process_opening_brace(struct jes_context *ctx)
 {
   if ((ctx->serdes.state != JES_EXPECT_OBJECT) &&
       (ctx->serdes.state != JES_EXPECT_KEY_VALUE)  &&
@@ -31,7 +31,7 @@ static inline void jes_parser_on_opening_brace(struct jes_context *ctx)
  * It validates the current parser state, determines the proper parent node to return to,
  * and updates the parser state accordingly.
  */
-static inline void jes_parser_on_closing_brace(struct jes_context *ctx)
+static inline void jes_parser_process_closing_brace(struct jes_context *ctx)
 {
   /* Validate current state - closing brace is only valid in specific states */
   if ((ctx->serdes.state != JES_EXPECT_KEY) &&
@@ -87,7 +87,7 @@ static inline void jes_parser_on_closing_brace(struct jes_context *ctx)
   }
 }
 
-static inline void jes_parser_on_opening_bracket(struct jes_context *ctx)
+static inline void jes_parser_process_opening_bracket(struct jes_context *ctx)
 {
   if ((ctx->serdes.state != JES_EXPECT_KEY_VALUE) &&
       (ctx->serdes.state != JES_EXPECT_ARRAY_VALUE)) {
@@ -106,7 +106,7 @@ static inline void jes_parser_on_opening_bracket(struct jes_context *ctx)
  * It validates the current parser state, determines the proper parent node to return to,
  * and updates the parser state accordingly.
  */
-static inline void jes_parser_on_closing_bracket(struct jes_context *ctx)
+static inline void jes_parser_process_closing_bracket(struct jes_context *ctx)
 {
   /* Validate current state - closing bracket is only valid in specific states */
   if ((ctx->serdes.state != JES_EXPECT_ARRAY_VALUE) &&
@@ -161,7 +161,7 @@ static inline void jes_parser_on_closing_bracket(struct jes_context *ctx)
   }
 }
 
-static inline void jes_parser_on_colon(struct jes_context *ctx)
+static inline void jes_parser_process_colon(struct jes_context *ctx)
 {
   if (ctx->serdes.state == JES_EXPECT_COLON) {
     ctx->serdes.state = JES_EXPECT_KEY_VALUE;
@@ -173,7 +173,7 @@ static inline void jes_parser_on_colon(struct jes_context *ctx)
   }
 }
 
-static inline void jes_parser_on_comma(struct jes_context *ctx)
+static inline void jes_parser_process_comma(struct jes_context *ctx)
 {
   /* Update parser state based on the current context */
   if (ctx->serdes.state == JES_HAVE_KEY_VALUE) {
@@ -208,7 +208,7 @@ static inline void jes_parser_on_comma(struct jes_context *ctx)
   }
 }
 
-static inline void jes_parser_on_string(struct jes_context *ctx)
+static inline void jes_parser_process_string(struct jes_context *ctx)
 {
 
   if (ctx->serdes.state == JES_EXPECT_KEY) {
@@ -236,7 +236,7 @@ static inline void jes_parser_on_string(struct jes_context *ctx)
   }
 }
 
-static inline void jes_parser_on_value(struct jes_context *ctx, enum jes_type value_type)
+static inline void jes_parser_process_value(struct jes_context *ctx, enum jes_type value_type)
 {
   if (ctx->serdes.state == JES_EXPECT_KEY_VALUE) {
     ctx->serdes.state = JES_HAVE_KEY_VALUE;
@@ -272,47 +272,47 @@ void jes_parse(struct jes_context *ctx)
         break;
 
       case JES_TOKEN_OPENING_BRACE:
-        jes_parser_on_opening_brace(ctx);
+        jes_parser_process_opening_brace(ctx);
         break;
 
       case JES_TOKEN_CLOSING_BRACE:
-        jes_parser_on_closing_brace(ctx);
+        jes_parser_process_closing_brace(ctx);
         break;
 
       case JES_TOKEN_OPENING_BRACKET:
-        jes_parser_on_opening_bracket(ctx);
+        jes_parser_process_opening_bracket(ctx);
         break;
 
       case JES_TOKEN_CLOSING_BRACKET:
-        jes_parser_on_closing_bracket(ctx);
+        jes_parser_process_closing_bracket(ctx);
         break;
 
       case JES_TOKEN_COLON:
-        jes_parser_on_colon(ctx);
+        jes_parser_process_colon(ctx);
         break;
 
       case JES_TOKEN_COMMA:
-        jes_parser_on_comma(ctx);
+        jes_parser_process_comma(ctx);
         break;
 
       case JES_TOKEN_STRING:
-        jes_parser_on_string(ctx);
+        jes_parser_process_string(ctx);
         break;
 
       case JES_TOKEN_FALSE:
-        jes_parser_on_value(ctx, JES_FALSE);
+        jes_parser_process_value(ctx, JES_FALSE);
         break;
 
       case JES_TOKEN_TRUE:
-        jes_parser_on_value(ctx, JES_TRUE);
+        jes_parser_process_value(ctx, JES_TRUE);
         break;
 
       case JES_TOKEN_NULL:
-        jes_parser_on_value(ctx, JES_NULL);
+        jes_parser_process_value(ctx, JES_NULL);
         break;
 
       case JES_TOKEN_NUMBER:
-        jes_parser_on_value(ctx, JES_NUMBER);
+        jes_parser_process_value(ctx, JES_NUMBER);
         break;
 
       case JES_TOKEN_INVALID:
