@@ -86,6 +86,9 @@
  */
 //#define JES_ENABLE_FALL_BACK_TO_LINEAR_SEARCH
 
+#define JES_ALLOW_TOPLEVEL_ARRAY
+//#define JES_ALLOW_TOPLEVEL_ANY
+
 typedef enum jes_status {
   JES_NO_ERROR = 0,
   JES_PARSING_FAILED,

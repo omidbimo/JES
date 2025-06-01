@@ -756,7 +756,7 @@ struct jes_element* jes_load(struct jes_context* ctx, const char* json_data, uin
 
   ctx->json_data = json_data;
   ctx->json_size = json_length;
-  jes_parse(ctx);
+  jes_parse2(ctx);
 
   return ctx->status == JES_NO_ERROR ? (struct jes_element*)ctx->node_mng.root : NULL;
 }

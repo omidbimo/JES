@@ -93,8 +93,7 @@
 
 <exp>          ::= ("e" | "E") ("+" | "-")? <digits>
 
-<ws>           ::= ε
-                | <whitespace> <ws>
+<ws>           ::= "" | <whitespace> <ws>
 
 <whitespace>   ::= " " | "\n" | "\r" | "\t"
 

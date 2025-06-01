@@ -11,7 +11,7 @@
 
 static inline void jes_parser_process_opening_brace(struct jes_context *ctx)
 {
-  if ((ctx->serdes.state != JES_EXPECT_OBJECT) &&
+  if ((ctx->serdes.state != JES_EMPTY) &&
       (ctx->serdes.state != JES_EXPECT_KEY_VALUE)  &&
       (ctx->serdes.state != JES_EXPECT_ARRAY_VALUE)) {
     ctx->status = JES_UNEXPECTED_TOKEN;
@@ -133,14 +133,19 @@ static inline void jes_parser_process_closing_bracket(struct jes_context *ctx)
   }
 
   if (ctx->serdes.iter != NULL) {
-    /* Now that we've found the object being closed, move up one more level
+    /* Now that we've found the array being closed, move up one more level
      * to the parent container (either an object or array) to continue parsing */
     ctx->serdes.iter = jes_tree_get_container_parent_node(ctx, ctx->serdes.iter);
   }
 
   if (ctx->serdes.iter == NULL) {
+#if defined JES_ALLOW_TOPLEVEL_ARRAY
     /* We've reached the root level, This should never inside an array happen */
     ctx->status = JES_PARSING_FAILED;
+#else
+    /* We've reached the root level, expect end of file */
+    ctx->serdes.state = JES_EXPECT_EOF;
+#endif
     return;
   }
 
@@ -260,9 +265,477 @@ void jes_parse(struct jes_context *ctx)
   assert(ctx->json_data != NULL);
   assert(ctx->json_size != 0);
 
-  ctx->serdes.state = JES_EXPECT_OBJECT;
+  ctx->serdes.state = JES_EMPTY;
+
   jes_tokenizer_set_cursor(ctx, ctx->json_data);
 
+  do {
+    if (jes_tokenizer_get_token(ctx) != JES_NO_ERROR) break;
+
+    switch (ctx->tokenizer.token.type) {
+
+      case JES_TOKEN_EOF:
+        break;
+
+      case JES_TOKEN_OPENING_BRACE:
+        jes_parser_process_opening_brace(ctx);
+        break;
+
+      case JES_TOKEN_CLOSING_BRACE:
+        jes_parser_process_closing_brace(ctx);
+        break;
+
+      case JES_TOKEN_OPENING_BRACKET:
+        jes_parser_process_opening_bracket(ctx);
+        break;
+
+      case JES_TOKEN_CLOSING_BRACKET:
+        jes_parser_process_closing_bracket(ctx);
+        break;
+
+      case JES_TOKEN_COLON:
+        jes_parser_process_colon(ctx);
+        break;
+
+      case JES_TOKEN_COMMA:
+        jes_parser_process_comma(ctx);
+        break;
+
+      case JES_TOKEN_STRING:
+        jes_parser_process_string(ctx);
+        break;
+
+      case JES_TOKEN_FALSE:
+        jes_parser_process_value(ctx, JES_FALSE);
+        break;
+
+      case JES_TOKEN_TRUE:
+        jes_parser_process_value(ctx, JES_TRUE);
+        break;
+
+      case JES_TOKEN_NULL:
+        jes_parser_process_value(ctx, JES_NULL);
+        break;
+
+      case JES_TOKEN_NUMBER:
+        jes_parser_process_value(ctx, JES_NUMBER);
+        break;
+
+      case JES_TOKEN_INVALID:
+        /* Do not overwrite errors from Tokenizer */
+        if (ctx->status == JES_NO_ERROR) {
+          ctx->status = JES_PARSING_FAILED;
+        }
+        break;
+
+      default:
+        assert(0);
+        ctx->status = JES_PARSING_FAILED;
+        break;
+    }
+  } while ((ctx->status == JES_NO_ERROR) && (ctx->tokenizer.token.type != JES_TOKEN_EOF));
+
+  if ((ctx->status == JES_NO_ERROR) && (ctx->serdes.iter != NULL)) {
+      ctx->status = JES_UNEXPECTED_EOF;
+  }
+}
+
+void jes_state_start(struct jes_context* ctx)
+{
+  if (ctx->tokenizer.token.type == JES_OBJECT) {
+    ctx->serdes.state = JES_EXPECT_KEY;
+  }
+  else if (ctx->tokenizer.token.type == JES_ARRAY) {
+#if defined(JES_ALLOW_TOPLEVEL_ARRAY) || defined(JES_ALLOW_TOPLEVEL_ANY)
+    ctx->serdes.state = JES_EXPECT_ARRAY_VALUE;
+#else
+    ctx->state = JES_UNEXPECTED_TOKEN;
+    return;
+#endif
+  }
+  else {
+#if defined(JES_ALLOW_TOPLEVEL_ANY)
+    ctx->serdes.state = JES_END;
+#else
+    ctx->status = JES_UNEXPECTED_TOKEN;
+    return;
+#endif
+  }
+
+  ctx->serdes.iter = jes_tree_insert_node(ctx, ctx->serdes.iter, GET_LAST_CHILD(ctx, ctx->serdes.iter),
+                              ctx->tokenizer.token.type, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
+}
+
+
+void jes_state_expect_key(struct jes_context* ctx)
+{
+  if (ctx->tokenizer.token.type == JES_TOKEN_STRING) {
+    /* Append the key */
+    ctx->serdes.iter = jes_tree_insert_key_node(ctx, ctx->serdes.iter, GET_LAST_CHILD(ctx, ctx->serdes.iter),
+                         ctx->tokenizer.token.length, ctx->tokenizer.token.value);
+    ctx->serdes.state = JES_EXPECT_COLON;
+  }
+  else if (ctx->tokenizer.token.type == JES_TOKEN_CLOSING_BRACE) {
+    /* Handle special case: empty object "{}" */
+    /* An object in EXPECT_KEY state, can only be an empty object with no children */
+    if (HAS_CHILD(ctx->serdes.iter)) {
+      ctx->status = JES_UNEXPECTED_TOKEN;
+      ctx->ext_status = ctx->serdes.state;
+      return;
+    }
+    /* Now that we've found the object being closed, move up one more level
+     * to the parent container (either an object or array) to transition based on
+     * the parent type. */
+    ctx->serdes.iter = jes_tree_get_container_parent_node(ctx, ctx->serdes.iter);
+    if (ctx->serdes.iter == NULL) {
+      /* We've reached the root level, expect end of file */
+      ctx->serdes.state = JES_END;
+      return;
+    }
+
+    /* Update parser state based on the type of parent container we've moved to */
+    switch (NODE_TYPE(ctx->serdes.iter)) {
+      case JES_ARRAY:
+        /* We're now inside an array, ready for the next value or ARRAY closing */
+        ctx->serdes.state = JES_HAVE_ARRAY_VALUE;
+        break;
+      case JES_OBJECT:
+        /* We're now inside an object, just finished a key-value pair */
+        ctx->serdes.state = JES_HAVE_KEY_VALUE;
+        break;
+      default:
+        /* This should never happen - parent should always be object or array */
+        assert(0);
+        break;
+    }
+  }
+  else {
+    ctx->status = JES_UNEXPECTED_TOKEN;
+  }
+}
+
+void jes_state_expect_key_value(struct jes_context* ctx)
+{
+  enum jes_type value_type;
+  switch (ctx->tokenizer.token.type) {
+    case JES_TOKEN_STRING:
+      value_type = JES_STRING;
+      ctx->serdes.state = JES_HAVE_KEY_VALUE;
+      break;
+    case JES_TOKEN_NUMBER:
+      value_type = JES_NUMBER;
+      ctx->serdes.state = JES_HAVE_KEY_VALUE;
+      break;
+    case JES_TOKEN_TRUE:
+      value_type = JES_TRUE;
+      ctx->serdes.state = JES_HAVE_KEY_VALUE;
+      break;
+    case JES_TOKEN_FALSE:
+      value_type = JES_FALSE;
+      ctx->serdes.state = JES_HAVE_KEY_VALUE;
+      break;
+    case JES_TOKEN_NULL:
+      value_type = JES_NULL;
+      ctx->serdes.state = JES_HAVE_KEY_VALUE;
+      break;
+    case JES_TOKEN_OPENING_BRACKET:
+      value_type = JES_ARRAY;
+      ctx->serdes.state = JES_EXPECT_ARRAY_VALUE;
+      break;
+    case JES_TOKEN_OPENING_BRACE:
+      value_type = JES_OBJECT;
+      ctx->serdes.state = JES_EXPECT_KEY;
+      break;
+    default:
+      ctx->status = JES_UNEXPECTED_TOKEN;
+      return;
+  }
+
+  ctx->serdes.iter = jes_tree_insert_node(ctx, ctx->serdes.iter, GET_LAST_CHILD(ctx, ctx->serdes.iter),
+           value_type, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
+}
+
+void jes_state_have_key_value(struct jes_context* ctx)
+{
+  if (ctx->tokenizer.token.type == JES_TOKEN_CLOSING_BRACE) {
+    /* If current node is not an OBJECT type, navigate up to find the parent OBJECT */
+    if (NODE_TYPE(ctx->serdes.iter) != JES_OBJECT) {
+      ctx->serdes.iter = jes_tree_get_parent_node_by_type(ctx, ctx->serdes.iter, JES_OBJECT);
+      assert(ctx->serdes.iter != NULL);
+    }
+
+    assert(ctx->serdes.iter != NULL);
+    /* Now that we've found the object being closed, move up one more level
+     * to the parent container (either an object or array) to transition based on
+     * the parent type. */
+    ctx->serdes.iter = jes_tree_get_container_parent_node(ctx, ctx->serdes.iter);
+
+    if (ctx->serdes.iter == NULL) {
+      /* We've reached the root level, expect end of file */
+      ctx->serdes.state = JES_EXPECT_EOF;
+      return;
+    }
+    /* Update parser state based on the type of parent container we've moved to */
+    switch (NODE_TYPE(ctx->serdes.iter)) {
+      case JES_ARRAY:
+        /* We're now inside an array, ready for the next value or ARRAY closing */
+        ctx->serdes.state = JES_HAVE_ARRAY_VALUE;
+        break;
+      case JES_OBJECT:
+        /* We're now inside an object, just finished a key-value pair */
+        ctx->serdes.state = JES_HAVE_KEY_VALUE;
+        break;
+      default:
+        /* This should never happen - parent should always be object or array */
+        assert(0);
+        break;
+    }
+  }
+  else if (ctx->tokenizer.token.type == JES_TOKEN_COMMA) {
+  /*
+   * Handle navigation within the JSON structure after a comma:
+   * - For container nodes (objects/arrays), validate they have children
+   * - For value nodes, move back up to the parent container
+   */
+  if ((NODE_TYPE(ctx->serdes.iter) == JES_OBJECT) || (NODE_TYPE(ctx->serdes.iter) == JES_ARRAY)) {
+    if (!HAS_CHILD(ctx->serdes.iter)) {
+      ctx->status = JES_UNEXPECTED_TOKEN;
+      ctx->ext_status = ctx->serdes.state;
+    }
+  }
+  else {
+    /* Current node is a value - navigate up to the parent container (object or array) */
+    ctx->serdes.iter = jes_tree_get_container_parent_node(ctx, ctx->serdes.iter);
+  }
+    ctx->serdes.state = JES_EXPECT_KEY;
+  }
+  else {
+    ctx->status = JES_UNEXPECTED_TOKEN;
+  }
+}
+
+void jes_state_expect_array_value(struct jes_context* ctx)
+{
+  switch (ctx->tokenizer.token.type) {
+    case JES_TOKEN_STRING:
+      ctx->serdes.iter = jes_tree_insert_node(ctx, ctx->serdes.iter, GET_LAST_CHILD(ctx, ctx->serdes.iter),
+             JES_STRING, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
+            ctx->serdes.state = JES_HAVE_ARRAY_VALUE;
+      break;
+    case JES_TOKEN_NUMBER:
+      ctx->serdes.iter = jes_tree_insert_node(ctx, ctx->serdes.iter, GET_LAST_CHILD(ctx, ctx->serdes.iter),
+             JES_NUMBER, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
+            ctx->serdes.state = JES_HAVE_ARRAY_VALUE;
+      break;
+    case JES_TOKEN_TRUE:
+      ctx->serdes.iter = jes_tree_insert_node(ctx, ctx->serdes.iter, GET_LAST_CHILD(ctx, ctx->serdes.iter),
+             JES_TRUE, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
+            ctx->serdes.state = JES_HAVE_ARRAY_VALUE;
+      break;
+    case JES_TOKEN_FALSE:
+      ctx->serdes.iter = jes_tree_insert_node(ctx, ctx->serdes.iter, GET_LAST_CHILD(ctx, ctx->serdes.iter),
+             JES_FALSE, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
+            ctx->serdes.state = JES_HAVE_ARRAY_VALUE;
+      break;
+    case JES_TOKEN_NULL:
+      ctx->serdes.iter = jes_tree_insert_node(ctx, ctx->serdes.iter, GET_LAST_CHILD(ctx, ctx->serdes.iter),
+             JES_NULL, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
+            ctx->serdes.state = JES_HAVE_ARRAY_VALUE;
+      break;
+    case JES_TOKEN_OPENING_BRACKET:
+      ctx->serdes.iter = jes_tree_insert_node(ctx, ctx->serdes.iter, GET_LAST_CHILD(ctx, ctx->serdes.iter),
+             JES_ARRAY, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
+      ctx->serdes.state = JES_EXPECT_ARRAY_VALUE;
+
+      break;
+    case JES_TOKEN_CLOSING_BRACKET:
+      /* Handle special case: empty array "[]" */
+      if (NODE_TYPE(ctx->serdes.iter) == JES_ARRAY) {
+        /* An array in expecting state, can only be an empty and must have no values */
+        if (HAS_CHILD(ctx->serdes.iter)) {
+          ctx->status = JES_UNEXPECTED_TOKEN;
+          ctx->ext_status = ctx->serdes.state;
+          return;
+        }
+      }
+
+      /* If current node is not an ARRAY type, navigate up to find the parent ARRAY */
+      if (NODE_TYPE(ctx->serdes.iter) != JES_ARRAY) {
+        ctx->serdes.iter = jes_tree_get_parent_node_by_type(ctx, ctx->serdes.iter, JES_ARRAY);
+        assert(ctx->serdes.iter != NULL);
+      }
+
+      if (ctx->serdes.iter != NULL) {
+        /* Now that we've found the array being closed, move up one more level
+         * to the parent container (either an object or array) to continue parsing */
+        ctx->serdes.iter = jes_tree_get_container_parent_node(ctx, ctx->serdes.iter);
+      }
+
+      if (ctx->serdes.iter == NULL) {
+#if defined JES_ALLOW_TOPLEVEL_ARRAY
+        /* We've reached the root level, This should never inside an array happen */
+        ctx->status = JES_PARSING_FAILED;
+#else
+        /* We've reached the root level, expect end of file */
+        ctx->serdes.state = JES_EXPECT_EOF;
+#endif
+      }
+      else {
+        /* Update parser state based on the type of parent container we've moved to */
+        switch (NODE_TYPE(ctx->serdes.iter)) {
+          case JES_ARRAY:
+            /* We're now inside an array, ready for the next value or ARRAY closing */
+            ctx->serdes.state = JES_HAVE_ARRAY_VALUE;
+            break;
+          case JES_OBJECT:
+            /* We're now inside an object, just finished a key-value pair */
+            ctx->serdes.state = JES_HAVE_KEY_VALUE;
+            break;
+          default:
+            /* This should never happen - parent should always be object or array */
+            assert(0);
+            break;
+        }
+      }
+      break;
+    case JES_TOKEN_OPENING_BRACE:
+      ctx->serdes.iter = jes_tree_insert_node(ctx, ctx->serdes.iter, GET_LAST_CHILD(ctx, ctx->serdes.iter),
+             JES_OBJECT, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
+            ctx->serdes.state = JES_EXPECT_KEY;
+      break;
+
+    default:
+      ctx->status = JES_UNEXPECTED_TOKEN;
+      break;
+  }
+}
+
+void jes_state_have_array_value(struct jes_context* ctx)
+{
+  switch (ctx->tokenizer.token.type) {
+    case JES_TOKEN_CLOSING_BRACKET:
+      assert(ctx->serdes.iter != NULL);
+      /* If current node is not an ARRAY type, navigate up to find the parent ARRAY */
+      if (NODE_TYPE(ctx->serdes.iter) != JES_ARRAY) {
+        ctx->serdes.iter = jes_tree_get_parent_node_by_type(ctx, ctx->serdes.iter, JES_ARRAY);
+        assert(ctx->serdes.iter != NULL);
+      }
+
+      /* Now that we've found the array being closed, move up one more level
+       * to the parent container (either an object or array) to continue parsing */
+      ctx->serdes.iter = jes_tree_get_container_parent_node(ctx, ctx->serdes.iter);
+
+      if (ctx->serdes.iter == NULL) {
+#if defined(JES_ALLOW_TOPLEVEL_ARRAY)
+        /* We've reached the root level, This should never inside an array happen */
+        ctx->status = JES_PARSING_FAILED;
+#else
+        /* We've reached the root level, expect end of file */
+        ctx->serdes.state = JES_EXPECT_EOF;
+#endif
+        return;
+      }
+      /* Update parser state based on the type of parent container we've moved to */
+      switch (NODE_TYPE(ctx->serdes.iter)) {
+        case JES_ARRAY:
+          /* We're now inside an array, ready for the next value or ARRAY closing */
+          ctx->serdes.state = JES_HAVE_ARRAY_VALUE;
+          break;
+        case JES_OBJECT:
+          /* We're now inside an object, just finished a key-value pair */
+          ctx->serdes.state = JES_HAVE_KEY_VALUE;
+          break;
+        default:
+          /* This should never happen - parent should always be object or array */
+          assert(0);
+          break;
+      }
+      break;
+    case JES_TOKEN_COMMA:
+  /*
+   * Handle navigation within the JSON structure after a comma:
+   * - For container nodes (objects/arrays), validate they have children
+   * - For value nodes, move back up to the parent container
+   */
+  if ((NODE_TYPE(ctx->serdes.iter) == JES_OBJECT) || (NODE_TYPE(ctx->serdes.iter) == JES_ARRAY)) {
+    if (!HAS_CHILD(ctx->serdes.iter)) {
+      ctx->status = JES_UNEXPECTED_TOKEN;
+      ctx->ext_status = ctx->serdes.state;
+    }
+  }
+  else {
+    /* Current node is a value - navigate up to the parent container (object or array) */
+    ctx->serdes.iter = jes_tree_get_container_parent_node(ctx, ctx->serdes.iter);
+  }
+      assert(NODE_TYPE(ctx->serdes.iter) == JES_ARRAY);
+      ctx->serdes.state = JES_EXPECT_ARRAY_VALUE;
+      break;
+    default:
+
+      ctx->status = JES_UNEXPECTED_TOKEN;
+      break;
+  }
+}
+
+void jes_parse2(struct jes_context *ctx)
+{
+  assert(ctx != NULL);
+  assert(ctx->json_data != NULL);
+  assert(ctx->json_size != 0);
+
+  ctx->serdes.state = JES_EMPTY;
+
+  jes_tokenizer_set_cursor(ctx, ctx->json_data);
+
+  while ((ctx->status == JES_NO_ERROR) && (ctx->serdes.state != JES_END)) {
+    if (jes_tokenizer_get_token(ctx) != JES_NO_ERROR) return;
+
+    switch (ctx->serdes.state) {
+      case JES_EMPTY:
+        jes_state_start(ctx);
+        break;
+      case JES_EXPECT_KEY:
+        jes_state_expect_key(ctx);
+        break;
+      case JES_EXPECT_COLON:
+        if (ctx->tokenizer.token.type != JES_TOKEN_COLON) {
+          ctx->status = JES_UNEXPECTED_TOKEN;
+          ctx->ext_status = ctx->serdes.state;
+        }
+        else {
+          ctx->serdes.state = JES_EXPECT_KEY_VALUE;
+        }
+        break;
+      case JES_EXPECT_KEY_VALUE:
+        jes_state_expect_key_value(ctx);
+        break;
+      case JES_HAVE_KEY_VALUE:
+        jes_state_have_key_value(ctx);
+        break;
+      case JES_EXPECT_ARRAY_VALUE:
+        jes_state_expect_array_value(ctx);
+        break;
+      case JES_HAVE_ARRAY_VALUE:
+        jes_state_have_array_value(ctx);
+        break;
+      case JES_EXPECT_EOF:
+        if (ctx->tokenizer.token.type == JES_TOKEN_EOF) {
+          ctx->serdes.state = JES_END;
+          break;
+        }
+        ctx->status = JES_UNEXPECTED_TOKEN;
+        break;
+      default:
+        assert(0);
+        ctx->status = JES_PARSING_FAILED;
+        break;
+    }
+  }
+
+  if ((ctx->status == JES_NO_ERROR) && (ctx->serdes.iter != NULL)) {
+      ctx->status = JES_UNEXPECTED_EOF;
+  }
+  return;
   do {
     if (jes_tokenizer_get_token(ctx) != JES_NO_ERROR) break;
 
