@@ -20,8 +20,6 @@ static inline void jes_parser_process_opening_brace(struct jes_context *ctx)
 
 /**
  * @brief Handles the parsing of a closing brace '}' in a JSON document.
- * It validates the current parser state, determines the proper parent node to return to,
- * and updates the parser state accordingly.
  */
 static inline void jes_parser_process_closing_brace(struct jes_context *ctx)
 {
@@ -80,8 +78,6 @@ static inline void jes_parser_process_opening_bracket(struct jes_context *ctx)
 
 /**
  * @brief Handles the parsing of a closing bracket ']' in a JSON document.
- * It validates the current parser state, determines the proper parent node to return to,
- * and updates the parser state accordingly.
  */
 static inline void jes_parser_process_closing_bracket(struct jes_context *ctx)
 {
@@ -108,12 +104,12 @@ static inline void jes_parser_process_closing_bracket(struct jes_context *ctx)
   }
 
   if (ctx->serdes.iter == NULL) {
-#if defined JES_ALLOW_TOPLEVEL_ARRAY
-    /* We've reached the root level, This should never inside an array happen */
-    ctx->status = JES_PARSING_FAILED;
-#else
+#if defined(JES_ALLOW_TOPLEVEL_ARRAY)
     /* We've reached the root level, expect end of file */
     ctx->serdes.state = JES_EXPECT_EOF;
+#else
+    /* We've reached the root level, This should never inside an array happen */
+    ctx->status = JES_PARSING_FAILED;
 #endif
     return;
   }
