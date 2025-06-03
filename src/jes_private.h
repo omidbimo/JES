@@ -44,8 +44,7 @@ typedef uint16_t jes_node_descriptor;
 struct jes_element;
 
 enum jes_state {
-  JES_EMPTY,
-  JES_EXPECT_OBJECT,
+  JES_START,
   JES_EXPECT_KEY,
   JES_EXPECT_COLON,
   JES_EXPECT_KEY_VALUE,

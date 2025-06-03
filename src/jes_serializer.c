@@ -27,7 +27,7 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
   }
 
   ctx->serdes.iter = ctx->node_mng.root;
-  ctx->serdes.state = JES_EXPECT_OBJECT;
+  ctx->serdes.state = JES_START;
   ctx->status = JES_NO_ERROR;
 
   do {
@@ -38,7 +38,7 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
     switch (ctx->serdes.iter->json_tlv.type) {
 
       case JES_OBJECT:
-        if ((ctx->serdes.state == JES_EXPECT_OBJECT) ||
+        if ((ctx->serdes.state == JES_START) ||
             (ctx->serdes.state == JES_EXPECT_KEY_VALUE)  ||
             (ctx->serdes.state == JES_EXPECT_ARRAY_VALUE)) {
           ctx->serdes.state = JES_EXPECT_KEY;
