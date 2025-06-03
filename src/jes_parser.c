@@ -332,8 +332,7 @@ void jes_parse(struct jes_context *ctx)
 
   jes_tokenizer_set_cursor(ctx, ctx->json_data);
 
-  while ((ctx->status == JES_NO_ERROR) && (ctx->serdes.state != JES_END)) {
-    if (jes_tokenizer_get_token(ctx) != JES_NO_ERROR) return;
+  while ((ctx->status == JES_NO_ERROR) && (ctx->serdes.state != JES_END) && (jes_tokenizer_get_token(ctx) == JES_NO_ERROR)) {
 
     switch (ctx->serdes.state) {
       case JES_EMPTY:
