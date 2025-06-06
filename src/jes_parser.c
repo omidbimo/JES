@@ -149,7 +149,7 @@ static inline void jes_parser_process_comma(struct jes_context *ctx)
   }
 }
 
-static inline void jes_parser_process_empty_state(struct jes_context* ctx)
+static inline void jes_parser_process_start_state(struct jes_context* ctx)
 {
   switch (ctx->tokenizer.token.type) {
     case JES_TOKEN_OPENING_BRACE:
@@ -336,7 +336,7 @@ void jes_parse(struct jes_context *ctx)
 
     switch (ctx->serdes.state) {
       case JES_START:
-        jes_parser_process_empty_state(ctx);
+        jes_parser_process_start_state(ctx);
         break;
       case JES_EXPECT_KEY:
         jes_parser_process_expect_key_state(ctx);

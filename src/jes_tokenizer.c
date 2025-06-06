@@ -28,6 +28,7 @@
 
 
 /**
+ * RFC8259, RFC6901, RFC6902
  * JSON grammar in Backus-Naur Form based on the ECMA-404 standard
 
 <json>         ::= <element>
