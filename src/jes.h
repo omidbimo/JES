@@ -166,7 +166,7 @@ struct jes_element* jes_load(struct jes_context* ctx, const char* json_data, uin
  * note: The output JSON is totally compact without any space characters.
  * note: It's possible to get the size of JSON string by calling the evaluate function.
  */
-uint32_t jes_render(struct jes_context *ctx, char *dst, uint32_t length, bool compact);
+uint32_t jes_render(struct jes_context *ctx, char *dst, size_t length, bool compact);
 
 /* Evaluates a tree of JSON elements to check if the structure is valid. It also
  * additionally calculates the size of the rendered JSON.
@@ -178,8 +178,7 @@ uint32_t jes_render(struct jes_context *ctx, char *dst, uint32_t length, bool co
           there might be failures in the tree. use jes_get_status or jes_stringify_status.
  */
 uint32_t jes_evaluate(struct jes_context *ctx, bool compact);
-uint32_t jes_evaluate2(struct jes_context *ctx, bool compact);
-uint32_t jes_render2(struct jes_context *ctx, char* buffer, size_t buffer_len, bool compact);
+
 /* Get the status of latest process
  * param [in] ctx: an Initialized jes context
  */

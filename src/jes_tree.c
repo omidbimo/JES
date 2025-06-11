@@ -118,21 +118,21 @@ struct jes_node* jes_tree_get_parent_node(struct jes_context* ctx,
                                           struct jes_node* node)
 {
   assert(ctx != NULL);
-  return GET_PARENT(ctx, node);
+  return GET_PARENT(ctx->node_mng, node);
 }
 
 struct jes_node* jes_tree_get_child_node(struct jes_context* ctx,
                                           struct jes_node* node)
 {
   assert(ctx != NULL);
-  return GET_FIRST_CHILD(ctx, node);
+  return GET_FIRST_CHILD(ctx->node_mng, node);
 }
 
 struct jes_node* jes_tree_get_sibling_node(struct jes_context* ctx,
                                           struct jes_node* node)
 {
   assert(ctx != NULL);
-  return GET_SIBLING(ctx, node);
+  return GET_SIBLING(ctx->node_mng, node);
 }
 
 struct jes_node* jes_tree_get_parent_node_by_type(struct jes_context* ctx,
@@ -146,9 +146,9 @@ struct jes_node* jes_tree_get_parent_node_by_type(struct jes_context* ctx,
   assert(ctx->cookie == JES_CONTEXT_COOKIE);
 
   /* Traverse up the tree until we find a parent of the requested type, or reach NULL */
-  for (parent = GET_PARENT(ctx, node);
+  for (parent = GET_PARENT(ctx->node_mng, node);
        parent != NULL && NODE_TYPE(parent) != type;
-       parent = GET_PARENT(ctx, parent)) {
+       parent = GET_PARENT(ctx->node_mng, parent)) {
     /* Empty body - all work done in the loop control expression */
   }
 
@@ -165,9 +165,9 @@ struct jes_node* jes_tree_get_container_parent_node(struct jes_context* ctx,
   assert(ctx->cookie == JES_CONTEXT_COOKIE);
 
   /* Traverse up the tree until we find an object or array parent, or reach NULL */
-  for (parent = GET_PARENT(ctx, node);
+  for (parent = GET_PARENT(ctx->node_mng, node);
        parent != NULL && NODE_TYPE(parent) != JES_OBJECT && NODE_TYPE(parent) != JES_ARRAY;
-       parent = GET_PARENT(ctx, parent)) {
+       parent = GET_PARENT(ctx->node_mng, parent)) {
     /* Empty body - all work done in the loop control expression */
   }
 
@@ -186,7 +186,7 @@ struct jes_node* jes_tree_insert_node(struct jes_context* ctx,
       ctx->JES_INVALID_PARAMETER;
       return NULL;
     }
-    else if (anchor->parent != JES_NODE_INDEX(ctx, parent) {
+    else if (anchor->parent != JES_NODE_INDEX(ctx->node_mng, parent) {
       ctx->JES_INVALID_PARAMETER;
       return NULL;
     }
@@ -200,22 +200,22 @@ struct jes_node* jes_tree_insert_node(struct jes_context* ctx,
 
   if (new_node) {
     if (parent) {
-      new_node->parent = JES_NODE_INDEX(ctx, parent);
+      new_node->parent = JES_NODE_INDEX(ctx->node_mng, parent);
 
       if (anchor) {
         /* We have to insert after an existing node */
         new_node->sibling = anchor->sibling;
-        anchor->sibling = JES_NODE_INDEX(ctx, new_node);
-        if (parent->last_child == JES_NODE_INDEX(ctx, anchor)) {
-          parent->last_child = JES_NODE_INDEX(ctx, new_node);
+        anchor->sibling = JES_NODE_INDEX(ctx->node_mng, new_node);
+        if (parent->last_child == JES_NODE_INDEX(ctx->node_mng, anchor)) {
+          parent->last_child = JES_NODE_INDEX(ctx->node_mng, new_node);
         }
       }
       else {
         /* There is no node before. Prepend node */
         new_node->sibling = parent->first_child;
-        parent->first_child = JES_NODE_INDEX(ctx, new_node);
+        parent->first_child = JES_NODE_INDEX(ctx->node_mng, new_node);
         if (!HAS_CHILD(parent)) {
-          parent->last_child = JES_NODE_INDEX(ctx, new_node);
+          parent->last_child = JES_NODE_INDEX(ctx->node_mng, new_node);
         }
       }
     }
@@ -228,7 +228,7 @@ struct jes_node* jes_tree_insert_node(struct jes_context* ctx,
     new_node->json_tlv.length = length;
     new_node->json_tlv.value = value;
 
-    JES_LOG_NODE("\n    + ", JES_NODE_INDEX(ctx, new_node), NODE_TYPE(new_node),
+    JES_LOG_NODE("\n    + ", JES_NODE_INDEX(ctx->node_mng, new_node), NODE_TYPE(new_node),
                   new_node->json_tlv.length, new_node->json_tlv.value,
                   new_node->parent, new_node->sibling, new_node->first_child, new_node->last_child, "");
   }
@@ -295,7 +295,7 @@ void jes_tree_delete_node(struct jes_context* ctx, struct jes_node* node)
 
     /* Navigate to the deepest leaf node in this branch */
     while (HAS_CHILD(iter)) {
-      iter = GET_FIRST_CHILD(ctx, iter);
+      iter = GET_FIRST_CHILD(ctx->node_mng, iter);
     }
 
     /* If we're back at the original node, all children have been deleted */
@@ -304,7 +304,7 @@ void jes_tree_delete_node(struct jes_context* ctx, struct jes_node* node)
     }
 
     /* Get parent before deleting the node */
-    parent = GET_PARENT(ctx, iter);
+    parent = GET_PARENT(ctx->node_mng, iter);
     if (parent == NULL) {
       ctx->status = JES_BROKEN_TREE;
       return;
@@ -313,7 +313,7 @@ void jes_tree_delete_node(struct jes_context* ctx, struct jes_node* node)
     /* Update parent's first_child to skip the node being deleted */
     parent->first_child = iter->sibling;
 
-    JES_LOG_NODE("\n    - ", JES_NODE_INDEX(ctx, iter), NODE_TYPE(iter),
+    JES_LOG_NODE("\n    - ", JES_NODE_INDEX(ctx->node_mng, iter), NODE_TYPE(iter),
                   iter->json_tlv.length, iter->json_tlv.value,
                   iter->parent, iter->sibling, iter->first_child, iter->last_child, "");
 
@@ -329,36 +329,36 @@ void jes_tree_delete_node(struct jes_context* ctx, struct jes_node* node)
   }
 
   /* Second phase: Delete the original node and update parent references */
-  parent = GET_PARENT(ctx, node);
+  parent = GET_PARENT(ctx->node_mng, node);
   if (parent != NULL) {
-    if (parent->first_child == JES_NODE_INDEX(ctx, node)) {
+    if (parent->first_child == JES_NODE_INDEX(ctx->node_mng, node)) {
       /* Node is the first child of its parent */
       parent->first_child = node->sibling;
 
       /* If this was the only child, update last_child as well */
-      if (parent->last_child == JES_NODE_INDEX(ctx, node)) {
+      if (parent->last_child == JES_NODE_INDEX(ctx->node_mng, node)) {
         parent->last_child = node->sibling;
       }
     }
     else {
       /* Node is not the first child - find the sibling that points to it */
-      for (iter = GET_FIRST_CHILD(ctx, parent);
-           iter != NULL && iter->sibling != JES_NODE_INDEX(ctx, node);
-           iter = GET_SIBLING(ctx, iter)) {
+      for (iter = GET_FIRST_CHILD(ctx->node_mng, parent);
+           iter != NULL && iter->sibling != JES_NODE_INDEX(ctx->node_mng, node);
+           iter = GET_SIBLING(ctx->node_mng, iter)) {
         /* Just find the node whose sibling pointer points to our target node */
       }
 
       if (iter != NULL) {
         iter->sibling = node->sibling;
         /* Update parent's last_child if necessary */
-        if (parent->last_child == JES_NODE_INDEX(ctx, node)) {
-          parent->last_child = JES_NODE_INDEX(ctx, iter);
+        if (parent->last_child == JES_NODE_INDEX(ctx->node_mng, node)) {
+          parent->last_child = JES_NODE_INDEX(ctx->node_mng, iter);
         }
       }
     }
   }
 
-  JES_LOG_NODE("\n    - ", JES_NODE_INDEX(ctx, node), NODE_TYPE(node),
+  JES_LOG_NODE("\n    - ", JES_NODE_INDEX(ctx->node_mng, node), NODE_TYPE(node),
                 node->json_tlv.length, node->json_tlv.value,
                 node->parent, node->sibling, node->first_child, node->last_child, "");
 
@@ -387,7 +387,7 @@ static struct jes_node* jes_tree_find_key(struct jes_context* ctx,
     return NULL;
   }
 
-  iter = GET_FIRST_CHILD(ctx, iter);
+  iter = GET_FIRST_CHILD(ctx->node_mng, iter);
 
   while ((iter != NULL) && (NODE_TYPE(iter) == JES_KEY)) {
     if ((iter->json_tlv.length == keyword_lenngth) &&
@@ -395,7 +395,7 @@ static struct jes_node* jes_tree_find_key(struct jes_context* ctx,
       key = iter;
       break;
     }
-    iter = GET_SIBLING(ctx, iter);
+    iter = GET_SIBLING(ctx->node_mng, iter);
   }
 
   return key;

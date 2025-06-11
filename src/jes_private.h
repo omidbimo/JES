@@ -18,15 +18,15 @@
 #define HAS_SIBLING(node_ptr) (((node_ptr) != NULL) ? (node_ptr)->sibling < JES_INVALID_INDEX : false)
 #define HAS_CHILD(node_ptr) (((node_ptr) != NULL) ? (node_ptr)->last_child < JES_INVALID_INDEX : false)
 
-#define GET_PARENT(ctx_, node_ptr) (HAS_PARENT(node_ptr) ? &ctx_->node_mng.pool[(node_ptr)->parent] : NULL)
-#define GET_SIBLING(ctx_, node_ptr) (HAS_SIBLING(node_ptr) ? &ctx_->node_mng.pool[(node_ptr)->sibling] : NULL)
-#define GET_FIRST_CHILD(ctx_, node_ptr) (HAS_CHILD(node_ptr) ? &ctx_->node_mng.pool[(node_ptr)->first_child] : NULL)
-#define GET_LAST_CHILD(ctx_, node_ptr) (HAS_CHILD(node_ptr) ? &ctx_->node_mng.pool[(node_ptr)->last_child] : NULL)
+#define GET_PARENT(node_mng_, node_ptr) (HAS_PARENT(node_ptr) ? &node_mng_.pool[(node_ptr)->parent] : NULL)
+#define GET_SIBLING(node_mng_, node_ptr) (HAS_SIBLING(node_ptr) ? &node_mng_.pool[(node_ptr)->sibling] : NULL)
+#define GET_FIRST_CHILD(node_mng_, node_ptr) (HAS_CHILD(node_ptr) ? &node_mng_.pool[(node_ptr)->first_child] : NULL)
+#define GET_LAST_CHILD(node_mng_, node_ptr) (HAS_CHILD(node_ptr) ? &node_mng_.pool[(node_ptr)->last_child] : NULL)
 
 #define NODE_TYPE(node_ptr) ((node_ptr != NULL) ? node_ptr->json_tlv.type : JES_UNKNOWN)
-#define PARENT_TYPE(ctx_, node_ptr) (HAS_PARENT(node_ptr) ? ctx_->node_mng.pool[(node_ptr)->parent].json_tlv.type : JES_UNKNOWN)
+#define PARENT_TYPE(node_mng_, node_ptr) (HAS_PARENT(node_ptr) ? node_mng_.pool[(node_ptr)->parent].json_tlv.type : JES_UNKNOWN)
 
-#define JES_NODE_INDEX(ctx_, node_ptr) ((node_ptr != NULL) ? (jes_node_descriptor)((node_ptr) - ctx_->node_mng.pool) : JES_INVALID_INDEX)
+#define JES_NODE_INDEX(node_mng_, node_ptr) ((node_ptr != NULL) ? (jes_node_descriptor)((node_ptr) - node_mng_.pool) : JES_INVALID_INDEX)
 
 #define JES_CONTEXT_COOKIE 0xABC09DEF
 #define JES_IS_INITIATED(ctx_) (ctx_->cookie == JES_CONTEXT_COOKIE)
@@ -99,15 +99,35 @@ struct jes_freed_node {
   struct jes_freed_node* next;
 };
 
-struct jes_tokenizer_context {
+
+struct jes_cursor {
   /* Points to the next character in JSON document to be tokenized */
-  const char* cursor;
+  const char* pos;
+  /*  */
+  size_t  column;
   /* The current line number in the JSON input that is being processed */
-  uint32_t  line_number;
+  size_t  line_number;
+};
+
+struct jes_tokenizer_context {
+  const char* json_data;
+  size_t json_length;
+  enum jes_status status;
+  /*  */
+  struct jes_cursor cursor;
   /* To dynamically switch tokenizer functions when detecting Integers, fractions and exponents */
-  bool (*typed_tokenizer_fn) (struct jes_context* ctx, struct jes_token* token, const char* current, const char* end);
+  bool (*typed_tokenizer_fn) (struct jes_tokenizer_context* ctx, struct jes_token* token, const char* current, const char* end);
   /* Holds the last token delivered by tokenizer. */
   struct jes_token token;
+};
+
+struct jes_deserializer_context {
+  /* State of the parser state machine or the serializer state machine */
+  enum jes_state state;
+  struct jes_tokenizer_context tokenizer;
+  /* Internal node iterator */
+  struct jes_node* iter;
+  struct jes_context* jes_ctx;
 };
 
 struct jes_serdes_context {
@@ -184,8 +204,6 @@ struct jes_context {
   /* Indicates success/failure state of the most recent JES operation.
    * Check against JES_STATUS_* constants for specific meanings. */
   uint32_t status;
-  /* Extended status code. In some cases provides more detailed information about the status. */
-  uint32_t ext_status;
   /* Pointer to the JSON data buffer to be parsed.
    * Must remain valid throughout the parsing operation.
    * The library does not take ownership - caller must manage memory. */
@@ -202,7 +220,7 @@ struct jes_context {
   /* Tokenizer subsystem state. */
   struct jes_tokenizer_context tokenizer;
   /* Serialization/Deserialization subsystem state. */
-  struct jes_serdes_context serdes;
+  //struct jes_serdes_context serdes;
   /* Node management subsystem state. */
   struct jes_node_mng_context node_mng;
 

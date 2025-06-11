@@ -78,7 +78,7 @@ struct jes_node* jes_hash_table_find_key(struct jes_context* ctx,
 
   assert(parent_object != NULL);
 
-  hash = table->hash_fn(JES_NODE_INDEX(ctx, parent_object), keyword, keyword_length);
+  hash = table->hash_fn(JES_NODE_INDEX(ctx->node_mng, parent_object), keyword, keyword_length);
 
 #ifdef REVERSE_TABLE
     index = table->capacity - (hash % table->capacity) - 1;
@@ -110,7 +110,7 @@ struct jes_node* jes_hash_table_find_key(struct jes_context* ctx,
 static jes_status jes_hash_table_add(struct jes_context* ctx, struct jes_node* parent_object, struct jes_node* key)
 {
   struct jes_hash_table_context* table = &ctx->hash_table;
-  size_t hash = table->hash_fn(JES_NODE_INDEX(ctx, parent_object), key->json_tlv.value, key->json_tlv.length);
+  size_t hash = table->hash_fn(JES_NODE_INDEX(ctx->node_mng, parent_object), key->json_tlv.value, key->json_tlv.length);
   size_t index = table->capacity - (hash % table->capacity);
   size_t start_index = index;
   size_t iterations = 0;
@@ -161,7 +161,7 @@ static void jes_hash_table_remove(struct jes_context* ctx, struct jes_node* pare
 
   assert(parent_object != NULL);
 
-  hash = table->hash_fn(JES_NODE_INDEX(ctx, parent_object), key->json_tlv.value, key->json_tlv.length);
+  hash = table->hash_fn(JES_NODE_INDEX(ctx->node_mng, parent_object), key->json_tlv.value, key->json_tlv.length);
 
 #ifdef REVERSE_TABLE
     index = table->capacity - ((index + 1) % table->capacity) - 1;

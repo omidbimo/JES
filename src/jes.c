@@ -27,9 +27,6 @@ struct jes_context* jes_init(void* buffer, size_t buffer_size)
   ctx->workspace = buffer;
   ctx->workspace_size = buffer_size;
   jes_tree_init(ctx, (struct jes_context*)ctx->workspace + 1, ctx->workspace_size - sizeof(*ctx));
-  jes_tokenizer_init(ctx);
-  ctx->serdes.iter = NULL;
-  ctx->node_mng.root = NULL;
 
   ctx->cookie = JES_CONTEXT_COOKIE;
   return ctx;
@@ -41,9 +38,6 @@ void jes_reset(struct jes_context* ctx)
     ctx->status = JES_NO_ERROR;
     ctx->json_data = NULL;
     jes_tree_init(ctx, (struct jes_context*)ctx->workspace + 1, ctx->workspace_size - sizeof(*ctx));
-    jes_tokenizer_init(ctx);
-    ctx->serdes.iter = NULL;
-    ctx->node_mng.root = NULL;
   }
 }
 
@@ -197,7 +191,7 @@ struct jes_element* jes_get_key(struct jes_context* ctx, struct jes_element* par
     }
 
     if (NODE_TYPE(iter) == JES_KEY) {
-      iter = GET_FIRST_CHILD(ctx, iter);
+      iter = GET_FIRST_CHILD(ctx->node_mng, iter);
     }
     iter = ctx->node_mng.find_key_fn(ctx, iter, key, key_len);
 
@@ -227,7 +221,7 @@ struct jes_element* jes_get_key_value(struct jes_context* ctx, struct jes_elemen
     return NULL;
   }
 
-  node = GET_FIRST_CHILD(ctx, (struct jes_node*)key);
+  node = GET_FIRST_CHILD(ctx->node_mng, (struct jes_node*)key);
   return (struct jes_element*)node;
 }
 
@@ -247,10 +241,10 @@ uint16_t jes_get_array_size(struct jes_context* ctx, struct jes_element* array)
     return 0;
   }
 
-  iter = GET_FIRST_CHILD(ctx, (struct jes_node*)array);
+  iter = GET_FIRST_CHILD(ctx->node_mng, (struct jes_node*)array);
   if (iter) {
     for (array_size = 0; iter != NULL; array_size++) {
-      iter = GET_SIBLING(ctx, iter);
+      iter = GET_SIBLING(ctx->node_mng, iter);
     }
   }
 
@@ -278,9 +272,9 @@ struct jes_element* jes_get_array_value(struct jes_context* ctx, struct jes_elem
     return NULL;
   }
 
-  iter = GET_FIRST_CHILD(ctx, (struct jes_node*)array);
+  iter = GET_FIRST_CHILD(ctx->node_mng, (struct jes_node*)array);
   for (; iter && index > 0; index--) {
-    iter = GET_SIBLING(ctx, iter);
+    iter = GET_SIBLING(ctx->node_mng, iter);
   }
 
   if (iter) {
@@ -348,16 +342,22 @@ struct jes_element* jes_add_element(struct jes_context* ctx, struct jes_element*
 
   switch (type) {
     case JES_NUMBER:
-      if (!jes_tokenizer_validate_number(ctx, value, value_length)) {
-        ctx->status = JES_INVALID_PARAMETER;
-        return NULL;
+      {
+        struct jes_tokenizer_context tok_ctx = { 0 };
+        if (!jes_tokenizer_validate_number(&tok_ctx, value, value_length)) {
+          ctx->status = JES_INVALID_PARAMETER;
+          return NULL;
+        }
       }
       break;
     case JES_KEY: /* Fall through is intended */
     case JES_STRING:
-      if (!jes_tokenizer_validate_string(ctx, value, value_length)) {
-        ctx->status = JES_INVALID_PARAMETER;
-        return NULL;
+      {
+        struct jes_tokenizer_context tok_ctx = { 0 };
+        if (!jes_tokenizer_validate_string(&tok_ctx, value, value_length)) {
+          ctx->status = JES_INVALID_PARAMETER;
+          return NULL;
+        }
       }
       break;
 
@@ -373,7 +373,7 @@ struct jes_element* jes_add_element(struct jes_context* ctx, struct jes_element*
       return NULL;
   }
 
-  new_node = jes_tree_insert_node(ctx, (struct jes_node*)parent, GET_LAST_CHILD(ctx, (struct jes_node*)parent),
+  new_node = jes_tree_insert_node(ctx, (struct jes_node*)parent, GET_LAST_CHILD(ctx->node_mng, (struct jes_node*)parent),
                              type, value_length, value);
 
   return (struct jes_element*)new_node;
@@ -407,17 +407,20 @@ struct jes_element* jes_add_key(struct jes_context* ctx, struct jes_element* par
     return NULL;
   }
 
-  if (!jes_tokenizer_validate_string(ctx, keyword, keyword_length)) {
-    ctx->status = JES_INVALID_PARAMETER;
-    return NULL;
+  {
+    struct jes_tokenizer_context tok_ctx = { 0 };
+    if (!jes_tokenizer_validate_string(&tok_ctx, keyword, keyword_length)) {
+      ctx->status = JES_INVALID_PARAMETER;
+      return NULL;
+    }
   }
 
 
   if (parent->type == JES_KEY) {
     /* The key must be added to an existing key and must be embedded in an OBJECT */
-    object = GET_FIRST_CHILD(ctx, (struct jes_node*)parent);
+    object = GET_FIRST_CHILD(ctx->node_mng, (struct jes_node*)parent);
     if (object == NULL) {
-      object = jes_tree_insert_node(ctx, (struct jes_node*)parent, GET_LAST_CHILD(ctx, (struct jes_node*)parent), JES_OBJECT, 1, "{");
+      object = jes_tree_insert_node(ctx, (struct jes_node*)parent, GET_LAST_CHILD(ctx->node_mng, (struct jes_node*)parent), JES_OBJECT, 1, "{");
     }
     else if (NODE_TYPE(object) != JES_OBJECT) {
       /* We should not land here */
@@ -430,7 +433,7 @@ struct jes_element* jes_add_key(struct jes_context* ctx, struct jes_element* par
   }
 
   /* Append the key */
-  new_node = jes_tree_insert_key_node(ctx, object, GET_LAST_CHILD(ctx, object), keyword_length, keyword);
+  new_node = jes_tree_insert_key_node(ctx, object, GET_LAST_CHILD(ctx->node_mng, object), keyword_length, keyword);
 
   return (struct jes_element*)new_node;
 }
@@ -461,12 +464,12 @@ struct jes_element* jes_add_key_before(struct jes_context* ctx, struct jes_eleme
     return NULL;
   }
 
-  parent = GET_PARENT(ctx, key_node);
+  parent = GET_PARENT(ctx->node_mng, key_node);
   assert(parent != NULL);
   assert(NODE_TYPE(parent) == JES_OBJECT);
 
 
-  for (iter = GET_FIRST_CHILD(ctx, parent); iter != NULL; iter = GET_SIBLING(ctx, iter)) {
+  for (iter = GET_FIRST_CHILD(ctx->node_mng, parent); iter != NULL; iter = GET_SIBLING(ctx->node_mng, iter)) {
     assert(NODE_TYPE(iter) == JES_KEY);
     if (iter == key_node) {
       new_node = jes_tree_insert_key_node(ctx, parent, before, keyword_length, keyword);
@@ -496,7 +499,7 @@ struct jes_element* jes_add_key_after(struct jes_context* ctx, struct jes_elemen
     return NULL;
   }
 
-  parent = GET_PARENT(ctx, key_node);
+  parent = GET_PARENT(ctx->node_mng, key_node);
   assert(parent != NULL);
   assert(NODE_TYPE(parent) == JES_OBJECT);
 
@@ -532,9 +535,12 @@ enum jes_status jes_update_key(struct jes_context* ctx, struct jes_element* key,
     return ctx->status;
   }
 
-  if (!jes_tokenizer_validate_string(ctx, keyword, keyword_length)) {
-    ctx->status = JES_INVALID_PARAMETER;
-    return ctx->status;
+  {
+    struct jes_tokenizer_context tok_ctx = { 0 };
+    if (!jes_tokenizer_validate_string(&tok_ctx, keyword, keyword_length)) {
+      ctx->status = JES_INVALID_PARAMETER;
+      return ctx->status;
+    }
   }
 
   key->length = keyword_length;
@@ -548,7 +554,7 @@ struct jes_element* jes_update_key_value(struct jes_context* ctx, struct jes_ele
   struct jes_element* key_value = NULL;
 
   /* First delete the old value of the key if exists. */
-  jes_tree_delete_node(ctx, GET_FIRST_CHILD(ctx, (struct jes_node*)key));
+  jes_tree_delete_node(ctx, GET_FIRST_CHILD(ctx->node_mng, (struct jes_node*)key));
   key_value = jes_add_element(ctx, key, type, value);
 
   return key_value;
@@ -612,7 +618,7 @@ struct jes_element* jes_update_array_value(struct jes_context* ctx, struct jes_e
     return NULL;
   }
 
-  for(target_node = GET_FIRST_CHILD(ctx, (struct jes_node*)array); target_node != NULL; target_node = GET_SIBLING(ctx, target_node)) {
+  for(target_node = GET_FIRST_CHILD(ctx->node_mng, (struct jes_node*)array); target_node != NULL; target_node = GET_SIBLING(ctx->node_mng, target_node)) {
     if (index-- == 0) {
       break;
     }
@@ -621,7 +627,7 @@ struct jes_element* jes_update_array_value(struct jes_context* ctx, struct jes_e
   if (target_node) {
     /* We'll not delete the target_node to keep the original array order. Just update its JSON TLV.
      * The rest of the branch however must be removed. */
-    jes_tree_delete_node(ctx, GET_FIRST_CHILD(ctx, target_node));
+    jes_tree_delete_node(ctx, GET_FIRST_CHILD(ctx->node_mng, target_node));
     target_node->json_tlv.type = type;
     target_node->json_tlv.length = value_length;
     target_node->json_tlv.value = value;
@@ -657,7 +663,7 @@ struct jes_element* jes_append_array_value(struct jes_context* ctx, struct jes_e
     return NULL;
   }
 
-  new_node = jes_tree_insert_node(ctx, (struct jes_node*)array, GET_LAST_CHILD(ctx, (struct jes_node*)array), type, value_length, value);
+  new_node = jes_tree_insert_node(ctx, (struct jes_node*)array, GET_LAST_CHILD(ctx->node_mng, (struct jes_node*)array), type, value_length, value);
 
   return (struct jes_element*)new_node;
 }
@@ -698,7 +704,7 @@ struct jes_element* jes_add_array_value(struct jes_context* ctx, struct jes_elem
     return NULL;
   }
 
-  for (anchor_node = GET_FIRST_CHILD(ctx, (struct jes_node*)array); anchor_node != NULL; anchor_node = GET_SIBLING(ctx, anchor_node)) {
+  for (anchor_node = GET_FIRST_CHILD(ctx->node_mng, (struct jes_node*)array); anchor_node != NULL; anchor_node = GET_SIBLING(ctx->node_mng, anchor_node)) {
     if (index == 0) {
       break;
     }

@@ -92,8 +92,11 @@ void jes_log_node(const char *pre_msg,
     post_msg);
 }
 
+
 char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len)
 {
+  *msg = '\0';
+  #if 0
   if ((ctx == NULL) || (msg == NULL) || (msg_len == 0)) {
     return "";
   }
@@ -207,7 +210,9 @@ char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len)
       snprintf(msg, msg_len, "%s(#%d)", jes_status_str[ctx->status], ctx->status);
       break;
   }
-  return msg;
+#endif
+ return msg;
+
 }
 
 char* jes_stringify_element(struct jes_element *element, char *msg, size_t msg_len)
