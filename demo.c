@@ -40,7 +40,6 @@ int main(void)
     fclose(fp);
   }
 
-  printf("\n 1.");
   doc = jes_init(working_buffer, sizeof(working_buffer));
   if (!doc) {
     printf("\n Context initiation failed!");
@@ -68,7 +67,7 @@ int main(void)
     printf("\n Render Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
   }
   else {
-    printf("\n out size: %d", out_size);
+    printf("\n out size: %d %d", out_size, strlen(output));
     printf("\n%.*s\n\n", out_size, output);
   }
   #endif

@@ -92,8 +92,8 @@
 //#define JES_ENABLE_TOKEN_LOG
 //#define JES_ENABLE_PARSER_NODE_LOG
 //#define JES_ENABLE_PARSER_STATE_LOG
-#define JES_ENABLE_SERIALIZER_NODE_LOG
-#define JES_ENABLE_SERIALIZER_STATE_LOG
+//#define JES_ENABLE_SERIALIZER_NODE_LOG
+//#define JES_ENABLE_SERIALIZER_STATE_LOG
 
 
 typedef enum jes_status {
@@ -168,7 +168,8 @@ struct jes_element* jes_load(struct jes_context* ctx, const char* json_data, uin
  *            without formatting or any spaces. If set to false, a formatted JSON string with two
  *            spaces indention will be generated.
  *
- * return the size of JSON string. If zero, there where probably a failure. Check the ctx->status
+ * return the size of JSON string including the space required for NUL termination.
+ *        If zero, there where probably a failure. Check the ctx->status
  *
  * note: The output JSON is totally compact without any space characters.
  * note: It's possible to get the size of JSON string by calling the evaluate function.
@@ -181,8 +182,8 @@ uint32_t jes_render(struct jes_context *ctx, char *dst, size_t length, bool comp
  * param [in] compact: if true, the function will calculate the length of a compact JSON string
  *            If false, the length of formatted JSON with two spaces indention will be returned.
  *
- * return the required buffer size to render the JSON into string. If zero,
-          there might be failures in the tree. use jes_get_status or jes_stringify_status.
+ * return the required buffer size to render the JSON into string including the NUL termination.
+ *        If zero, there might be failures in the tree. use jes_get_status or jes_stringify_status.
  */
 uint32_t jes_evaluate(struct jes_context *ctx, bool compact);
 
