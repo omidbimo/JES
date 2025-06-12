@@ -394,9 +394,9 @@ jes_status jes_tokenizer_get_token(struct jes_tokenizer_context* ctx)
       break;
     }
   }
-
+#if defined(JES_ENABLE_TOKEN_LOG)
   JES_LOG_TOKEN(token.type, ctx->cursor.line_number, ctx->cursor.pos - ctx->json_data, token.length, token.value);
-
+#endif
   ctx->token = token;
   return ctx->status;
 }

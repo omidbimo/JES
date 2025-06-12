@@ -4,8 +4,8 @@
     "name": "Kazantzakis",
     "first-name": "Nikos",
     "age": 32,
-    "number": 435000000000,
-    "fraction_number": 4.35e-10,
+    "fraction_number": 435000000000.1234567890,
+    "exponent_number": 4.35e-10,
     "hobbies": [
         "reading",
         "cinema",

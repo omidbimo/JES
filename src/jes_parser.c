@@ -9,6 +9,12 @@
 #include "jes_tokenizer.h"
 #include "jes_tree.h"
 
+#ifndef NDEBUG
+  #define JES_LOG_STATE jes_log_state
+#else
+  #define JES_LOG_STATE(...)
+#endif
+
 static inline void jes_parser_process_opening_brace(struct jes_deserializer_context* ctx)
 {
   /* Append node */
@@ -366,7 +372,10 @@ void jes_parse(struct jes_context *ctx)
   jes_tokenizer_set_cursor(&parser.tokenizer, ctx->json_data);
 
   while ((ctx->status == JES_NO_ERROR) && (parser.state != JES_END) && (jes_tokenizer_get_token(&parser.tokenizer) == JES_NO_ERROR)) {
-    //printf("\n1... %d, state: %d", ctx->status, parser.state);
+#if defined(JES_ENABLE_PARSER_STATE_LOG)
+    JES_LOG_STATE("\nJES.Parser.State: ", parser.state, "");
+#endif
+
     switch (parser.state) {
       case JES_START:
         ctx->status = jes_parser_process_start_state(&parser);
@@ -402,7 +411,7 @@ void jes_parse(struct jes_context *ctx)
         break;
     }
   }
-  //printf("\n2... %d, state: %d", ctx->status, parser.state);
+
   if ((ctx->status == JES_NO_ERROR) && (parser.iter != NULL)) {
       ctx->status = JES_UNEXPECTED_EOF;
   }

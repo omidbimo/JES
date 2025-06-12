@@ -227,10 +227,11 @@ struct jes_node* jes_tree_insert_node(struct jes_context* ctx,
     new_node->json_tlv.type = type;
     new_node->json_tlv.length = length;
     new_node->json_tlv.value = value;
-
+#if defined(JES_ENABLE_PARSER_NODE_LOG)
     JES_LOG_NODE("\n    + ", JES_NODE_INDEX(ctx->node_mng, new_node), NODE_TYPE(new_node),
                   new_node->json_tlv.length, new_node->json_tlv.value,
                   new_node->parent, new_node->sibling, new_node->first_child, new_node->last_child, "");
+#endif
   }
 
   return new_node;
@@ -312,11 +313,11 @@ void jes_tree_delete_node(struct jes_context* ctx, struct jes_node* node)
 
     /* Update parent's first_child to skip the node being deleted */
     parent->first_child = iter->sibling;
-
+#if defined(JES_ENABLE_PARSER_NODE_LOG)
     JES_LOG_NODE("\n    - ", JES_NODE_INDEX(ctx->node_mng, iter), NODE_TYPE(iter),
                   iter->json_tlv.length, iter->json_tlv.value,
                   iter->parent, iter->sibling, iter->first_child, iter->last_child, "");
-
+#endif
     /* Remove key from hash table if applicable */
 #ifdef JES_ENABLE_FAST_KEY_SEARCH
     if (NODE_TYPE(iter) == JES_KEY) {
@@ -358,10 +359,11 @@ void jes_tree_delete_node(struct jes_context* ctx, struct jes_node* node)
     }
   }
 
+#if defined(JES_ENABLE_PARSER_NODE_LOG)
   JES_LOG_NODE("\n    - ", JES_NODE_INDEX(ctx->node_mng, node), NODE_TYPE(node),
                 node->json_tlv.length, node->json_tlv.value,
                 node->parent, node->sibling, node->first_child, node->last_child, "");
-
+#endif
 /* Remove from hash table if it's a key */
 #ifdef JES_ENABLE_FAST_KEY_SEARCH
   if (NODE_TYPE(node) == JES_KEY) {

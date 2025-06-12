@@ -21,7 +21,7 @@ void jes_log_node(const char *pre_msg,
                   int32_t first_child_id,
                   int32_t last_child_id,
                   const char *post_msg);
-void jes_log_state(enum jes_state);
+void jes_log_state(const char *pre_msg, uint32_t state, const char *post_msg);
 /* Provides a textual overview of the latest failure */
 char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len);
 /* Provides a textual type of a JES element */

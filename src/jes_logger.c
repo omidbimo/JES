@@ -68,7 +68,7 @@ void jes_log_token(uint16_t token_type,
                    size_t token_len,
                    const char *token_value)
 {
-  printf("\n JES.Token: [Ln: %4d, Pos: %5d, Len: %3d] %-16s \"%.*s\"",
+  printf("\nJES.Token: [Ln: %4d, Pos: %5d, Len: %3d] %-16s \"%.*s\"",
           line_numebr, token_pos, token_len, jes_token_type_str[token_type],
           token_len, token_value);
 }
@@ -84,7 +84,7 @@ void jes_log_node(const char *pre_msg,
                   int32_t last_child_id,
                   const char *post_msg)
 {
-  printf("%sJES.Node: [%d] \"%.*s\" <%s>,    parent:[%d], right:[%d], first_child:[%d], last_child:[%d] %s",
+    printf("%sJES.Node: [%d] \"%.*s\" <%s>,    parent:[%d], right:[%d], first_child:[%d], last_child:[%d]%s",
     pre_msg, node_id, node_length, node_value, jes_node_type_str[node_type],
     parent_id == JES_INVALID_INDEX ? -1 : parent_id,
     right_id == JES_INVALID_INDEX ? -1 : right_id,
@@ -93,9 +93,9 @@ void jes_log_node(const char *pre_msg,
     post_msg);
 }
 
-void jes_log_state(enum jes_state state)
+void jes_log_state(const char *pre_msg, uint32_t state, const char *post_msg)
 {
-  printf("\n state: <%s>(%d)", jes_state_str[state], state);
+  printf("%s<%s>(%d)%s", pre_msg, jes_state_str[state], state, post_msg);
 }
 
 char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len)

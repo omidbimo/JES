@@ -23,6 +23,7 @@ struct jes_serializer_context {
 
   size_t out_length;
   size_t indention;
+  size_t tab_size;
   bool compact;
   char* out_buffer;
   size_t buffer_size;
@@ -38,15 +39,28 @@ static inline void jes_serializer_render_opening_brace(struct jes_serializer_con
     if (PARENT_TYPE(ctx->jes_ctx->node_mng, ctx->iter) == JES_ARRAY) {
       if (ctx->out_buffer != NULL) {
         *ctx->out_buffer++ = '\n';
-        memset(ctx->out_buffer, ' ', ctx->indention * sizeof(char));
+        memset(ctx->out_buffer, ' ', ctx->indention);
+        ctx->out_buffer += ctx->indention;
       }
       ctx->out_length += sizeof("\n") - 1;
       ctx->out_length += ctx->indention;
     }
-    ctx->indention += 2;
+    ctx->indention += ctx->tab_size;
   }
 
   if (ctx->out_buffer != NULL) { *ctx->out_buffer++ = '{'; }
+}
+
+static inline void jes_serializer_render_new_line(struct jes_serializer_context* ctx)
+{
+  if (!ctx->compact) {
+    ctx->out_length += sizeof("\n") - 1 + ctx->indention;
+    if (ctx->out_buffer != NULL) {
+      *ctx->out_buffer++ = '\n';
+      memset(ctx->out_buffer, ' ', ctx->indention);
+      ctx->out_buffer += ctx->indention;
+    }
+  }
 }
 
 static inline void jes_serializer_render_opening_bracket(struct jes_serializer_context* ctx)
@@ -57,12 +71,13 @@ static inline void jes_serializer_render_opening_bracket(struct jes_serializer_c
     if (PARENT_TYPE(ctx->jes_ctx->node_mng, ctx->iter) == JES_ARRAY) {
       if (ctx->out_buffer != NULL) {
         *ctx->out_buffer++ = '\n';
-        memset(ctx->out_buffer, ' ', ctx->indention * sizeof(char));
+        memset(ctx->out_buffer, ' ', ctx->indention);
+        ctx->out_buffer += ctx->indention;
       }
       ctx->out_length += sizeof("\n") - 1;
       ctx->out_length += ctx->indention;
     }
-    ctx->indention += 2;
+    ctx->indention += ctx->tab_size;
   }
   if (ctx->out_buffer != NULL) { *ctx->out_buffer++ = '['; }
 }
@@ -75,7 +90,8 @@ static inline void jes_serializer_render_string(struct jes_serializer_context* c
     if (PARENT_TYPE(ctx->jes_ctx->node_mng, ctx->iter) != JES_KEY) {
       if (ctx->out_buffer != NULL) {
         *ctx->out_buffer++ = '\n';
-        memset(ctx->out_buffer, ' ', ctx->indention * sizeof(char));
+        memset(ctx->out_buffer, ' ', ctx->indention);
+        ctx->out_buffer += ctx->indention;
       }
       ctx->out_length += sizeof("\n") - 1;
       ctx->out_length += ctx->indention;
@@ -94,12 +110,13 @@ static inline void jes_serializer_render_string(struct jes_serializer_context* c
 
 static inline void jes_serializer_render_key(struct jes_serializer_context* ctx)
 {
-  ctx->out_length += (ctx->iter->json_tlv.length + sizeof("\"\":") - 1);
+  ctx->out_length += (ctx->iter->json_tlv.length + sizeof("\"\": ") - 1);
 
   if (!ctx->compact) {
     if (ctx->out_buffer != NULL) {
       *ctx->out_buffer++ = '\n';
-      memset(ctx->out_buffer, ' ', ctx->indention * sizeof(char));
+      memset(ctx->out_buffer, ' ', ctx->indention);
+      ctx->out_buffer += ctx->indention;
     }
     ctx->out_length += sizeof("\n ") - 1;
     ctx->out_length += ctx->indention;
@@ -113,6 +130,7 @@ static inline void jes_serializer_render_key(struct jes_serializer_context* ctx)
     ctx->out_buffer = (char*)memcpy(ctx->out_buffer, ctx->iter->json_tlv.value, ctx->iter->json_tlv.length) + ctx->iter->json_tlv.length;
     *ctx->out_buffer++ = '"';
     *ctx->out_buffer++ = ':';
+    *ctx->out_buffer++ = ' ';
   }
 }
 
@@ -124,7 +142,8 @@ static inline void jes_serializer_render_number(struct jes_serializer_context* c
     if (PARENT_TYPE(ctx->jes_ctx->node_mng, ctx->iter) != JES_KEY) {
       if (ctx->out_buffer != NULL) {
         *ctx->out_buffer++ = '\n';
-        memset(ctx->out_buffer, ' ', ctx->indention * sizeof(char));
+        memset(ctx->out_buffer, ' ', ctx->indention);
+        ctx->out_buffer += ctx->indention;
       }
       ctx->out_length += sizeof("\n") - 1;
       ctx->out_length += ctx->indention;
@@ -147,7 +166,8 @@ static inline void jes_serializer_render_literal(struct jes_serializer_context* 
     if (PARENT_TYPE(ctx->jes_ctx->node_mng, ctx->iter) != JES_KEY) {
       if (ctx->out_buffer != NULL) {
         *ctx->out_buffer++ = '\n';
-        memset(ctx->out_buffer, ' ', ctx->indention * sizeof(char));
+        memset(ctx->out_buffer, ' ', ctx->indention);
+        ctx->out_buffer += ctx->indention;
       }
       ctx->out_length += sizeof("\n") - 1;
       ctx->out_length += ctx->indention;
@@ -173,15 +193,36 @@ static inline void jes_serializer_render_closing_brace(struct jes_serializer_con
   ctx->out_length += sizeof("}") - 1;
 
   if (!ctx->compact) {
-    ctx->indention -= 2;
-    if (ctx->out_buffer != NULL) {
-      *ctx->out_buffer++ = '\n';
-      memset(ctx->out_buffer, ' ', ctx->indention * sizeof(char));
-      ctx->out_buffer += ctx->indention;
+    ctx->indention -= ctx->tab_size;
+
+    if ((NODE_TYPE(ctx->iter) == JES_OBJECT) && !HAS_CHILD(ctx->iter)) { /* close the array on the same line */
+      if (ctx->out_buffer != NULL) { *ctx->out_buffer++ = '}'; }
+      if (!HAS_SIBLING(ctx->iter)) { /* The parent has no further children, insert a newline */
+        ctx->out_length += sizeof("\n") - 1;
+        ctx->out_length += ctx->indention;
+
+        if (ctx->out_buffer != NULL) {
+          *ctx->out_buffer++ = '\n';
+          memset(ctx->out_buffer, ' ', ctx->indention);
+          ctx->out_buffer += ctx->indention;
+        }
+      }
+    }
+    else {
+      ctx->out_length += sizeof("\n") - 1;
+      ctx->out_length += ctx->indention;
+
+      if (ctx->out_buffer != NULL) {
+        *ctx->out_buffer++ = '\n';
+        memset(ctx->out_buffer, ' ', ctx->indention);
+        ctx->out_buffer += ctx->indention;
+        *ctx->out_buffer++ = '}';
+      }
     }
   }
-
-  if (ctx->out_buffer != NULL) { *ctx->out_buffer++ = '}'; }
+  else {
+    if (ctx->out_buffer != NULL) { *ctx->out_buffer++ = ']'; }
+  }
 }
 
 static inline void jes_serializer_render_closing_bracket(struct jes_serializer_context* ctx)
@@ -189,15 +230,35 @@ static inline void jes_serializer_render_closing_bracket(struct jes_serializer_c
   ctx->out_length += sizeof("]") - 1;
 
   if (!ctx->compact) {
-    ctx->indention -= 2;
-    if (ctx->out_buffer != NULL) {
-      *ctx->out_buffer++ = '\n';
-      memset(ctx->out_buffer, ' ', ctx->indention * sizeof(char));
-      ctx->out_buffer += ctx->indention;
+    ctx->indention -= ctx->tab_size;
+
+    if ((NODE_TYPE(ctx->iter) == JES_ARRAY) && !HAS_CHILD(ctx->iter)) { /* close the array on the same line */
+      if (ctx->out_buffer != NULL) { *ctx->out_buffer++ = ']'; }
+      if (!HAS_SIBLING(ctx->iter)) { /* The parent has no further children, insert a newline */
+        ctx->out_length += sizeof("\n") - 1;
+        ctx->out_length += ctx->indention;
+        if (ctx->out_buffer != NULL) {
+          *ctx->out_buffer++ = '\n';
+          memset(ctx->out_buffer, ' ', ctx->indention);
+          ctx->out_buffer += ctx->indention;
+        }
+      }
+    }
+    else {
+      ctx->out_length += sizeof("\n") - 1;
+      ctx->out_length += ctx->indention;
+
+      if (ctx->out_buffer != NULL) {
+        *ctx->out_buffer++ = '\n';
+        memset(ctx->out_buffer, ' ', ctx->indention);
+        ctx->out_buffer += ctx->indention;
+        *ctx->out_buffer++ = ']';
+      }
     }
   }
-
-  if (ctx->out_buffer != NULL) { *ctx->out_buffer++ = ']'; }
+  else {
+    if (ctx->out_buffer != NULL) { *ctx->out_buffer++ = ']'; }
+  }
 }
 
 static inline enum jes_status jes_serializer_process_start_state(struct jes_serializer_context* ctx)
@@ -477,7 +538,9 @@ static enum jes_status jes_serialize(struct jes_serializer_context* ctx)
   jes_serializer_get_node(ctx);
 
   while ((ctx->iter != NULL) && (status == JES_NO_ERROR)) {
-    JES_LOG_STATE(ctx->state);
+#if defined(JES_ENABLE_SERIALIZER_STATE_LOG)
+    JES_LOG_STATE("\nJES.Serializer.State: ", ctx->state, "");
+#endif
     switch (ctx->state) {
       case JES_START:
         status = jes_serializer_process_start_state(ctx);
@@ -507,7 +570,8 @@ static enum jes_status jes_serialize(struct jes_serializer_context* ctx)
         break;
     }
 
-    JES_LOG_NODE("\n   ", JES_NODE_INDEX(ctx->jes_ctx->node_mng, ctx->iter),
+#if defined(JES_ENABLE_SERIALIZER_NODE_LOG)
+    JES_LOG_NODE("\n", JES_NODE_INDEX(ctx->jes_ctx->node_mng, ctx->iter),
                           ctx->iter->json_tlv.type,
                           ctx->iter->json_tlv.length,
                           ctx->iter->json_tlv.value,
@@ -516,9 +580,8 @@ static enum jes_status jes_serialize(struct jes_serializer_context* ctx)
                           ctx->iter->first_child,
                           ctx->iter->last_child,
                           "");
-
+#endif
     jes_serializer_get_node(ctx);
-    //JES_LOG_STATE(ctx->state);
   }
 
 
@@ -542,8 +605,8 @@ uint32_t jes_render(struct jes_context *ctx, char* buffer, size_t buffer_length,
     return 0;
   }
 
-  serializer.iter = NULL;
-  serializer.state = JES_START;
+
+  serializer.tab_size = 4;
   serializer.out_buffer = NULL;
   serializer.out_length = 0;
   serializer.indention = 0;
@@ -579,8 +642,7 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
     return 0;
   }
 
-  serializer.iter = NULL;
-  serializer.state = JES_START;
+  serializer.tab_size = 4;
   serializer.out_buffer = NULL;
   serializer.out_length = 0;
   serializer.indention = 0;
