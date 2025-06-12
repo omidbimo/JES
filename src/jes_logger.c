@@ -51,7 +51,7 @@ static char jes_node_type_str[][JES_HELPER_STR_LENGTH] = {
 };
 
 static char jes_state_str[][JES_HELPER_STR_LENGTH] = {
-  "EXPECT_OBJECT",
+  "START",
   "EXPECT_KEY",
   "EXPECT_COLON",
   "EXPECT_KEY_VALUE",
@@ -59,6 +59,7 @@ static char jes_state_str[][JES_HELPER_STR_LENGTH] = {
   "EXPECT_ARRAY_VALUE",
   "HAVE_ARRAY_VALUE",
   "EXPECT_EOF",
+  "END",
 };
 
 void jes_log_token(uint16_t token_type,
@@ -83,7 +84,7 @@ void jes_log_node(const char *pre_msg,
                   int32_t last_child_id,
                   const char *post_msg)
 {
-  printf("%sJES.Node: [%d] \"%.*s\" <%s>,    parent:[%d], right:[%d], first_child:[%d], last_child:[%d], %s",
+  printf("%sJES.Node: [%d] \"%.*s\" <%s>,    parent:[%d], right:[%d], first_child:[%d], last_child:[%d] %s",
     pre_msg, node_id, node_length, node_value, jes_node_type_str[node_type],
     parent_id == JES_INVALID_INDEX ? -1 : parent_id,
     right_id == JES_INVALID_INDEX ? -1 : right_id,
@@ -92,6 +93,10 @@ void jes_log_node(const char *pre_msg,
     post_msg);
 }
 
+void jes_log_state(enum jes_state state)
+{
+  printf("\n state: <%s>(%d)", jes_state_str[state], state);
+}
 
 char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len)
 {

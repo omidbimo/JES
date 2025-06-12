@@ -65,6 +65,8 @@ static inline enum jes_status jes_parser_process_closing_brace(struct jes_deseri
       assert(0);
       break;
   }
+
+  return JES_NO_ERROR;
 }
 
 static inline void jes_parser_process_opening_bracket(struct jes_deserializer_context* ctx)
@@ -125,6 +127,8 @@ static inline enum jes_status jes_parser_process_closing_bracket(struct jes_dese
       assert(0);
       break;
   }
+
+  return JES_NO_ERROR;
 }
 
 static inline enum jes_status jes_parser_process_comma(struct jes_deserializer_context* ctx)
@@ -362,7 +366,7 @@ void jes_parse(struct jes_context *ctx)
   jes_tokenizer_set_cursor(&parser.tokenizer, ctx->json_data);
 
   while ((ctx->status == JES_NO_ERROR) && (parser.state != JES_END) && (jes_tokenizer_get_token(&parser.tokenizer) == JES_NO_ERROR)) {
-
+    //printf("\n1... %d, state: %d", ctx->status, parser.state);
     switch (parser.state) {
       case JES_START:
         ctx->status = jes_parser_process_start_state(&parser);
@@ -398,7 +402,7 @@ void jes_parse(struct jes_context *ctx)
         break;
     }
   }
-
+  //printf("\n2... %d, state: %d", ctx->status, parser.state);
   if ((ctx->status == JES_NO_ERROR) && (parser.iter != NULL)) {
       ctx->status = JES_UNEXPECTED_EOF;
   }

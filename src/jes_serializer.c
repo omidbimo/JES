@@ -9,8 +9,10 @@
 
 #ifndef NDEBUG
   #define JES_LOG_NODE  jes_log_node
+  #define JES_LOG_STATE jes_log_state
 #else
   #define JES_LOG_NODE(...)
+  #define JES_LOG_STATE(...)
 #endif
 
 struct jes_serializer_context {
@@ -467,12 +469,15 @@ static enum jes_status jes_serialize(struct jes_serializer_context* ctx)
     assert(ctx->evaluated != false);
   }
 
-
+  ctx->state = JES_START;
+  ctx->iter = NULL;
+  ctx->out_length = 0;
+  ctx->indention = 0;
 
   jes_serializer_get_node(ctx);
 
   while ((ctx->iter != NULL) && (status == JES_NO_ERROR)) {
-
+    JES_LOG_STATE(ctx->state);
     switch (ctx->state) {
       case JES_START:
         status = jes_serializer_process_start_state(ctx);
@@ -513,6 +518,7 @@ static enum jes_status jes_serialize(struct jes_serializer_context* ctx)
                           "");
 
     jes_serializer_get_node(ctx);
+    //JES_LOG_STATE(ctx->state);
   }
 
 
@@ -526,7 +532,7 @@ static enum jes_status jes_serialize(struct jes_serializer_context* ctx)
 
 uint32_t jes_render(struct jes_context *ctx, char* buffer, size_t buffer_length, bool compact)
 {
-  struct jes_serializer_context serilizer = { 0 };
+  struct jes_serializer_context serializer = { 0 };
 
   if ((ctx == NULL) || !JES_IS_INITIATED(ctx)) {
     return 0;
@@ -536,33 +542,34 @@ uint32_t jes_render(struct jes_context *ctx, char* buffer, size_t buffer_length,
     return 0;
   }
 
-  serilizer.iter = NULL;
-  serilizer.state = JES_START;
-  serilizer.out_buffer = NULL;
-  serilizer.out_length = 0;
-  serilizer.indention = 0;
-  serilizer.compact = compact;
-  serilizer.jes_ctx = ctx;
+  serializer.iter = NULL;
+  serializer.state = JES_START;
+  serializer.out_buffer = NULL;
+  serializer.out_length = 0;
+  serializer.indention = 0;
+  serializer.compact = compact;
+  serializer.jes_ctx = ctx;
   ctx->status = JES_NO_ERROR;
 
-  ctx->status = jes_serialize(&serilizer);
-  if ((ctx->status == JES_NO_ERROR) && (buffer_length >= serilizer.out_length)) {
-    serilizer.out_buffer = buffer;
-    serilizer.out_length = 0;
-    ctx->status = jes_serialize(&serilizer);
+  ctx->status = jes_serialize(&serializer);
+  if ((ctx->status == JES_NO_ERROR) && (buffer_length >= serializer.out_length)) {
+    serializer.out_buffer = buffer;
+    serializer.out_length = 0;
+    serializer.evaluated = true;
+    ctx->status = jes_serialize(&serializer);
   }
 
-  if (serilizer.state == JES_EXPECT_KEY_VALUE) {
+  if (serializer.state == JES_EXPECT_KEY_VALUE) {
     ctx->status = JES_RENDER_FAILED;
-    serilizer.out_length = 0;
+    serializer.out_length = 0;
   }
 
-  return serilizer.out_length;
+  return serializer.out_length;
 }
 
 uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
 {
-  struct jes_serializer_context serilizer = { 0 };
+  struct jes_serializer_context serializer = { 0 };
 
   if ((ctx == NULL) || !JES_IS_INITIATED(ctx)) {
     return 0;
@@ -572,21 +579,21 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
     return 0;
   }
 
-  serilizer.iter = NULL;
-  serilizer.state = JES_START;
-  serilizer.out_buffer = NULL;
-  serilizer.out_length = 0;
-  serilizer.indention = 0;
-  serilizer.compact = compact;
-  serilizer.jes_ctx = ctx;
+  serializer.iter = NULL;
+  serializer.state = JES_START;
+  serializer.out_buffer = NULL;
+  serializer.out_length = 0;
+  serializer.indention = 0;
+  serializer.compact = compact;
+  serializer.jes_ctx = ctx;
   ctx->status = JES_NO_ERROR;
 
-  ctx->status = jes_serialize(&serilizer);
+  ctx->status = jes_serialize(&serializer);
 
-  if (serilizer.state == JES_EXPECT_KEY_VALUE) {
+  if (serializer.state == JES_EXPECT_KEY_VALUE) {
     ctx->status = JES_RENDER_FAILED;
-    serilizer.out_length = 0;
+    serializer.out_length = 0;
   }
 
-  return serilizer.out_length;
+  return serializer.out_length;
 }
