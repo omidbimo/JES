@@ -193,6 +193,9 @@ static inline enum jes_status jes_parser_process_expect_key_state(struct jes_des
       /* Append the key */
       ctx->iter = jes_tree_insert_key_node(ctx->jes_ctx, ctx->iter, GET_LAST_CHILD(ctx->jes_ctx->node_mng, ctx->iter),
                            ctx->tokenizer.token.length, ctx->tokenizer.token.value);
+      if (ctx->iter == NULL) {
+        return ctx->jes_ctx->status;
+      }
       ctx->state = JES_EXPECT_COLON;
     break;
   case JES_TOKEN_CLOSING_BRACE:
@@ -279,27 +282,27 @@ static inline enum jes_status jes_parser_process_expect_array_value_state(struct
     case JES_TOKEN_STRING:
       ctx->iter = jes_tree_insert_node(ctx->jes_ctx, ctx->iter, GET_LAST_CHILD(ctx->jes_ctx->node_mng, ctx->iter),
              JES_STRING, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
-            ctx->state = JES_HAVE_ARRAY_VALUE;
+      ctx->state = JES_HAVE_ARRAY_VALUE;
       break;
     case JES_TOKEN_NUMBER:
       ctx->iter = jes_tree_insert_node(ctx->jes_ctx, ctx->iter, GET_LAST_CHILD(ctx->jes_ctx->node_mng, ctx->iter),
              JES_NUMBER, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
-            ctx->state = JES_HAVE_ARRAY_VALUE;
+      ctx->state = JES_HAVE_ARRAY_VALUE;
       break;
     case JES_TOKEN_TRUE:
       ctx->iter = jes_tree_insert_node(ctx->jes_ctx, ctx->iter, GET_LAST_CHILD(ctx->jes_ctx->node_mng, ctx->iter),
              JES_TRUE, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
-            ctx->state = JES_HAVE_ARRAY_VALUE;
+      ctx->state = JES_HAVE_ARRAY_VALUE;
       break;
     case JES_TOKEN_FALSE:
       ctx->iter = jes_tree_insert_node(ctx->jes_ctx, ctx->iter, GET_LAST_CHILD(ctx->jes_ctx->node_mng, ctx->iter),
              JES_FALSE, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
-            ctx->state = JES_HAVE_ARRAY_VALUE;
+      ctx->state = JES_HAVE_ARRAY_VALUE;
       break;
     case JES_TOKEN_NULL:
       ctx->iter = jes_tree_insert_node(ctx->jes_ctx, ctx->iter, GET_LAST_CHILD(ctx->jes_ctx->node_mng, ctx->iter),
              JES_NULL, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
-            ctx->state = JES_HAVE_ARRAY_VALUE;
+      ctx->state = JES_HAVE_ARRAY_VALUE;
       break;
     case JES_TOKEN_OPENING_BRACKET:
       ctx->iter = jes_tree_insert_node(ctx->jes_ctx, ctx->iter, GET_LAST_CHILD(ctx->jes_ctx->node_mng, ctx->iter),
@@ -415,6 +418,4 @@ void jes_parse(struct jes_context *ctx)
   if ((ctx->status == JES_NO_ERROR) && (parser.iter != NULL)) {
       ctx->status = JES_UNEXPECTED_EOF;
   }
-  return;
-
 }

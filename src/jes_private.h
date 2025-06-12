@@ -218,7 +218,7 @@ struct jes_context {
   /* Size of the workspace buffer in bytes. This will be used to reconstruct the workspace when needed. */
   size_t workspace_size;
   /* Tokenizer subsystem state. */
-  struct jes_tokenizer_context tokenizer;
+  //struct jes_tokenizer_context tokenizer;
   /* Serialization/Deserialization subsystem state. */
   //struct jes_serdes_context serdes;
   /* Node management subsystem state. */
