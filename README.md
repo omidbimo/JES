@@ -17,7 +17,7 @@ JES provides a simple and efficient API to:
 - ✅ **Concurrent document handling** – Supports parsing multiple JSON documents simultaneously by using a separate parser context and working buffer for each document.
 - ✅ **High performance** – Operates directly on the input buffer without copying data, ensuring minimal processing overhead.
 - ✅ **No external dependencies** – Fully self-contained, making it easy to integrate into embedded projects.
-- ✅ **Fast Key search**  – Can be configured at compile time to utilise a hash table key lookup for faster key searching.
+- ✅ **Fast Key search**  – Can be configured at compile time to utilise a hash table key lookup for faster key searching in large JSON data.
 - ✅ **Flexible output formatting** – The output can be generated as a compact string or formatted with indentation for readability.
 
 ## [API Documentation](https://github.com/omidbimo/JES/blob/main/documentation.md)
