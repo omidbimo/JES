@@ -172,12 +172,35 @@ static inline enum jes_status jes_parser_process_start_state(struct jes_deserial
       ctx->state = JES_UNEXPECTED_TOKEN;
 #endif
       break;
-    default:
 #if defined(JES_ALLOW_TOPLEVEL_ANY)
+    case JES_TOKEN_STRING:
+      ctx->iter = jes_tree_insert_node(ctx->jes_ctx, ctx->iter, GET_LAST_CHILD(ctx->jes_ctx->node_mng, ctx->iter),
+                              JES_STRING, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
       ctx->state = JES_EXPECT_EOF;
-#else
-      status = JES_UNEXPECTED_TOKEN;
+      break;
+    case JES_TOKEN_NUMBER:
+      ctx->iter = jes_tree_insert_node(ctx->jes_ctx, ctx->iter, GET_LAST_CHILD(ctx->jes_ctx->node_mng, ctx->iter),
+                              JES_NUMBER, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
+      ctx->state = JES_EXPECT_EOF;
+      break;
+    case JES_TOKEN_TRUE:
+      ctx->iter = jes_tree_insert_node(ctx->jes_ctx, ctx->iter, GET_LAST_CHILD(ctx->jes_ctx->node_mng, ctx->iter),
+                              JES_TRUE, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
+      ctx->state = JES_EXPECT_EOF;
+      break;
+    case JES_TOKEN_FALSE:
+      ctx->iter = jes_tree_insert_node(ctx->jes_ctx, ctx->iter, GET_LAST_CHILD(ctx->jes_ctx->node_mng, ctx->iter),
+                              JES_FALSE, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
+      ctx->state = JES_EXPECT_EOF;
+      break;
+    case JES_TOKEN_NULL:
+      ctx->iter = jes_tree_insert_node(ctx->jes_ctx, ctx->iter, GET_LAST_CHILD(ctx->jes_ctx->node_mng, ctx->iter),
+                              JES_NULL, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
+      ctx->state = JES_EXPECT_EOF;
+      break;
 #endif
+    default:
+      status = JES_UNEXPECTED_TOKEN;
       break;
   }
 
@@ -415,7 +438,7 @@ void jes_parse(struct jes_context *ctx)
     }
   }
 
-  if ((ctx->status == JES_NO_ERROR) && (parser.iter != NULL)) {
+  if ((ctx->status == JES_NO_ERROR) && (parser.state != JES_END) && (parser.iter != NULL)) {
       ctx->status = JES_UNEXPECTED_EOF;
   }
 }

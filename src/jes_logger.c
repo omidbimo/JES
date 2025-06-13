@@ -216,6 +216,7 @@ char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len)
       break;
   }
 #endif
+snprintf(msg, msg_len, "%s(#%d)", jes_status_str[ctx->status], ctx->status);
  return msg;
 
 }
