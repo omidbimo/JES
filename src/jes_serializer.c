@@ -152,6 +152,7 @@ static inline enum jes_status jes_serializer_process_start_state(struct jes_seri
       break;
     case JES_NUMBER:
       jes_serializer_render_number(ctx);
+      ctx->state = JES_HAVE_KEY_VALUE;
       if (PARENT_TYPE(ctx->jes_ctx->node_mng, ctx->iter) == JES_KEY) {
         ctx->state = JES_HAVE_KEY_VALUE;
       }
@@ -398,6 +399,7 @@ static inline struct jes_node* jes_serializer_get_node(struct jes_serializer_con
   }
 
   if (ctx->iter == NULL) {
+    JES_LOG_STATE("\nJES.Serializer.State: ", ctx->state, "");
     assert(ctx->state == JES_HAVE_ARRAY_VALUE || ctx->state == JES_HAVE_KEY_VALUE);
     ctx->state = JES_END;
   }
@@ -489,7 +491,7 @@ uint32_t jes_render(struct jes_context *ctx, char* buffer, size_t buffer_length,
     return 0;
   }
 
-  serializer.tab_size = 4;
+  serializer.tab_size = 2;
   serializer.out_buffer = NULL;
   serializer.compact = compact;
   serializer.jes_ctx = ctx;
@@ -523,7 +525,7 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
     return 0;
   }
 
-  serializer.tab_size = 4;
+  serializer.tab_size = 2;
   serializer.out_buffer = NULL;
   serializer.compact = compact;
   serializer.jes_ctx = ctx;
