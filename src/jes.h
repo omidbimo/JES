@@ -63,7 +63,7 @@
  * for the JES context to accommodate the internal hash table structure.
  * Insufficient memory may lead to parsing failures.
  */
-//#define JES_ENABLE_FAST_KEY_SEARCH
+#define JES_ENABLE_FAST_KEY_SEARCH
 
 /**
  * JES_ENABLE_FALL_BACK_TO_LINEAR_SEARCH
@@ -87,7 +87,7 @@
 //#define JES_ENABLE_FALL_BACK_TO_LINEAR_SEARCH
 
 //#define JES_ALLOW_TOPLEVEL_ARRAY
-//#define JES_ALLOW_TOPLEVEL_ANY
+#define JES_ALLOW_TOPLEVEL_ANY
 
 //#define JES_ENABLE_TOKEN_LOG
 //#define JES_ENABLE_PARSER_NODE_LOG

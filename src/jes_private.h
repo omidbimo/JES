@@ -99,44 +99,6 @@ struct jes_freed_node {
   struct jes_freed_node* next;
 };
 
-
-struct jes_cursor {
-  /* Points to the next character in JSON document to be tokenized */
-  const char* pos;
-  /*  */
-  size_t  column;
-  /* The current line number in the JSON input that is being processed */
-  size_t  line_number;
-};
-
-struct jes_tokenizer_context {
-  const char* json_data;
-  size_t json_length;
-  enum jes_status status;
-  /*  */
-  struct jes_cursor cursor;
-  /* To dynamically switch tokenizer functions when detecting Integers, fractions and exponents */
-  bool (*typed_tokenizer_fn) (struct jes_tokenizer_context* ctx, struct jes_token* token, const char* current, const char* end);
-  /* Holds the last token delivered by tokenizer. */
-  struct jes_token token;
-};
-
-struct jes_deserializer_context {
-  /* State of the parser state machine or the serializer state machine */
-  enum jes_state state;
-  struct jes_tokenizer_context tokenizer;
-  /* Internal node iterator */
-  struct jes_node* iter;
-  struct jes_context* jes_ctx;
-};
-
-struct jes_serdes_context {
-  /* State of the parser state machine or the serializer state machine */
-  enum jes_state state;
-  /* Internal node iterator */
-  struct jes_node* iter;
-};
-
 struct jes_node_mng_context {
   /* Part of the buffer given by the user at the time of the context initialization.
    * The buffer will be used to allocate the context structure at first.
@@ -157,6 +119,41 @@ struct jes_node_mng_context {
   struct jes_node* (*find_key_fn) (struct jes_context* ctx, struct jes_node* parent, const char* key, size_t key_len);
   /* Holds the main object node */
   struct jes_node* root;
+};
+
+struct jes_cursor {
+  /* Points to the next character in JSON document to be tokenized */
+  const char* pos;
+  /*  */
+  size_t  column;
+  /* The current line number in the JSON input that is being processed */
+  size_t  line_number;
+};
+
+struct jes_tokenizer_context {
+  /*  */
+  struct jes_cursor cursor;
+  /* To dynamically switch tokenizer functions when detecting Integers, fractions and exponents */
+  bool (*typed_tokenizer_fn) (struct jes_context* ctx, struct jes_token* token, const char* current, const char* end);
+  /* Holds the last token delivered by tokenizer. */
+  struct jes_token token;
+};
+
+struct jes_serdes_context {
+  /* State of the parser state machine or the serializer state machine */
+  enum jes_state state;
+  /* Internal node iterator */
+  struct jes_node* iter;
+
+  size_t out_length;
+  size_t indention;
+  size_t tab_size;
+  bool compact;
+  char* out_buffer;
+  char* buffer_end;
+  bool evaluated;
+  /* Tokenizer subsystem state. */
+  struct jes_tokenizer_context tokenizer;
 };
 
 struct jes_hash_table_context {
@@ -210,17 +207,16 @@ struct jes_context {
   const char* json_data;
   /* Size of the JSON data buffer in bytes.
    * Must accurately reflect the length of data at json_data pointer (without NUL termination) */
-  uint32_t  json_size;
+  uint32_t  json_length;
   /* User-provided working memory buffer for all JES operations.
    * It will be fragmented to hold the jes context, node allocations and the hash table entries.
    * Must remain available throughout the context's lifetime. */
   void* workspace;
   /* Size of the workspace buffer in bytes. This will be used to reconstruct the workspace when needed. */
   size_t workspace_size;
-  /* Tokenizer subsystem state. */
-  //struct jes_tokenizer_context tokenizer;
+
   /* Serialization/Deserialization subsystem state. */
-  //struct jes_serdes_context serdes;
+  struct jes_serdes_context serdes;
   /* Node management subsystem state. */
   struct jes_node_mng_context node_mng;
 

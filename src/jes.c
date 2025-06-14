@@ -17,13 +17,13 @@ struct jes_context* jes_init(void* buffer, size_t buffer_size)
   if ((buffer == NULL) || buffer_size < sizeof(struct jes_context)) {
     return NULL;
   }
-
+  printf("\n size of jes_context: %d",sizeof(*ctx));
   memset(ctx, 0, sizeof(*ctx));
 
   ctx->status = JES_NO_ERROR;
 
   ctx->json_data = NULL;
-  ctx->json_size = 0;
+  ctx->json_length = 0;
   ctx->workspace = buffer;
   ctx->workspace_size = buffer_size;
   jes_tree_init(ctx, (struct jes_context*)ctx->workspace + 1, ctx->workspace_size - sizeof(*ctx));
@@ -342,25 +342,18 @@ struct jes_element* jes_add_element(struct jes_context* ctx, struct jes_element*
 
   switch (type) {
     case JES_NUMBER:
-      {
-        struct jes_tokenizer_context tok_ctx = { 0 };
-        if (!jes_tokenizer_validate_number(&tok_ctx, value, value_length)) {
-          ctx->status = JES_INVALID_PARAMETER;
-          return NULL;
-        }
+      if (!jes_tokenizer_validate_number(ctx, value, value_length)) {
+        ctx->status = JES_INVALID_PARAMETER;
+        return NULL;
       }
       break;
     case JES_KEY: /* Fall through is intended */
     case JES_STRING:
-      {
-        struct jes_tokenizer_context tok_ctx = { 0 };
-        if (!jes_tokenizer_validate_string(&tok_ctx, value, value_length)) {
-          ctx->status = JES_INVALID_PARAMETER;
-          return NULL;
-        }
+      if (!jes_tokenizer_validate_string(ctx, value, value_length)) {
+        ctx->status = JES_INVALID_PARAMETER;
+        return NULL;
       }
       break;
-
     case JES_OBJECT:
     case JES_ARRAY:
     case JES_TRUE:
@@ -373,8 +366,11 @@ struct jes_element* jes_add_element(struct jes_context* ctx, struct jes_element*
       return NULL;
   }
 
-  new_node = jes_tree_insert_node(ctx, (struct jes_node*)parent, GET_LAST_CHILD(ctx->node_mng, (struct jes_node*)parent),
-                             type, value_length, value);
+  new_node = jes_tree_insert_node(ctx,
+                                  (struct jes_node*)parent,
+                                  GET_LAST_CHILD(ctx->node_mng,
+                                  (struct jes_node*)parent),
+                                  type, value_length, value);
 
   return (struct jes_element*)new_node;
 }
@@ -407,14 +403,10 @@ struct jes_element* jes_add_key(struct jes_context* ctx, struct jes_element* par
     return NULL;
   }
 
-  {
-    struct jes_tokenizer_context tok_ctx = { 0 };
-    if (!jes_tokenizer_validate_string(&tok_ctx, keyword, keyword_length)) {
-      ctx->status = JES_INVALID_PARAMETER;
-      return NULL;
-    }
+  if (!jes_tokenizer_validate_string(ctx, keyword, keyword_length)) {
+    ctx->status = JES_INVALID_PARAMETER;
+    return NULL;
   }
-
 
   if (parent->type == JES_KEY) {
     /* The key must be added to an existing key and must be embedded in an OBJECT */
@@ -535,12 +527,9 @@ enum jes_status jes_update_key(struct jes_context* ctx, struct jes_element* key,
     return ctx->status;
   }
 
-  {
-    struct jes_tokenizer_context tok_ctx = { 0 };
-    if (!jes_tokenizer_validate_string(&tok_ctx, keyword, keyword_length)) {
-      ctx->status = JES_INVALID_PARAMETER;
-      return ctx->status;
-    }
+  if (!jes_tokenizer_validate_string(ctx, keyword, keyword_length)) {
+    ctx->status = JES_INVALID_PARAMETER;
+    return ctx->status;
   }
 
   key->length = keyword_length;
@@ -761,7 +750,7 @@ struct jes_element* jes_load(struct jes_context* ctx, const char* json_data, uin
   jes_reset(ctx);
 
   ctx->json_data = json_data;
-  ctx->json_size = json_length;
+  ctx->json_length = json_length;
   jes_parse(ctx);
 
   return ctx->status == JES_NO_ERROR ? (struct jes_element*)ctx->node_mng.root : NULL;

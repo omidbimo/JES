@@ -15,153 +15,154 @@
   #define JES_LOG_STATE(...)
 #endif
 
-static inline void jes_parser_process_opening_brace(struct jes_deserializer_context* ctx)
+static inline void jes_parser_process_opening_brace(struct jes_context* ctx)
 {
   /* Append node */
-  ctx->iter = jes_tree_insert_node(ctx->jes_ctx, ctx->iter, GET_LAST_CHILD(ctx->jes_ctx->node_mng, ctx->iter),
-                              JES_OBJECT, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
-  ctx->state = JES_EXPECT_KEY;
+  ctx->serdes.iter = jes_tree_insert_node(ctx,
+                                          ctx->serdes.iter,
+                                          GET_LAST_CHILD(ctx->node_mng, ctx->serdes.iter),
+                                          JES_OBJECT,
+                                          ctx->serdes.tokenizer.token.length,
+                                          ctx->serdes.tokenizer.token.value);
+  ctx->serdes.state = JES_EXPECT_KEY;
 }
 
 
 /**
  * @brief Handles the parsing of a closing brace '}' in a JSON document.
  */
-static inline enum jes_status jes_parser_process_closing_brace(struct jes_deserializer_context* ctx)
+static inline void jes_parser_process_closing_brace(struct jes_context* ctx)
 {
   /* Handle special case: empty object "{}" */
-  if ((NODE_TYPE(ctx->iter) == JES_OBJECT) && (ctx->state == JES_EXPECT_KEY)) {
+  if ((NODE_TYPE(ctx->serdes.iter) == JES_OBJECT) && (ctx->serdes.state == JES_EXPECT_KEY)) {
     /* An object in EXPECT_KEY state, can only be an empty object with no children */
-    if (HAS_CHILD(ctx->iter)) {
-      return JES_UNEXPECTED_TOKEN;
+    if (HAS_CHILD(ctx->serdes.iter)) {
+      ctx->status = JES_UNEXPECTED_TOKEN;
+      return;
     }
   }
 
   /* If current node is not an OBJECT type, navigate up to find the parent OBJECT */
-  if (NODE_TYPE(ctx->iter) != JES_OBJECT) {
-    ctx->iter = jes_tree_get_parent_node_by_type(ctx->jes_ctx, ctx->iter, JES_OBJECT);
-    assert(ctx->iter != NULL);
+  if (NODE_TYPE(ctx->serdes.iter) != JES_OBJECT) {
+    ctx->serdes.iter = jes_tree_get_parent_node_by_type(ctx, ctx->serdes.iter, JES_OBJECT);
+    assert(ctx->serdes.iter != NULL);
   }
 
-  if (ctx->iter != NULL) {
+  if (ctx->serdes.iter != NULL) {
     /* Now that we've found the object being closed, move up one more level
      * to the parent container (either an object or array) to transition based on
      * the parent type. */
-    ctx->iter = jes_tree_get_container_parent_node(ctx->jes_ctx, ctx->iter);
+    ctx->serdes.iter = jes_tree_get_container_parent_node(ctx, ctx->serdes.iter);
   }
 
-  if (ctx->iter == NULL) {
+  if (ctx->serdes.iter == NULL) {
     /* We've reached the root level, expect end of file */
-    ctx->state = JES_EXPECT_EOF;
-    return JES_NO_ERROR;
+    ctx->serdes.state = JES_EXPECT_EOF;
+    return;
   }
 
   /* Update parser state based on the type of parent container we've moved to */
-  switch (NODE_TYPE(ctx->iter)) {
+  switch (NODE_TYPE(ctx->serdes.iter)) {
     case JES_ARRAY:
       /* We're now inside an array, ready for the next value or ARRAY closing */
-      ctx->state = JES_HAVE_ARRAY_VALUE;
+      ctx->serdes.state = JES_HAVE_ARRAY_VALUE;
       break;
     case JES_OBJECT:
       /* We're now inside an object, just finished a key-value pair */
-      ctx->state = JES_HAVE_KEY_VALUE;
+      ctx->serdes.state = JES_HAVE_KEY_VALUE;
       break;
     default:
       /* This should never happen - parent should always be object or array */
       assert(0);
       break;
   }
-
-  return JES_NO_ERROR;
 }
 
-static inline void jes_parser_process_opening_bracket(struct jes_deserializer_context* ctx)
+static inline void jes_parser_process_opening_bracket(struct jes_context* ctx)
 {
-  ctx->iter = jes_tree_insert_node(ctx->jes_ctx, ctx->iter, GET_LAST_CHILD(ctx->jes_ctx->node_mng, ctx->iter),
-                              JES_ARRAY, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
-  ctx->state = JES_EXPECT_ARRAY_VALUE;
+  ctx->serdes.iter = jes_tree_insert_node(ctx,
+                                          ctx->serdes.iter,
+                                          GET_LAST_CHILD(ctx->node_mng, ctx->serdes.iter),
+                                          JES_ARRAY,
+                                          ctx->serdes.tokenizer.token.length,
+                                          ctx->serdes.tokenizer.token.value);
+  ctx->serdes.state = JES_EXPECT_ARRAY_VALUE;
 }
 
 /**
  * @brief Handles the parsing of a closing bracket ']' in a JSON document.
  */
-static inline enum jes_status jes_parser_process_closing_bracket(struct jes_deserializer_context* ctx)
+static inline void jes_parser_process_closing_bracket(struct jes_context* ctx)
 {
   /* Handle special case: empty array "[]" */
-  if ((NODE_TYPE(ctx->iter) == JES_ARRAY) && (ctx->state == JES_EXPECT_ARRAY_VALUE)) {
+  if ((NODE_TYPE(ctx->serdes.iter) == JES_ARRAY) && (ctx->serdes.state == JES_EXPECT_ARRAY_VALUE)) {
     /* An array in expecting state, can only be an empty and must have no values */
-    if (HAS_CHILD(ctx->iter)) {
-      return JES_UNEXPECTED_TOKEN;
+    if (HAS_CHILD(ctx->serdes.iter)) {
+      ctx->status = JES_UNEXPECTED_TOKEN;
+      return;
     }
   }
 
   /* If current node is not an ARRAY type, navigate up to find the parent ARRAY */
-  if (NODE_TYPE(ctx->iter) != JES_ARRAY) {
-    ctx->iter = jes_tree_get_parent_node_by_type(ctx->jes_ctx, ctx->iter, JES_ARRAY);
-    assert(ctx->iter != NULL);
+  if (NODE_TYPE(ctx->serdes.iter) != JES_ARRAY) {
+    ctx->serdes.iter = jes_tree_get_parent_node_by_type(ctx, ctx->serdes.iter, JES_ARRAY);
+    assert(ctx->serdes.iter != NULL);
   }
 
-  if (ctx->iter != NULL) {
+  if (ctx->serdes.iter != NULL) {
     /* Now that we've found the array being closed, move up one more level
      * to the parent container (either an object or array) to continue parsing */
-    ctx->iter = jes_tree_get_container_parent_node(ctx->jes_ctx, ctx->iter);
+    ctx->serdes.iter = jes_tree_get_container_parent_node(ctx, ctx->serdes.iter);
   }
 
-  if (ctx->iter == NULL) {
+  if (ctx->serdes.iter == NULL) {
 #if defined(JES_ALLOW_TOPLEVEL_ARRAY)
     /* We've reached the root level, expect end of file */
-    ctx->state = JES_EXPECT_EOF;
+    ctx->serdes.state = JES_EXPECT_EOF;
 #else
     /* We've reached the root level, This should never inside an array happen */
-    return JES_PARSING_FAILED;
+    ctx->status = JES_PARSING_FAILED;
 #endif
-    return JES_NO_ERROR;
+    return;
   }
 
   /* Update parser state based on the type of parent container we've moved to */
-  switch (NODE_TYPE(ctx->iter)) {
+  switch (NODE_TYPE(ctx->serdes.iter)) {
     case JES_ARRAY:
       /* We're now inside an array, ready for the next value or ARRAY closing */
-      ctx->state = JES_HAVE_ARRAY_VALUE;
+      ctx->serdes.state = JES_HAVE_ARRAY_VALUE;
       break;
     case JES_OBJECT:
       /* We're now inside an object, just finished a key-value pair */
-      ctx->state = JES_HAVE_KEY_VALUE;
+      ctx->serdes.state = JES_HAVE_KEY_VALUE;
       break;
     default:
       /* This should never happen - parent should always be object or array */
       assert(0);
       break;
   }
-
-  return JES_NO_ERROR;
 }
 
-static inline enum jes_status jes_parser_process_comma(struct jes_deserializer_context* ctx)
+static inline void jes_parser_process_comma(struct jes_context* ctx)
 {
-  enum jes_status status = JES_NO_ERROR;
   /* Handle navigation within the JSON structure after a comma:
    * - For container nodes (objects/arrays), validate they have children
    * - For value nodes, move back up to the parent container
    */
-  if ((NODE_TYPE(ctx->iter) == JES_OBJECT) || (NODE_TYPE(ctx->iter) == JES_ARRAY)) {
-    if (!HAS_CHILD(ctx->iter)) {
-      status = JES_UNEXPECTED_TOKEN;
+  if ((NODE_TYPE(ctx->serdes.iter) == JES_OBJECT) || (NODE_TYPE(ctx->serdes.iter) == JES_ARRAY)) {
+    if (!HAS_CHILD(ctx->serdes.iter)) {
+      ctx->status = JES_UNEXPECTED_TOKEN;
     }
   }
   else {
     /* Current node is a value - navigate up to the parent container (object or array) */
-    ctx->iter = jes_tree_get_container_parent_node(ctx->jes_ctx, ctx->iter);
+    ctx->serdes.iter = jes_tree_get_container_parent_node(ctx, ctx->serdes.iter);
   }
-
-  return status;
 }
 
-static inline enum jes_status jes_parser_process_start_state(struct jes_deserializer_context* ctx)
+static inline void jes_parser_process_start_state(struct jes_context* ctx)
 {
-  enum jes_status status = JES_NO_ERROR;
-
-  switch (ctx->tokenizer.token.type) {
+  switch (ctx->serdes.tokenizer.token.type) {
     case JES_TOKEN_OPENING_BRACE:
       jes_parser_process_opening_brace(ctx);
       break;
@@ -169,264 +170,241 @@ static inline enum jes_status jes_parser_process_start_state(struct jes_deserial
 #if defined(JES_ALLOW_TOPLEVEL_ARRAY) || defined(JES_ALLOW_TOPLEVEL_ANY)
       jes_parser_process_opening_bracket(ctx);
 #else
-      ctx->state = JES_UNEXPECTED_TOKEN;
+      ctx->serdes.state = JES_UNEXPECTED_TOKEN;
 #endif
       break;
 #if defined(JES_ALLOW_TOPLEVEL_ANY)
     case JES_TOKEN_STRING:
-      ctx->iter = jes_tree_insert_node(ctx->jes_ctx, ctx->iter, GET_LAST_CHILD(ctx->jes_ctx->node_mng, ctx->iter),
-                              JES_STRING, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
-      ctx->state = JES_EXPECT_EOF;
+      ctx->serdes.iter = jes_tree_insert_node(ctx, ctx->serdes.iter, GET_LAST_CHILD(ctx->node_mng, ctx->serdes.iter),
+                              JES_STRING, ctx->serdes.tokenizer.token.length, ctx->serdes.tokenizer.token.value);
+      ctx->serdes.state = JES_EXPECT_EOF;
       break;
     case JES_TOKEN_NUMBER:
-      ctx->iter = jes_tree_insert_node(ctx->jes_ctx, ctx->iter, GET_LAST_CHILD(ctx->jes_ctx->node_mng, ctx->iter),
-                              JES_NUMBER, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
-      ctx->state = JES_EXPECT_EOF;
+      ctx->serdes.iter = jes_tree_insert_node(ctx, ctx->serdes.iter, GET_LAST_CHILD(ctx->node_mng, ctx->serdes.iter),
+                              JES_NUMBER, ctx->serdes.tokenizer.token.length, ctx->serdes.tokenizer.token.value);
+      ctx->serdes.state = JES_EXPECT_EOF;
       break;
     case JES_TOKEN_TRUE:
-      ctx->iter = jes_tree_insert_node(ctx->jes_ctx, ctx->iter, GET_LAST_CHILD(ctx->jes_ctx->node_mng, ctx->iter),
-                              JES_TRUE, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
-      ctx->state = JES_EXPECT_EOF;
+      ctx->serdes.iter = jes_tree_insert_node(ctx, ctx->serdes.iter, GET_LAST_CHILD(ctx->node_mng, ctx->serdes.iter),
+                              JES_TRUE, ctx->serdes.tokenizer.token.length, ctx->serdes.tokenizer.token.value);
+      ctx->serdes.state = JES_EXPECT_EOF;
       break;
     case JES_TOKEN_FALSE:
-      ctx->iter = jes_tree_insert_node(ctx->jes_ctx, ctx->iter, GET_LAST_CHILD(ctx->jes_ctx->node_mng, ctx->iter),
-                              JES_FALSE, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
-      ctx->state = JES_EXPECT_EOF;
+      ctx->serdes.iter = jes_tree_insert_node(ctx, ctx->serdes.iter, GET_LAST_CHILD(ctx->node_mng, ctx->serdes.iter),
+                              JES_FALSE, ctx->serdes.tokenizer.token.length, ctx->serdes.tokenizer.token.value);
+      ctx->serdes.state = JES_EXPECT_EOF;
       break;
     case JES_TOKEN_NULL:
-      ctx->iter = jes_tree_insert_node(ctx->jes_ctx, ctx->iter, GET_LAST_CHILD(ctx->jes_ctx->node_mng, ctx->iter),
-                              JES_NULL, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
-      ctx->state = JES_EXPECT_EOF;
+      ctx->serdes.iter = jes_tree_insert_node(ctx, ctx->serdes.iter, GET_LAST_CHILD(ctx->node_mng, ctx->serdes.iter),
+                              JES_NULL, ctx->serdes.tokenizer.token.length, ctx->serdes.tokenizer.token.value);
+      ctx->serdes.state = JES_EXPECT_EOF;
       break;
 #endif
     default:
-      status = JES_UNEXPECTED_TOKEN;
+      ctx->status = JES_UNEXPECTED_TOKEN;
       break;
   }
-
-  return status;
 }
 
-static inline enum jes_status jes_parser_process_expect_key_state(struct jes_deserializer_context* ctx)
+static inline void jes_parser_process_expect_key_state(struct jes_context* ctx)
 {
-  enum jes_status status = JES_NO_ERROR;
-
-  switch (ctx->tokenizer.token.type) {
+  switch (ctx->serdes.tokenizer.token.type) {
     case JES_TOKEN_STRING:
       /* Append the key */
-      ctx->iter = jes_tree_insert_key_node(ctx->jes_ctx, ctx->iter, GET_LAST_CHILD(ctx->jes_ctx->node_mng, ctx->iter),
-                           ctx->tokenizer.token.length, ctx->tokenizer.token.value);
-      if (ctx->iter == NULL) {
-        return ctx->jes_ctx->status;
+      ctx->serdes.iter = jes_tree_insert_key_node(ctx, ctx->serdes.iter, GET_LAST_CHILD(ctx->node_mng, ctx->serdes.iter),
+                           ctx->serdes.tokenizer.token.length, ctx->serdes.tokenizer.token.value);
+      if (ctx->serdes.iter == NULL) { /* Something went wrong. exit the process */
+        break;
       }
-      ctx->state = JES_EXPECT_COLON;
+      ctx->serdes.state = JES_EXPECT_COLON;
     break;
   case JES_TOKEN_CLOSING_BRACE:
-    status = jes_parser_process_closing_brace(ctx);
+    jes_parser_process_closing_brace(ctx);
     break;
   default:
-    status = JES_UNEXPECTED_TOKEN;
+    ctx->status = JES_UNEXPECTED_TOKEN;
     break;
   }
-
-  return status;
 }
 
-static inline enum jes_status jes_parser_process_expect_key_value_state(struct jes_deserializer_context* ctx)
+static inline void jes_parser_process_expect_key_value_state(struct jes_context* ctx)
 {
-  enum jes_status status = JES_NO_ERROR;
   enum jes_type value_type;
 
-  switch (ctx->tokenizer.token.type) {
+  switch (ctx->serdes.tokenizer.token.type) {
     case JES_TOKEN_STRING:
       value_type = JES_STRING;
-      ctx->state = JES_HAVE_KEY_VALUE;
+      ctx->serdes.state = JES_HAVE_KEY_VALUE;
       break;
     case JES_TOKEN_NUMBER:
       value_type = JES_NUMBER;
-      ctx->state = JES_HAVE_KEY_VALUE;
+      ctx->serdes.state = JES_HAVE_KEY_VALUE;
       break;
     case JES_TOKEN_TRUE:
       value_type = JES_TRUE;
-      ctx->state = JES_HAVE_KEY_VALUE;
+      ctx->serdes.state = JES_HAVE_KEY_VALUE;
       break;
     case JES_TOKEN_FALSE:
       value_type = JES_FALSE;
-      ctx->state = JES_HAVE_KEY_VALUE;
+      ctx->serdes.state = JES_HAVE_KEY_VALUE;
       break;
     case JES_TOKEN_NULL:
       value_type = JES_NULL;
-      ctx->state = JES_HAVE_KEY_VALUE;
+      ctx->serdes.state = JES_HAVE_KEY_VALUE;
       break;
     case JES_TOKEN_OPENING_BRACKET:
       value_type = JES_ARRAY;
-      ctx->state = JES_EXPECT_ARRAY_VALUE;
+      ctx->serdes.state = JES_EXPECT_ARRAY_VALUE;
       break;
     case JES_TOKEN_OPENING_BRACE:
       value_type = JES_OBJECT;
-      ctx->state = JES_EXPECT_KEY;
+      ctx->serdes.state = JES_EXPECT_KEY;
       break;
     default:
-      return JES_UNEXPECTED_TOKEN;
+      ctx->status = JES_UNEXPECTED_TOKEN;
+      return;
   }
 
-  ctx->iter = jes_tree_insert_node(ctx->jes_ctx, ctx->iter, GET_LAST_CHILD(ctx->jes_ctx->node_mng, ctx->iter),
-           value_type, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
-
-  return status;
+  ctx->serdes.iter = jes_tree_insert_node(ctx,
+                                          ctx->serdes.iter,
+                                          GET_LAST_CHILD(ctx->node_mng, ctx->serdes.iter),
+                                          value_type,
+                                          ctx->serdes.tokenizer.token.length,
+                                          ctx->serdes.tokenizer.token.value);
 }
 
-static inline enum jes_status jes_parser_process_have_key_value_state(struct jes_deserializer_context* ctx)
+static inline void jes_parser_process_have_key_value_state(struct jes_context* ctx)
 {
-  enum jes_status status = JES_NO_ERROR;
-
-  switch (ctx->tokenizer.token.type) {
+  switch (ctx->serdes.tokenizer.token.type) {
     case JES_TOKEN_CLOSING_BRACE:
-      status = jes_parser_process_closing_brace(ctx);
+      jes_parser_process_closing_brace(ctx);
       break;
     case JES_TOKEN_COMMA:
       jes_parser_process_comma(ctx);
-      assert(NODE_TYPE(ctx->iter) == JES_OBJECT);
-      ctx->state = JES_EXPECT_KEY;
+      assert(NODE_TYPE(ctx->serdes.iter) == JES_OBJECT);
+      ctx->serdes.state = JES_EXPECT_KEY;
       break;
     default:
-      status = JES_UNEXPECTED_TOKEN;
+      ctx->status = JES_UNEXPECTED_TOKEN;
       break;
   }
-
-  return status;
 }
 
-static inline enum jes_status jes_parser_process_expect_array_value_state(struct jes_deserializer_context* ctx)
+static inline void jes_parser_process_expect_array_value_state(struct jes_context* ctx)
 {
-  enum jes_status status = JES_NO_ERROR;
-
-  switch (ctx->tokenizer.token.type) {
+  switch (ctx->serdes.tokenizer.token.type) {
     case JES_TOKEN_STRING:
-      ctx->iter = jes_tree_insert_node(ctx->jes_ctx, ctx->iter, GET_LAST_CHILD(ctx->jes_ctx->node_mng, ctx->iter),
-             JES_STRING, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
-      ctx->state = JES_HAVE_ARRAY_VALUE;
+      ctx->serdes.iter = jes_tree_insert_node(ctx, ctx->serdes.iter, GET_LAST_CHILD(ctx->node_mng, ctx->serdes.iter),
+             JES_STRING, ctx->serdes.tokenizer.token.length, ctx->serdes.tokenizer.token.value);
+      ctx->serdes.state = JES_HAVE_ARRAY_VALUE;
       break;
     case JES_TOKEN_NUMBER:
-      ctx->iter = jes_tree_insert_node(ctx->jes_ctx, ctx->iter, GET_LAST_CHILD(ctx->jes_ctx->node_mng, ctx->iter),
-             JES_NUMBER, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
-      ctx->state = JES_HAVE_ARRAY_VALUE;
+      ctx->serdes.iter = jes_tree_insert_node(ctx, ctx->serdes.iter, GET_LAST_CHILD(ctx->node_mng, ctx->serdes.iter),
+             JES_NUMBER, ctx->serdes.tokenizer.token.length, ctx->serdes.tokenizer.token.value);
+      ctx->serdes.state = JES_HAVE_ARRAY_VALUE;
       break;
     case JES_TOKEN_TRUE:
-      ctx->iter = jes_tree_insert_node(ctx->jes_ctx, ctx->iter, GET_LAST_CHILD(ctx->jes_ctx->node_mng, ctx->iter),
-             JES_TRUE, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
-      ctx->state = JES_HAVE_ARRAY_VALUE;
+      ctx->serdes.iter = jes_tree_insert_node(ctx, ctx->serdes.iter, GET_LAST_CHILD(ctx->node_mng, ctx->serdes.iter),
+             JES_TRUE, ctx->serdes.tokenizer.token.length, ctx->serdes.tokenizer.token.value);
+      ctx->serdes.state = JES_HAVE_ARRAY_VALUE;
       break;
     case JES_TOKEN_FALSE:
-      ctx->iter = jes_tree_insert_node(ctx->jes_ctx, ctx->iter, GET_LAST_CHILD(ctx->jes_ctx->node_mng, ctx->iter),
-             JES_FALSE, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
-      ctx->state = JES_HAVE_ARRAY_VALUE;
+      ctx->serdes.iter = jes_tree_insert_node(ctx, ctx->serdes.iter, GET_LAST_CHILD(ctx->node_mng, ctx->serdes.iter),
+             JES_FALSE, ctx->serdes.tokenizer.token.length, ctx->serdes.tokenizer.token.value);
+      ctx->serdes.state = JES_HAVE_ARRAY_VALUE;
       break;
     case JES_TOKEN_NULL:
-      ctx->iter = jes_tree_insert_node(ctx->jes_ctx, ctx->iter, GET_LAST_CHILD(ctx->jes_ctx->node_mng, ctx->iter),
-             JES_NULL, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
-      ctx->state = JES_HAVE_ARRAY_VALUE;
+      ctx->serdes.iter = jes_tree_insert_node(ctx, ctx->serdes.iter, GET_LAST_CHILD(ctx->node_mng, ctx->serdes.iter),
+             JES_NULL, ctx->serdes.tokenizer.token.length, ctx->serdes.tokenizer.token.value);
+      ctx->serdes.state = JES_HAVE_ARRAY_VALUE;
       break;
     case JES_TOKEN_OPENING_BRACKET:
-      ctx->iter = jes_tree_insert_node(ctx->jes_ctx, ctx->iter, GET_LAST_CHILD(ctx->jes_ctx->node_mng, ctx->iter),
-             JES_ARRAY, ctx->tokenizer.token.length, ctx->tokenizer.token.value);
-      ctx->state = JES_EXPECT_ARRAY_VALUE;
+      ctx->serdes.iter = jes_tree_insert_node(ctx, ctx->serdes.iter, GET_LAST_CHILD(ctx->node_mng, ctx->serdes.iter),
+             JES_ARRAY, ctx->serdes.tokenizer.token.length, ctx->serdes.tokenizer.token.value);
+      ctx->serdes.state = JES_EXPECT_ARRAY_VALUE;
       break;
     case JES_TOKEN_CLOSING_BRACKET:
-      status = jes_parser_process_closing_bracket(ctx);
+      jes_parser_process_closing_bracket(ctx);
       break;
     case JES_TOKEN_OPENING_BRACE:
       jes_parser_process_opening_brace(ctx);
       break;
     default:
-      status = JES_UNEXPECTED_TOKEN;
+      ctx->status = JES_UNEXPECTED_TOKEN;
       break;
   }
-
-  return status;
 }
 
-static inline enum jes_status jes_parser_process_have_array_value_state(struct jes_deserializer_context* ctx)
+static inline void jes_parser_process_have_array_value_state(struct jes_context* ctx)
 {
-  enum jes_status status = JES_NO_ERROR;
 
-  switch (ctx->tokenizer.token.type) {
+
+  switch (ctx->serdes.tokenizer.token.type) {
     case JES_TOKEN_CLOSING_BRACKET:
-      assert(ctx->iter != NULL);
-      status = jes_parser_process_closing_bracket(ctx);
+      assert(ctx->serdes.iter != NULL);
+      jes_parser_process_closing_bracket(ctx);
       break;
     case JES_TOKEN_COMMA:
       jes_parser_process_comma(ctx);
-      assert(NODE_TYPE(ctx->iter) == JES_ARRAY);
-      ctx->state = JES_EXPECT_ARRAY_VALUE;
+      assert(NODE_TYPE(ctx->serdes.iter) == JES_ARRAY);
+      ctx->serdes.state = JES_EXPECT_ARRAY_VALUE;
       break;
     default:
-      status = JES_UNEXPECTED_TOKEN;
+      ctx->status = JES_UNEXPECTED_TOKEN;
       break;
   }
-
-  return status;
 }
 
-static inline enum jes_status jes_parser_process_expect_colon_state(struct jes_deserializer_context* ctx)
+static inline void jes_parser_process_expect_colon_state(struct jes_context* ctx)
 {
-  enum jes_status status = JES_NO_ERROR;
-
-  if (ctx->tokenizer.token.type != JES_TOKEN_COLON) {
-    status = JES_UNEXPECTED_TOKEN;
+  if (ctx->serdes.tokenizer.token.type != JES_TOKEN_COLON) {
+    ctx->status = JES_UNEXPECTED_TOKEN;
   }
   else {
-    ctx->state = JES_EXPECT_KEY_VALUE;
+    ctx->serdes.state = JES_EXPECT_KEY_VALUE;
   }
-
-  return status;
 }
 
 void jes_parse(struct jes_context *ctx)
 {
-  struct jes_deserializer_context parser = { 0 };
-
   assert(ctx != NULL);
   assert(ctx->json_data != NULL);
-  assert(ctx->json_size != 0);
+  assert(ctx->json_length != 0);
 
-  parser.state = JES_START;
-  parser.tokenizer.json_data = ctx->json_data;
-  parser.tokenizer.json_length = ctx->json_size;
-  parser.jes_ctx = ctx;
+  ctx->serdes.state = JES_START;
 
-  jes_tokenizer_set_cursor(&parser.tokenizer, ctx->json_data);
+  jes_tokenizer_reset_cursor(ctx);
 
-  while ((ctx->status == JES_NO_ERROR) && (parser.state != JES_END) && (jes_tokenizer_get_token(&parser.tokenizer) == JES_NO_ERROR)) {
+  while ((ctx->status == JES_NO_ERROR) && (ctx->serdes.state != JES_END) && (jes_tokenizer_get_token(ctx) == JES_NO_ERROR)) {
 #if defined(JES_ENABLE_PARSER_STATE_LOG)
-    JES_LOG_STATE("\nJES.Parser.State: ", parser.state, "");
+    JES_LOG_STATE("\nJES.Parser.State: ", ctx->serdes.state, "");
 #endif
 
-    switch (parser.state) {
+    switch (ctx->serdes.state) {
       case JES_START:
-        ctx->status = jes_parser_process_start_state(&parser);
+        jes_parser_process_start_state(ctx);
         break;
       case JES_EXPECT_KEY:
-        ctx->status = jes_parser_process_expect_key_state(&parser);
+        jes_parser_process_expect_key_state(ctx);
         break;
       case JES_EXPECT_COLON:
-        ctx->status = jes_parser_process_expect_colon_state(&parser);
+        jes_parser_process_expect_colon_state(ctx);
         break;
       case JES_EXPECT_KEY_VALUE:
-        ctx->status = jes_parser_process_expect_key_value_state(&parser);
+        jes_parser_process_expect_key_value_state(ctx);
         break;
       case JES_HAVE_KEY_VALUE:
-        ctx->status = jes_parser_process_have_key_value_state(&parser);
+        jes_parser_process_have_key_value_state(ctx);
         break;
       case JES_EXPECT_ARRAY_VALUE:
-        ctx->status = jes_parser_process_expect_array_value_state(&parser);
+        jes_parser_process_expect_array_value_state(ctx);
         break;
       case JES_HAVE_ARRAY_VALUE:
-        ctx->status = jes_parser_process_have_array_value_state(&parser);
+        jes_parser_process_have_array_value_state(ctx);
         break;
       case JES_EXPECT_EOF:
-        if (parser.tokenizer.token.type == JES_TOKEN_EOF) {
-          parser.state = JES_END;
+        if (ctx->serdes.tokenizer.token.type == JES_TOKEN_EOF) {
+          ctx->serdes.state = JES_END;
           break;
         }
         ctx->status = JES_UNEXPECTED_TOKEN;
@@ -438,7 +416,7 @@ void jes_parse(struct jes_context *ctx)
     }
   }
 
-  if ((ctx->status == JES_NO_ERROR) && (parser.state != JES_END) && (parser.iter != NULL)) {
+  if ((ctx->status == JES_NO_ERROR) && (ctx->serdes.state != JES_END) && (ctx->serdes.iter != NULL)) {
       ctx->status = JES_UNEXPECTED_EOF;
   }
 }
