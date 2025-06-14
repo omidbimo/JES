@@ -207,7 +207,7 @@ static inline void jes_serializer_process_expect_key_value_state(struct jes_cont
       ctx->serdes.indention += ctx->serdes.tab_size;
       ctx->serdes.state = JES_EXPECT_ARRAY_VALUE;
       if (!HAS_CHILD(ctx->serdes.iter)) {
-        jes_serializer_render_closing_brace(ctx);
+        jes_serializer_render_closing_bracket(ctx);
         ctx->serdes.indention -= ctx->serdes.tab_size;
         ctx->serdes.state = JES_HAVE_KEY_VALUE;
       }

@@ -470,4 +470,3 @@ void jes_tokenizer_reset_cursor(struct jes_context* ctx)
   ctx->serdes.tokenizer.cursor.line_number = 0;
   ctx->serdes.tokenizer.cursor.column = 0;
 }
-
