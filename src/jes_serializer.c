@@ -378,7 +378,7 @@ static enum jes_status jes_serialize(struct jes_context* ctx)
 {
   assert(ctx != NULL);
   if (ctx->serdes.out_buffer != NULL) {
-    assert(ctx->evaluated != false);
+    assert(ctx->serdes.evaluated != false);
   }
 
   ctx->serdes.state = JES_START;
@@ -441,6 +441,7 @@ static enum jes_status jes_serialize(struct jes_context* ctx)
     ctx->status = JES_RENDER_FAILED;
   }
 #endif
+  return ctx->status;
 }
 
 uint32_t jes_render(struct jes_context *ctx, char* buffer, size_t buffer_length, bool compact)
