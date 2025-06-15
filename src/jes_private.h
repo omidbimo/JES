@@ -139,6 +139,19 @@ struct jes_tokenizer_context {
   struct jes_token token;
 };
 
+struct jes_renderer_set {
+  void (*opening_brace)   (struct jes_context*);
+  void (*closing_brace)   (struct jes_context*);
+  void (*opening_bracket) (struct jes_context*);
+  void (*closing_bracket) (struct jes_context*);
+  void (*new_line)        (struct jes_context*);
+  void (*key)             (struct jes_context*);
+  void (*literal)         (struct jes_context*);
+  void (*string)          (struct jes_context*);
+  void (*number)          (struct jes_context*);
+  void (*comma)           (struct jes_context*);
+};
+
 struct jes_serdes_context {
   /* State of the parser state machine or the serializer state machine */
   enum jes_state state;
@@ -148,10 +161,10 @@ struct jes_serdes_context {
   size_t out_length;
   size_t indention;
   size_t tab_size;
-  bool compact;
   char* out_buffer;
   char* buffer_end;
   bool evaluated;
+  struct jes_renderer_set* renderer;
   /* Tokenizer subsystem state. */
   struct jes_tokenizer_context tokenizer;
 };

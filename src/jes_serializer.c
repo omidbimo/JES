@@ -15,117 +15,170 @@
   #define JES_LOG_STATE(...)
 #endif
 
-static inline void jes_serializer_render_opening_brace(struct jes_context* ctx)
+void jes_serializer_calculate_delimiter(struct jes_context* ctx)
+{
+  ctx->serdes.out_length += sizeof(char);
+}
+
+void jes_serializer_calculate_string(struct jes_context* ctx)
+{
+  ctx->serdes.out_length += ctx->serdes.iter->json_tlv.length + sizeof("\"\"") - 1;
+}
+
+void jes_serializer_calculate_key(struct jes_context* ctx)
+{
+  ctx->serdes.out_length += ctx->serdes.iter->json_tlv.length;
+  ctx->serdes.out_length += sizeof("\"\": ") - 1;
+}
+
+void jes_serializer_calculate_number(struct jes_context* ctx)
+{
+  ctx->serdes.out_length += ctx->serdes.iter->json_tlv.length;
+}
+
+void jes_serializer_claculate_literal(struct jes_context* ctx)
+{
+  ctx->serdes.out_length += ctx->serdes.iter->json_tlv.length;
+}
+
+void jes_serializer_calculate_new_line(struct jes_context* ctx)
+{
+  ctx->serdes.out_length += ctx->serdes.indention;
+  ctx->serdes.out_length += sizeof("\n") - 1;
+}
+
+void jes_serializer_calculate_compact_key(struct jes_context* ctx)
+{
+  ctx->serdes.out_length += ctx->serdes.iter->json_tlv.length;
+  ctx->serdes.out_length += sizeof("\"\":") - 1;
+}
+
+void jes_serializer_calculate_compact_new_line(struct jes_context* ctx)
+{
+  /* Compact format requires no new line. Do nothing */
+}
+
+void jes_serializer_render_opening_brace(struct jes_context* ctx)
 {
   ctx->serdes.out_length += sizeof("{") - 1;
-  if (ctx->serdes.out_buffer != NULL) { *ctx->serdes.out_buffer++ = '{'; }
+  *ctx->serdes.out_buffer++ = '{';
+}
+
+void jes_serializer_render_closing_brace(struct jes_context* ctx)
+{
+  ctx->serdes.out_length += sizeof("}") - 1;
+  *ctx->serdes.out_buffer++ = '}';
 }
 
 static inline void jes_serializer_render_opening_bracket(struct jes_context* ctx)
 {
   ctx->serdes.out_length += sizeof("[") - 1;
-  if (ctx->serdes.out_buffer != NULL) { *ctx->serdes.out_buffer++ = '['; }
+  *ctx->serdes.out_buffer++ = '[';
 }
 
-static inline void jes_serializer_render_string(struct jes_context* ctx)
-{
-  ctx->serdes.out_length += ctx->serdes.iter->json_tlv.length + sizeof("\"\"") - 1;
-  if (ctx->serdes.out_buffer != NULL) {
-    *ctx->serdes.out_buffer++ = '"';
-    /* The JSON string has already been validated for size and structure,
-       so this memcpy can proceed safely without further boundary checks. */
-    assert((ctx->serdes.out_buffer + ctx->serdes.iter->json_tlv.length) < ctx->serdes.buffer_end);
-    ctx->serdes.out_buffer = (char*)memcpy(ctx->serdes.out_buffer, ctx->serdes.iter->json_tlv.value, ctx->serdes.iter->json_tlv.length) + ctx->serdes.iter->json_tlv.length;
-    *ctx->serdes.out_buffer++ = '"';
-  }
-}
-
-static inline void jes_serializer_render_key(struct jes_context* ctx)
-{
-  ctx->serdes.out_length += (ctx->serdes.iter->json_tlv.length + sizeof("\"\": ") - 1);
-  if (ctx->serdes.out_buffer != NULL) {
-    *ctx->serdes.out_buffer++ = '"';
-    /* The JSON string has already been validated for size and structure,
-       so this memcpy can proceed safely without further boundary checks. */
-    assert((ctx->serdes.out_buffer + ctx->serdes.iter->json_tlv.length) < ctx->serdes.buffer_end);
-    ctx->serdes.out_buffer = (char*)memcpy(ctx->serdes.out_buffer, ctx->serdes.iter->json_tlv.value, ctx->serdes.iter->json_tlv.length) + ctx->serdes.iter->json_tlv.length;
-    *ctx->serdes.out_buffer++ = '"';
-    *ctx->serdes.out_buffer++ = ':';
-    *ctx->serdes.out_buffer++ = ' ';
-  }
-}
-
-static inline void jes_serializer_render_number(struct jes_context* ctx)
-{
-  ctx->serdes.out_length += ctx->serdes.iter->json_tlv.length;
-  if(ctx->serdes.out_buffer != NULL) {
-    /* The JSON string has already been validated for size and structure,
-       so this memcpy can proceed safely without further boundary checks. */
-    assert((ctx->serdes.out_buffer + ctx->serdes.iter->json_tlv.length) < ctx->serdes.buffer_end);
-    ctx->serdes.out_buffer = (char*)memcpy(ctx->serdes.out_buffer, ctx->serdes.iter->json_tlv.value, ctx->serdes.iter->json_tlv.length) + ctx->serdes.iter->json_tlv.length;
-  }
-}
-
-static inline void jes_serializer_render_literal(struct jes_context* ctx)
-{
-  ctx->serdes.out_length += ctx->serdes.iter->json_tlv.length;
-  if(ctx->serdes.out_buffer != NULL) {
-    /* The JSON string has already been validated for size and structure,
-       so this memcpy can proceed safely without further boundary checks. */
-    assert((ctx->serdes.out_buffer + ctx->serdes.iter->json_tlv.length) < ctx->serdes.buffer_end);
-    ctx->serdes.out_buffer = (char*)memcpy(ctx->serdes.out_buffer, ctx->serdes.iter->json_tlv.value, ctx->serdes.iter->json_tlv.length) + ctx->serdes.iter->json_tlv.length;
-  }
-}
-
-static inline void jes_serializer_render_comma(struct jes_context* ctx)
-{
-  ctx->serdes.out_length += sizeof(",") - 1;
-  if (ctx->serdes.out_buffer != NULL) { *ctx->serdes.out_buffer++ = ','; }
-}
-
-static inline void jes_serializer_render_new_line(struct jes_context* ctx)
-{
-  if (!ctx->serdes.compact) {
-    ctx->serdes.out_length += sizeof("\n") - 1 + ctx->serdes.indention;
-    if (ctx->serdes.out_buffer != NULL) {
-      *ctx->serdes.out_buffer++ = '\n';
-      memset(ctx->serdes.out_buffer, ' ', ctx->serdes.indention);
-      ctx->serdes.out_buffer += ctx->serdes.indention;
-    }
-  }
-}
-
-static inline void jes_serializer_render_closing_brace(struct jes_context* ctx)
-{
-  ctx->serdes.out_length += sizeof("}") - 1;
-  if (ctx->serdes.out_buffer != NULL) { *ctx->serdes.out_buffer++ = '}'; }
-}
-
-static inline void jes_serializer_render_closing_bracket(struct jes_context* ctx)
+void jes_serializer_render_closing_bracket(struct jes_context* ctx)
 {
   ctx->serdes.out_length += sizeof("]") - 1;
-  if (ctx->serdes.out_buffer != NULL) { *ctx->serdes.out_buffer++ = ']'; }
+  *ctx->serdes.out_buffer++ = ']';
+}
+
+void jes_serializer_render_string(struct jes_context* ctx)
+{
+  ctx->serdes.out_length += ctx->serdes.iter->json_tlv.length + sizeof("\"\"") - 1;
+  *ctx->serdes.out_buffer++ = '"';
+  /* The JSON string has already been validated for size and structure,
+     so this memcpy can proceed safely without further boundary checks. */
+  assert((ctx->serdes.out_buffer + ctx->serdes.iter->json_tlv.length) < ctx->serdes.buffer_end);
+  memcpy(ctx->serdes.out_buffer, ctx->serdes.iter->json_tlv.value, ctx->serdes.iter->json_tlv.length);
+  ctx->serdes.out_buffer += ctx->serdes.iter->json_tlv.length;
+  *ctx->serdes.out_buffer++ = '"';
+}
+
+void jes_serializer_render_key(struct jes_context* ctx)
+{
+  ctx->serdes.out_length += (ctx->serdes.iter->json_tlv.length + sizeof("\"\": ") - 1);
+  *ctx->serdes.out_buffer++ = '"';
+  /* The JSON string has already been validated for size and structure,
+     so this memcpy can proceed safely without further boundary checks. */
+  assert((ctx->serdes.out_buffer + ctx->serdes.iter->json_tlv.length) < ctx->serdes.buffer_end);
+  memcpy(ctx->serdes.out_buffer, ctx->serdes.iter->json_tlv.value, ctx->serdes.iter->json_tlv.length);
+  ctx->serdes.out_buffer += ctx->serdes.iter->json_tlv.length;
+  *ctx->serdes.out_buffer++ = '"';
+  *ctx->serdes.out_buffer++ = ':';
+  *ctx->serdes.out_buffer++ = ' ';
+}
+
+void jes_serializer_render_number(struct jes_context* ctx)
+{
+  ctx->serdes.out_length += ctx->serdes.iter->json_tlv.length;
+  /* The JSON string has already been validated for size and structure,
+     so this memcpy can proceed safely without further boundary checks. */
+  assert((ctx->serdes.out_buffer + ctx->serdes.iter->json_tlv.length) < ctx->serdes.buffer_end);
+  memcpy(ctx->serdes.out_buffer, ctx->serdes.iter->json_tlv.value, ctx->serdes.iter->json_tlv.length);
+  ctx->serdes.out_buffer += ctx->serdes.iter->json_tlv.length;
+}
+
+void jes_serializer_render_literal(struct jes_context* ctx)
+{
+  ctx->serdes.out_length += ctx->serdes.iter->json_tlv.length;
+  /* The JSON string has already been validated for size and structure,
+     so this memcpy can proceed safely without further boundary checks. */
+  assert((ctx->serdes.out_buffer + ctx->serdes.iter->json_tlv.length) < ctx->serdes.buffer_end);
+  memcpy(ctx->serdes.out_buffer, ctx->serdes.iter->json_tlv.value, ctx->serdes.iter->json_tlv.length);
+  ctx->serdes.out_buffer += ctx->serdes.iter->json_tlv.length;
+}
+
+void jes_serializer_render_comma(struct jes_context* ctx)
+{
+  ctx->serdes.out_length += sizeof(",") - 1;
+  *ctx->serdes.out_buffer++ = ',';
+}
+
+void jes_serializer_render_new_line(struct jes_context* ctx)
+{
+  ctx->serdes.out_length += ctx->serdes.indention + sizeof("\n") - 1;
+  *ctx->serdes.out_buffer++ = '\n';
+  memset(ctx->serdes.out_buffer, ' ', ctx->serdes.indention);
+  ctx->serdes.out_buffer += ctx->serdes.indention;
+}
+
+void jes_serializer_render_compact_key(struct jes_context* ctx)
+{
+  ctx->serdes.out_length += (ctx->serdes.iter->json_tlv.length + sizeof("\"\":") - 1);
+  *ctx->serdes.out_buffer++ = '"';
+  /* The JSON string has already been validated for size and structure,
+     so this memcpy can proceed safely without further boundary checks. */
+  assert((ctx->serdes.out_buffer + ctx->serdes.iter->json_tlv.length) < ctx->serdes.buffer_end);
+  memcpy(ctx->serdes.out_buffer, ctx->serdes.iter->json_tlv.value, ctx->serdes.iter->json_tlv.length);
+  ctx->serdes.out_buffer += ctx->serdes.iter->json_tlv.length;
+  *ctx->serdes.out_buffer++ = '"';
+  *ctx->serdes.out_buffer++ = ':';
+}
+
+void jes_serializer_render_compact_new_line(struct jes_context* ctx)
+{
+  /* Compact format requires no new line. Do nothing */
 }
 
 static inline void jes_serializer_process_start_state(struct jes_context* ctx)
 {
   switch (NODE_TYPE(ctx->serdes.iter)) {
     case JES_OBJECT:
-      jes_serializer_render_opening_brace(ctx);
-      ctx->serdes.indention += ctx->serdes.tab_size;
+      ctx->serdes.renderer->opening_brace(ctx);
+      ctx->serdes.indention += JES_TAB_SIZE;
       ctx->serdes.state = JES_EXPECT_KEY;
       break;
     case JES_KEY:
-      jes_serializer_render_key(ctx);
+      ctx->serdes.renderer->key(ctx);
       ctx->serdes.state = JES_EXPECT_KEY_VALUE;
       break;
     case JES_ARRAY:
-      jes_serializer_render_opening_bracket(ctx);
-      ctx->serdes.indention += ctx->serdes.tab_size;
+      ctx->serdes.renderer->opening_bracket(ctx);
+      ctx->serdes.indention += JES_TAB_SIZE;
       ctx->serdes.state = JES_EXPECT_ARRAY_VALUE;
       break;
     case JES_STRING:
-      jes_serializer_render_string(ctx);
+      ctx->serdes.renderer->string(ctx);
       if (PARENT_TYPE(ctx->node_mng, ctx->serdes.iter) == JES_KEY) {
         ctx->serdes.state = JES_HAVE_KEY_VALUE;
       }
@@ -134,7 +187,7 @@ static inline void jes_serializer_process_start_state(struct jes_context* ctx)
       }
       break;
     case JES_NUMBER:
-      jes_serializer_render_number(ctx);
+      ctx->serdes.renderer->number(ctx);
       ctx->serdes.state = JES_HAVE_KEY_VALUE;
       if (PARENT_TYPE(ctx->node_mng, ctx->serdes.iter) == JES_KEY) {
         ctx->serdes.state = JES_HAVE_KEY_VALUE;
@@ -146,7 +199,7 @@ static inline void jes_serializer_process_start_state(struct jes_context* ctx)
     case JES_TRUE:
     case JES_FALSE:
     case JES_NULL:
-      jes_serializer_render_literal(ctx);
+      ctx->serdes.renderer->literal(ctx);
       if (PARENT_TYPE(ctx->node_mng, ctx->serdes.iter) == JES_KEY) {
         ctx->serdes.state = JES_HAVE_KEY_VALUE;
       }
@@ -165,8 +218,8 @@ static inline void jes_serializer_process_expect_key_state(struct jes_context* c
 {
   switch (NODE_TYPE(ctx->serdes.iter)) {
     case JES_KEY:
-      jes_serializer_render_new_line(ctx);
-      jes_serializer_render_key(ctx);
+      ctx->serdes.renderer->new_line(ctx);
+      ctx->serdes.renderer->key(ctx);
       ctx->serdes.state = JES_EXPECT_KEY_VALUE;
       break;
     default:
@@ -179,36 +232,36 @@ static inline void jes_serializer_process_expect_key_value_state(struct jes_cont
 {
   switch (NODE_TYPE(ctx->serdes.iter)) {
     case JES_STRING:
-      jes_serializer_render_string(ctx);
+      ctx->serdes.renderer->string(ctx);
       ctx->serdes.state = JES_HAVE_KEY_VALUE;
       break;
     case JES_NUMBER:
-      jes_serializer_render_number(ctx);
+      ctx->serdes.renderer->number(ctx);
       ctx->serdes.state = JES_HAVE_KEY_VALUE;
       break;
     case JES_TRUE:
     case JES_FALSE:
     case JES_NULL:
-      jes_serializer_render_literal(ctx);
+      ctx->serdes.renderer->literal(ctx);
       ctx->serdes.state = JES_HAVE_KEY_VALUE;
       break;
     case JES_OBJECT:
-      jes_serializer_render_opening_brace(ctx);
-      ctx->serdes.indention += ctx->serdes.tab_size;
+      ctx->serdes.renderer->opening_brace(ctx);
+      ctx->serdes.indention += JES_TAB_SIZE;
       ctx->serdes.state = JES_EXPECT_KEY;
       if (!HAS_CHILD(ctx->serdes.iter)) {
-        jes_serializer_render_closing_brace(ctx);
-        ctx->serdes.indention -= ctx->serdes.tab_size;
+        ctx->serdes.renderer->closing_brace(ctx);
+        ctx->serdes.indention -= JES_TAB_SIZE;
         ctx->serdes.state = JES_HAVE_KEY_VALUE;
       }
       break;
     case JES_ARRAY:
-      jes_serializer_render_opening_bracket(ctx);
-      ctx->serdes.indention += ctx->serdes.tab_size;
+      ctx->serdes.renderer->opening_bracket(ctx);
+      ctx->serdes.indention += JES_TAB_SIZE;
       ctx->serdes.state = JES_EXPECT_ARRAY_VALUE;
       if (!HAS_CHILD(ctx->serdes.iter)) {
-        jes_serializer_render_closing_bracket(ctx);
-        ctx->serdes.indention -= ctx->serdes.tab_size;
+        ctx->serdes.renderer->closing_bracket(ctx);
+        ctx->serdes.indention -= JES_TAB_SIZE;
         ctx->serdes.state = JES_HAVE_KEY_VALUE;
       }
       break;
@@ -224,7 +277,7 @@ static inline void jes_serializer_process_have_key_value_state(struct jes_contex
 
   while (iter) {
     if (HAS_SIBLING(iter)) {
-      jes_serializer_render_comma(ctx);
+      ctx->serdes.renderer->comma(ctx);
       if (PARENT_TYPE(ctx->node_mng, iter) == JES_ARRAY) {
         ctx->serdes.state = JES_EXPECT_ARRAY_VALUE;
       }
@@ -236,17 +289,17 @@ static inline void jes_serializer_process_have_key_value_state(struct jes_contex
     else { /* node has no siblings. */
       iter = GET_PARENT(ctx->node_mng, iter);
       if (NODE_TYPE(iter) == JES_ARRAY) {
-        ctx->serdes.indention -= ctx->serdes.tab_size;
-        jes_serializer_render_new_line(ctx);
-        jes_serializer_render_closing_bracket(ctx);
+        ctx->serdes.indention -= JES_TAB_SIZE;
+        ctx->serdes.renderer->new_line(ctx);
+        ctx->serdes.renderer->closing_bracket(ctx);
       }
       else if (NODE_TYPE(iter) == JES_KEY) {
         ctx->serdes.state = JES_HAVE_KEY_VALUE;
       }
       else if (NODE_TYPE(iter) == JES_OBJECT) {
-        ctx->serdes.indention -= ctx->serdes.tab_size;
-        jes_serializer_render_new_line(ctx);
-        jes_serializer_render_closing_brace(ctx);
+        ctx->serdes.indention -= JES_TAB_SIZE;
+        ctx->serdes.renderer->new_line(ctx);
+        ctx->serdes.renderer->closing_brace(ctx);
         ctx->serdes.state = JES_HAVE_KEY_VALUE;
       }
     }
@@ -256,39 +309,39 @@ static inline void jes_serializer_process_have_key_value_state(struct jes_contex
 static inline void jes_serializer_process_expect_array_value_state(struct jes_context* ctx)
 {
 
-  jes_serializer_render_new_line(ctx);
+  ctx->serdes.renderer->new_line(ctx);
   switch (NODE_TYPE(ctx->serdes.iter)) {
     case JES_STRING:
-      jes_serializer_render_string(ctx);
+      ctx->serdes.renderer->string(ctx);
       ctx->serdes.state = JES_HAVE_ARRAY_VALUE;
       break;
     case JES_NUMBER:
-      jes_serializer_render_number(ctx);
+      ctx->serdes.renderer->number(ctx);
       ctx->serdes.state = JES_HAVE_ARRAY_VALUE;
       break;
     case JES_TRUE:
     case JES_FALSE:
     case JES_NULL:
-      jes_serializer_render_literal(ctx);
+      ctx->serdes.renderer->literal(ctx);
       ctx->serdes.state = JES_HAVE_ARRAY_VALUE;
       break;
     case JES_OBJECT:
-      jes_serializer_render_opening_brace(ctx);
-      ctx->serdes.indention += ctx->serdes.tab_size;
+      ctx->serdes.renderer->opening_brace(ctx);
+      ctx->serdes.indention += JES_TAB_SIZE;
       ctx->serdes.state = JES_EXPECT_KEY;
       if (!HAS_CHILD(ctx->serdes.iter)) {
-        jes_serializer_render_closing_brace(ctx);
-        ctx->serdes.indention -= ctx->serdes.tab_size;
+        ctx->serdes.renderer->closing_brace(ctx);
+        ctx->serdes.indention -= JES_TAB_SIZE;
         ctx->serdes.state = JES_HAVE_ARRAY_VALUE;
       }
       break;
     case JES_ARRAY:
-      jes_serializer_render_opening_bracket(ctx);
-      ctx->serdes.indention += ctx->serdes.tab_size;
+      ctx->serdes.renderer->opening_bracket(ctx);
+      ctx->serdes.indention += JES_TAB_SIZE;
       ctx->serdes.state = JES_EXPECT_ARRAY_VALUE;
       if (!HAS_CHILD(ctx->serdes.iter)) {
-        jes_serializer_render_closing_bracket(ctx);
-        ctx->serdes.indention -= ctx->serdes.tab_size;
+        ctx->serdes.renderer->closing_bracket(ctx);
+        ctx->serdes.indention -= JES_TAB_SIZE;
         ctx->serdes.state = JES_HAVE_ARRAY_VALUE;
       }
       break;
@@ -305,7 +358,7 @@ static inline void jes_serializer_process_have_array_value_state(struct jes_cont
 
   while (iter) {
     if (HAS_SIBLING(iter)) {
-      jes_serializer_render_comma(ctx);
+      ctx->serdes.renderer->comma(ctx);
 
       if (PARENT_TYPE(ctx->node_mng, iter) == JES_ARRAY) {
         ctx->serdes.state = JES_EXPECT_ARRAY_VALUE;
@@ -318,17 +371,17 @@ static inline void jes_serializer_process_have_array_value_state(struct jes_cont
     else { /* node has no siblings. */
       iter = GET_PARENT(ctx->node_mng, iter);
       if (NODE_TYPE(iter) == JES_ARRAY) {
-        ctx->serdes.indention -= ctx->serdes.tab_size;
-        jes_serializer_render_new_line(ctx);
-        jes_serializer_render_closing_bracket(ctx);
+        ctx->serdes.indention -= JES_TAB_SIZE;
+        ctx->serdes.renderer->new_line(ctx);
+        ctx->serdes.renderer->closing_bracket(ctx);
       }
       else if (NODE_TYPE(iter) == JES_KEY) {
         ctx->serdes.state = JES_HAVE_KEY_VALUE;
       }
       else if (NODE_TYPE(iter) == JES_OBJECT) {
-        ctx->serdes.indention -= ctx->serdes.tab_size;
-        jes_serializer_render_new_line(ctx);
-        jes_serializer_render_closing_brace(ctx);
+        ctx->serdes.indention -= JES_TAB_SIZE;
+        ctx->serdes.renderer->new_line(ctx);
+        ctx->serdes.renderer->closing_brace(ctx);
         ctx->serdes.state = JES_HAVE_KEY_VALUE;
       }
     }
@@ -446,6 +499,39 @@ static enum jes_status jes_serialize(struct jes_context* ctx)
 
 uint32_t jes_render(struct jes_context *ctx, char* buffer, size_t buffer_length, bool compact)
 {
+  struct jes_renderer_set calculate_functions = {
+    .opening_brace    = jes_serializer_calculate_delimiter,
+    .closing_brace    = jes_serializer_calculate_delimiter,
+    .opening_bracket  = jes_serializer_calculate_delimiter,
+    .closing_bracket  = jes_serializer_calculate_delimiter,
+    .new_line         = jes_serializer_calculate_new_line,
+    .key              = jes_serializer_calculate_key,
+    .literal          = jes_serializer_claculate_literal,
+    .string           = jes_serializer_calculate_string,
+    .number           = jes_serializer_calculate_number,
+    .comma            = jes_serializer_calculate_delimiter,
+  };
+
+  struct jes_renderer_set render_functions = {
+    .opening_brace    = jes_serializer_render_opening_brace,
+    .closing_brace    = jes_serializer_render_closing_brace,
+    .opening_bracket  = jes_serializer_render_opening_bracket,
+    .closing_bracket  = jes_serializer_render_closing_bracket,
+    .new_line         = jes_serializer_render_new_line,
+    .key              = jes_serializer_render_key,
+    .literal          = jes_serializer_render_literal,
+    .string           = jes_serializer_render_string,
+    .number           = jes_serializer_render_number,
+    .comma            = jes_serializer_render_comma,
+  };
+
+  if (compact) {
+    calculate_functions.new_line = jes_serializer_calculate_compact_new_line;
+    calculate_functions.key      = jes_serializer_calculate_compact_key;
+    render_functions.new_line    = jes_serializer_render_compact_new_line;
+    render_functions.key         = jes_serializer_render_compact_key;
+  }
+
   if ((ctx == NULL) || !JES_IS_INITIATED(ctx)) {
     return 0;
   }
@@ -454,17 +540,16 @@ uint32_t jes_render(struct jes_context *ctx, char* buffer, size_t buffer_length,
     return 0;
   }
 
-  ctx->serdes.tab_size = 2;
   ctx->serdes.out_buffer = NULL;
-  ctx->serdes.compact = compact;
+  ctx->serdes.renderer = &calculate_functions;
   ctx->status = jes_serialize(ctx);
 
   if ((ctx->status == JES_NO_ERROR) && (buffer_length >= ctx->serdes.out_length)) {
     ctx->serdes.out_buffer = buffer;
     ctx->serdes.buffer_end = buffer + buffer_length;
     ctx->serdes.evaluated = true;
+    ctx->serdes.renderer = &render_functions;
     ctx->status = jes_serialize(ctx);
-
     if (ctx->status == JES_NO_ERROR) {
       buffer[ctx->serdes.out_length] = '\0';
     }
@@ -475,6 +560,23 @@ uint32_t jes_render(struct jes_context *ctx, char* buffer, size_t buffer_length,
 
 uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
 {
+  struct jes_renderer_set calculate_functions = {
+    .opening_brace    = jes_serializer_calculate_delimiter,
+    .closing_brace    = jes_serializer_calculate_delimiter,
+    .opening_bracket  = jes_serializer_calculate_delimiter,
+    .closing_bracket  = jes_serializer_calculate_delimiter,
+    .new_line         = jes_serializer_calculate_new_line,
+    .key              = jes_serializer_calculate_key,
+    .literal          = jes_serializer_claculate_literal,
+    .string           = jes_serializer_calculate_string,
+    .number           = jes_serializer_calculate_number,
+    .comma            = jes_serializer_calculate_delimiter,
+  };
+
+  if (compact) {
+    calculate_functions.new_line = jes_serializer_calculate_compact_new_line;
+    calculate_functions.key      = jes_serializer_calculate_compact_key;
+  }
 
   if ((ctx == NULL) || !JES_IS_INITIATED(ctx)) {
     return 0;
@@ -484,9 +586,9 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
     return 0;
   }
 
-  ctx->serdes.tab_size = 2;
   ctx->serdes.out_buffer = NULL;
-  ctx->serdes.compact = compact;
+  ctx->serdes.renderer = &calculate_functions;
+  printf("\n los...");
   ctx->status = jes_serialize(ctx);
 
   return ctx->serdes.out_length;
