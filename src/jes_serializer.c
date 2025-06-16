@@ -167,33 +167,35 @@ static inline void jes_serializer_process_start_state(struct jes_context* ctx)
       ctx->serdes.renderer->opening_brace(ctx);
       ctx->serdes.indention += JES_TAB_SIZE;
       ctx->serdes.state = JES_EXPECT_KEY;
+      ctx->serdes.renderer->new_line(ctx);
       break;
     case JES_KEY:
       ctx->serdes.renderer->key(ctx);
-      ctx->serdes.state = JES_EXPECT_KEY_VALUE;
+      ctx->serdes.state = JES_EXPECT_VALUE;
       break;
     case JES_ARRAY:
       ctx->serdes.renderer->opening_bracket(ctx);
       ctx->serdes.indention += JES_TAB_SIZE;
-      ctx->serdes.state = JES_EXPECT_ARRAY_VALUE;
+      ctx->serdes.state = JES_EXPECT_VALUE;
+      ctx->serdes.renderer->new_line(ctx);
       break;
     case JES_STRING:
       ctx->serdes.renderer->string(ctx);
       if (PARENT_TYPE(ctx->node_mng, ctx->serdes.iter) == JES_KEY) {
-        ctx->serdes.state = JES_HAVE_KEY_VALUE;
+        ctx->serdes.state = JES_HAVE_VALUE;
       }
       else if (PARENT_TYPE(ctx->node_mng, ctx->serdes.iter) == JES_ARRAY) {
-        ctx->serdes.state = JES_HAVE_ARRAY_VALUE;
+        ctx->serdes.state = JES_HAVE_VALUE;
       }
       break;
     case JES_NUMBER:
       ctx->serdes.renderer->number(ctx);
-      ctx->serdes.state = JES_HAVE_KEY_VALUE;
+      ctx->serdes.state = JES_HAVE_VALUE;
       if (PARENT_TYPE(ctx->node_mng, ctx->serdes.iter) == JES_KEY) {
-        ctx->serdes.state = JES_HAVE_KEY_VALUE;
+        ctx->serdes.state = JES_HAVE_VALUE;
       }
       else if (PARENT_TYPE(ctx->node_mng, ctx->serdes.iter) == JES_ARRAY) {
-        ctx->serdes.state = JES_HAVE_ARRAY_VALUE;
+        ctx->serdes.state = JES_HAVE_VALUE;
       }
       break;
     case JES_TRUE:
@@ -201,10 +203,10 @@ static inline void jes_serializer_process_start_state(struct jes_context* ctx)
     case JES_NULL:
       ctx->serdes.renderer->literal(ctx);
       if (PARENT_TYPE(ctx->node_mng, ctx->serdes.iter) == JES_KEY) {
-        ctx->serdes.state = JES_HAVE_KEY_VALUE;
+        ctx->serdes.state = JES_HAVE_VALUE;
       }
       else if (PARENT_TYPE(ctx->node_mng, ctx->serdes.iter) == JES_ARRAY) {
-        ctx->serdes.state = JES_HAVE_ARRAY_VALUE;
+        ctx->serdes.state = JES_HAVE_VALUE;
       }
       break;
     default:
@@ -218,9 +220,8 @@ static inline void jes_serializer_process_expect_key_state(struct jes_context* c
 {
   switch (NODE_TYPE(ctx->serdes.iter)) {
     case JES_KEY:
-      ctx->serdes.renderer->new_line(ctx);
       ctx->serdes.renderer->key(ctx);
-      ctx->serdes.state = JES_EXPECT_KEY_VALUE;
+      ctx->serdes.state = JES_EXPECT_VALUE;
       break;
     default:
       ctx->status = JES_UNEXPECTED_ELEMENT;
@@ -228,41 +229,47 @@ static inline void jes_serializer_process_expect_key_state(struct jes_context* c
   }
 }
 
-static inline void jes_serializer_process_expect_key_value_state(struct jes_context* ctx)
+static inline void jes_serializer_process_expect_value_state(struct jes_context* ctx)
 {
   switch (NODE_TYPE(ctx->serdes.iter)) {
     case JES_STRING:
       ctx->serdes.renderer->string(ctx);
-      ctx->serdes.state = JES_HAVE_KEY_VALUE;
+      ctx->serdes.state = JES_HAVE_VALUE;
       break;
     case JES_NUMBER:
       ctx->serdes.renderer->number(ctx);
-      ctx->serdes.state = JES_HAVE_KEY_VALUE;
+      ctx->serdes.state = JES_HAVE_VALUE;
       break;
     case JES_TRUE:
     case JES_FALSE:
     case JES_NULL:
       ctx->serdes.renderer->literal(ctx);
-      ctx->serdes.state = JES_HAVE_KEY_VALUE;
+      ctx->serdes.state = JES_HAVE_VALUE;
       break;
     case JES_OBJECT:
       ctx->serdes.renderer->opening_brace(ctx);
       ctx->serdes.indention += JES_TAB_SIZE;
       ctx->serdes.state = JES_EXPECT_KEY;
-      if (!HAS_CHILD(ctx->serdes.iter)) {
+      if (HAS_CHILD(ctx->serdes.iter)) {
+        ctx->serdes.renderer->new_line(ctx);
+      }
+      else { /* Empty OBJECT */
         ctx->serdes.renderer->closing_brace(ctx);
         ctx->serdes.indention -= JES_TAB_SIZE;
-        ctx->serdes.state = JES_HAVE_KEY_VALUE;
+        ctx->serdes.state = JES_HAVE_VALUE;
       }
       break;
     case JES_ARRAY:
       ctx->serdes.renderer->opening_bracket(ctx);
       ctx->serdes.indention += JES_TAB_SIZE;
-      ctx->serdes.state = JES_EXPECT_ARRAY_VALUE;
-      if (!HAS_CHILD(ctx->serdes.iter)) {
+      ctx->serdes.state = JES_EXPECT_VALUE;
+      if (HAS_CHILD(ctx->serdes.iter)) {
+        ctx->serdes.renderer->new_line(ctx);
+      }
+      else { /* Empty ARRAY */
         ctx->serdes.renderer->closing_bracket(ctx);
         ctx->serdes.indention -= JES_TAB_SIZE;
-        ctx->serdes.state = JES_HAVE_KEY_VALUE;
+        ctx->serdes.state = JES_HAVE_VALUE;
       }
       break;
     default:
@@ -271,7 +278,7 @@ static inline void jes_serializer_process_expect_key_value_state(struct jes_cont
   }
 }
 
-static inline void jes_serializer_process_have_key_value_state(struct jes_context* ctx)
+static inline void jes_serializer_process_have_value_state(struct jes_context* ctx)
 {
   struct jes_node* iter = ctx->serdes.iter;
 
@@ -279,9 +286,11 @@ static inline void jes_serializer_process_have_key_value_state(struct jes_contex
     if (HAS_SIBLING(iter)) {
       ctx->serdes.renderer->comma(ctx);
       if (PARENT_TYPE(ctx->node_mng, iter) == JES_ARRAY) {
-        ctx->serdes.state = JES_EXPECT_ARRAY_VALUE;
+        ctx->serdes.state = JES_EXPECT_VALUE;
+        ctx->serdes.renderer->new_line(ctx);
       }
       else {
+        ctx->serdes.renderer->new_line(ctx);
         ctx->serdes.state = JES_EXPECT_KEY;
       }
       break;
@@ -293,96 +302,14 @@ static inline void jes_serializer_process_have_key_value_state(struct jes_contex
         ctx->serdes.renderer->new_line(ctx);
         ctx->serdes.renderer->closing_bracket(ctx);
       }
-      else if (NODE_TYPE(iter) == JES_KEY) {
-        ctx->serdes.state = JES_HAVE_KEY_VALUE;
-      }
       else if (NODE_TYPE(iter) == JES_OBJECT) {
         ctx->serdes.indention -= JES_TAB_SIZE;
         ctx->serdes.renderer->new_line(ctx);
         ctx->serdes.renderer->closing_brace(ctx);
-        ctx->serdes.state = JES_HAVE_KEY_VALUE;
-      }
-    }
-  }
-}
-
-static inline void jes_serializer_process_expect_array_value_state(struct jes_context* ctx)
-{
-
-  ctx->serdes.renderer->new_line(ctx);
-  switch (NODE_TYPE(ctx->serdes.iter)) {
-    case JES_STRING:
-      ctx->serdes.renderer->string(ctx);
-      ctx->serdes.state = JES_HAVE_ARRAY_VALUE;
-      break;
-    case JES_NUMBER:
-      ctx->serdes.renderer->number(ctx);
-      ctx->serdes.state = JES_HAVE_ARRAY_VALUE;
-      break;
-    case JES_TRUE:
-    case JES_FALSE:
-    case JES_NULL:
-      ctx->serdes.renderer->literal(ctx);
-      ctx->serdes.state = JES_HAVE_ARRAY_VALUE;
-      break;
-    case JES_OBJECT:
-      ctx->serdes.renderer->opening_brace(ctx);
-      ctx->serdes.indention += JES_TAB_SIZE;
-      ctx->serdes.state = JES_EXPECT_KEY;
-      if (!HAS_CHILD(ctx->serdes.iter)) {
-        ctx->serdes.renderer->closing_brace(ctx);
-        ctx->serdes.indention -= JES_TAB_SIZE;
-        ctx->serdes.state = JES_HAVE_ARRAY_VALUE;
-      }
-      break;
-    case JES_ARRAY:
-      ctx->serdes.renderer->opening_bracket(ctx);
-      ctx->serdes.indention += JES_TAB_SIZE;
-      ctx->serdes.state = JES_EXPECT_ARRAY_VALUE;
-      if (!HAS_CHILD(ctx->serdes.iter)) {
-        ctx->serdes.renderer->closing_bracket(ctx);
-        ctx->serdes.indention -= JES_TAB_SIZE;
-        ctx->serdes.state = JES_HAVE_ARRAY_VALUE;
-      }
-      break;
-    default:
-      ctx->status = JES_UNEXPECTED_ELEMENT;
-      break;
-  }
-}
-
-static inline void jes_serializer_process_have_array_value_state(struct jes_context* ctx)
-{
-
-  struct jes_node* iter = ctx->serdes.iter;
-
-  while (iter) {
-    if (HAS_SIBLING(iter)) {
-      ctx->serdes.renderer->comma(ctx);
-
-      if (PARENT_TYPE(ctx->node_mng, iter) == JES_ARRAY) {
-        ctx->serdes.state = JES_EXPECT_ARRAY_VALUE;
+        ctx->serdes.state = JES_HAVE_VALUE;
       }
       else {
-        ctx->serdes.state = JES_EXPECT_KEY;
-      }
-      break;
-    }
-    else { /* node has no siblings. */
-      iter = GET_PARENT(ctx->node_mng, iter);
-      if (NODE_TYPE(iter) == JES_ARRAY) {
-        ctx->serdes.indention -= JES_TAB_SIZE;
-        ctx->serdes.renderer->new_line(ctx);
-        ctx->serdes.renderer->closing_bracket(ctx);
-      }
-      else if (NODE_TYPE(iter) == JES_KEY) {
-        ctx->serdes.state = JES_HAVE_KEY_VALUE;
-      }
-      else if (NODE_TYPE(iter) == JES_OBJECT) {
-        ctx->serdes.indention -= JES_TAB_SIZE;
-        ctx->serdes.renderer->new_line(ctx);
-        ctx->serdes.renderer->closing_brace(ctx);
-        ctx->serdes.state = JES_HAVE_KEY_VALUE;
+        ctx->serdes.state = JES_HAVE_VALUE;
       }
     }
   }
@@ -420,7 +347,7 @@ static inline struct jes_node* jes_serializer_get_node(struct jes_context* ctx)
 
   if (ctx->serdes.iter == NULL) {
     JES_LOG_STATE("\nJES.Serializer.State: ", ctx->serdes.state, "");
-    assert(ctx->serdes.state == JES_HAVE_ARRAY_VALUE || ctx->serdes.state == JES_HAVE_KEY_VALUE);
+    assert(ctx->serdes.state == JES_HAVE_VALUE);
     ctx->serdes.state = JES_END;
   }
   /* Return NULL if traversal is complete */
@@ -452,19 +379,12 @@ static enum jes_status jes_serialize(struct jes_context* ctx)
       case JES_EXPECT_KEY:
         jes_serializer_process_expect_key_state(ctx);
         break;
-      case JES_EXPECT_KEY_VALUE:
-        jes_serializer_process_expect_key_value_state(ctx);
-        if (ctx->serdes.state == JES_HAVE_KEY_VALUE) { continue; }
+      case JES_EXPECT_VALUE:
+        jes_serializer_process_expect_value_state(ctx);
+        if (ctx->serdes.state == JES_HAVE_VALUE) { continue; }
         break;
-      case JES_HAVE_KEY_VALUE:
-        jes_serializer_process_have_key_value_state(ctx);
-        break;
-      case JES_EXPECT_ARRAY_VALUE:
-        jes_serializer_process_expect_array_value_state(ctx);
-        if (ctx->serdes.state == JES_HAVE_ARRAY_VALUE) { continue; }
-        break;
-      case JES_HAVE_ARRAY_VALUE:
-         jes_serializer_process_have_array_value_state(ctx);
+      case JES_HAVE_VALUE:
+        jes_serializer_process_have_value_state(ctx);
         break;
       default:
         assert(0);

@@ -17,7 +17,7 @@ struct jes_context* jes_init(void* buffer, size_t buffer_size)
   if ((buffer == NULL) || buffer_size < sizeof(struct jes_context)) {
     return NULL;
   }
-  printf("\n size of jes_context: %d",sizeof(*ctx));
+  //printf("\n size of jes_context: %d",sizeof(*ctx));
   memset(ctx, 0, sizeof(*ctx));
 
   ctx->status = JES_NO_ERROR;
