@@ -310,7 +310,7 @@ static enum jes_status jes_serialize(struct jes_context* ctx)
 
   ctx->serdes.state = JES_EXPECT_VALUE;
   ctx->serdes.iter = NULL;
-  ctx->serdes.out_length = sizeof('\0');
+  ctx->serdes.out_length = sizeof(char); /* NUL termination */
   ctx->serdes.indention = 0;
 
   do {

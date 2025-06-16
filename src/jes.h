@@ -90,7 +90,7 @@
 #define JES_ALLOW_TOPLEVEL_ANY
 
 
-#define JES_TAB_SIZE 4
+#define JES_TAB_SIZE 2
 
 //#define JES_ENABLE_TOKEN_LOG
 //#define JES_ENABLE_PARSER_NODE_LOG
