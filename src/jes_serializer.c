@@ -324,7 +324,7 @@ static inline struct jes_node* jes_serializer_get_node(struct jes_context* ctx)
   return ctx->serdes.iter;
 }
 
-static enum jes_status jes_serializer_state_machine(struct jes_context* ctx, struct jes_serializer* serializer)
+static void jes_serializer_state_machine(struct jes_context* ctx, struct jes_serializer* serializer)
 {
   assert(ctx != NULL);
 
@@ -376,8 +376,6 @@ static enum jes_status jes_serializer_state_machine(struct jes_context* ctx, str
 #if defined(JES_ENABLE_SERIALIZER_STATE_LOG)
     JES_LOG_STATE("\nJES.Serializer.State: ", ctx->serdes.state, "");
 #endif
-
-  return ctx->status;
 }
 
 /* Dual-pass JSON serializer that renders the JES tree structure into a string buffer.
@@ -415,7 +413,8 @@ uint32_t jes_render(struct jes_context *ctx, char* buffer, size_t buffer_length,
                                : jes_serializer_calculate_new_line;
   serializer.out_buffer = NULL;
   serializer.evaluated = false;
-  ctx->status = jes_serializer_state_machine(ctx, &serializer);
+
+  jes_serializer_state_machine(ctx, &serializer);
 
   if ((ctx->status == JES_NO_ERROR) && (buffer_length >= serializer.out_length)) {
 
@@ -437,13 +436,14 @@ uint32_t jes_render(struct jes_context *ctx, char* buffer, size_t buffer_length,
     serializer.buffer_end = buffer + buffer_length;
     serializer.evaluated = true;
 
-    ctx->status = jes_serializer_state_machine(ctx, &serializer);
+    jes_serializer_state_machine(ctx, &serializer);
+
     if (ctx->status == JES_NO_ERROR) {
       buffer[serializer.out_length] = '\0';
     }
   }
 
-  return serializer.out_length;
+  return (ctx->status == JES_NO_ERROR) ? serializer.out_length : 0;
 }
 
 uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
@@ -475,7 +475,7 @@ uint32_t jes_evaluate(struct jes_context *ctx, bool compact)
   serializer.out_buffer = NULL;
   serializer.evaluated = false;
 
-  ctx->status = jes_serializer_state_machine(ctx, &serializer);
+  jes_serializer_state_machine(ctx, &serializer);
 
-  return serializer.out_length;
+  return (ctx->status == JES_NO_ERROR) ? serializer.out_length : 0;
 }
