@@ -23,7 +23,7 @@
  * - Enabling 32-bit descriptors doubles the memory consumption for node reference
  *   fields (parent, first_child, last_child, and sibling)
  */
-#define JES_USE_32BIT_NODE_DESCRIPTOR
+//#define JES_USE_32BIT_NODE_DESCRIPTOR
 
 /**
  * JES_MAX_VALUE_LENGTH
@@ -92,9 +92,9 @@
 
 #define JES_TAB_SIZE 2
 
-//#define JES_ENABLE_TOKEN_LOG
-//#define JES_ENABLE_PARSER_NODE_LOG
-//#define JES_ENABLE_PARSER_STATE_LOG
+#define JES_ENABLE_TOKEN_LOG
+#define JES_ENABLE_PARSER_NODE_LOG
+#define JES_ENABLE_PARSER_STATE_LOG
 #define JES_ENABLE_SERIALIZER_NODE_LOG
 #define JES_ENABLE_SERIALIZER_STATE_LOG
 
