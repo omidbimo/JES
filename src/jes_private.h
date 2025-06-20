@@ -44,15 +44,15 @@ typedef uint16_t jes_node_descriptor;
 struct jes_element;
 
 enum jes_state {
-  JES_START,
+  //JES_START,
   JES_EXPECT_KEY,
   JES_EXPECT_COLON,
   JES_EXPECT_VALUE,
   JES_HAVE_VALUE,
-  JES_EXPECT_KEY_VALUE,
-  JES_HAVE_KEY_VALUE,
-  JES_EXPECT_ARRAY_VALUE,
-  JES_HAVE_ARRAY_VALUE,
+  //JES_EXPECT_KEY_VALUE,
+  //JES_HAVE_KEY_VALUE,
+  //JES_EXPECT_ARRAY_VALUE,
+  //JES_HAVE_ARRAY_VALUE,
   JES_EXPECT_EOF,
   JES_END,
 };
@@ -79,7 +79,6 @@ struct jes_token {
   size_t length;
   const char* value;
 };
-
 
 struct jes_node {
   /* Element containing TLV JSON data.
@@ -141,14 +140,11 @@ struct jes_tokenizer_context {
   struct jes_token token;
 };
 
-
-
 struct jes_serdes_context {
   /* State of the parser state machine or the serializer state machine */
   enum jes_state state;
   /* Internal node iterator */
   struct jes_node* iter;
-  size_t tab_size;
   /* Tokenizer subsystem state. */
   struct jes_tokenizer_context tokenizer;
 };

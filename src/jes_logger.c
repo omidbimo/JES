@@ -51,15 +51,10 @@ static char jes_node_type_str[][JES_HELPER_STR_LENGTH] = {
 };
 
 static char jes_state_str[][JES_HELPER_STR_LENGTH] = {
-  "START",
   "EXPECT_KEY",
   "EXPECT_COLON",
   "EXPECT_VALUE",
   "HAVE_VALUE",
-  "EXPECT_KEY_VALUE",
-  "HAVE_KEY_VALUE",
-  "EXPECT_ARRAY_VALUE",
-  "HAVE_ARRAY_VALUE",
   "EXPECT_EOF",
   "END",
 };
