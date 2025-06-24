@@ -98,7 +98,6 @@
 #define JES_ENABLE_SERIALIZER_NODE_LOG
 #define JES_ENABLE_SERIALIZER_STATE_LOG
 
-
 typedef enum jes_status {
   JES_NO_ERROR = 0,
   JES_PARSING_FAILED,
@@ -113,6 +112,7 @@ typedef enum jes_status {
   JES_INVALID_CONTEXT,
   JES_BROKEN_TREE,
   JES_DUPLICATE_KEY,
+  JES_INVALID_UNICODE,
 } jes_status;
 
 enum jes_type {
@@ -151,6 +151,9 @@ struct jes_context;
  * return pointer to context or NULL in case of a failure.
  */
 struct jes_context* jes_init(void *buffer, size_t buffer_size);
+
+/* */
+size_t jes_get_context_size(void);
 
 void jes_reset(struct jes_context *ctx);
 
