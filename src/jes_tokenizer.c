@@ -16,7 +16,7 @@
 #define IS_DIGIT(c) ((c >= '0') && (c <= '9'))
 #define IS_ESCAPE(c) ((c=='\\') || (c=='\"') || (c=='\/') || (c=='\b') || \
                       (c=='\f') || (c=='\n') || (c=='\r') || (c=='\t') || (c == '\u'))
-
+#define IS_HEXADECIMAL(c) (
 #define JES_TOKENIZER_LOOK_AHEAD(current_ptr, end_ptr) (((current_ptr + 1) < (end_ptr)) ? *(current_ptr + 1) : '\0')
 #define JES_TOKENIZER_GET_CHAR(current_ptr, end_ptr)  (((current_ptr) < (end_ptr)) ? current_ptr++ : NULL)
 
@@ -100,6 +100,11 @@
 
 */
 
+static bool jes_tokenizer_process_string_token(struct jes_context*,
+                                               struct jes_token*,
+                                               const char*,
+                                               const char*);
+
 static inline bool jes_tokenizer_set_delimiter_token(struct jes_token* token,
                                                      const char* char_ptr)
 {
@@ -125,10 +130,10 @@ static inline bool jes_is_delimiter_token(char ch)
 }
 
 /* Token type is NUMBER. Try to feed it with more symbols. */
-static inline bool jes_tokenizer_process_exponent_token(struct jes_context* ctx,
-                                                        struct jes_token* token,
-                                                        const char* current,
-                                                        const char* end)
+static bool jes_tokenizer_process_exponent_token(struct jes_context* ctx,
+                                                 struct jes_token* token,
+                                                 const char* current,
+                                                 const char* end)
 {
   bool end_of_token = false;
   char ch = *current;
@@ -156,10 +161,10 @@ static inline bool jes_tokenizer_process_exponent_token(struct jes_context* ctx,
 }
 
 /* Token type is NUMBER. Try to feed it with more symbols. */
-static inline bool jes_tokenizer_process_decimal_fraction_token(struct jes_context* ctx,
-                                                                struct jes_token* token,
-                                                                const char* current,
-                                                                const char* end)
+static bool jes_tokenizer_process_decimal_fraction_token(struct jes_context* ctx,
+                                                         struct jes_token* token,
+                                                         const char* current,
+                                                         const char* end)
 {
   bool end_of_token = false;
   char ch = *current;
@@ -186,10 +191,10 @@ static inline bool jes_tokenizer_process_decimal_fraction_token(struct jes_conte
 }
 
 /* Token type is NUMBER. Try to feed it with more symbols. */
-static inline bool jes_tokenizer_process_integer_token(struct jes_context* ctx,
-                                                       struct jes_token* token,
-                                                       const char* current,
-                                                       const char* end)
+static bool jes_tokenizer_process_integer_token(struct jes_context* ctx,
+                                                struct jes_token* token,
+                                                const char* current,
+                                                const char* end)
 {
   bool end_of_token = false;
   char ch = *current;
@@ -224,10 +229,94 @@ static inline bool jes_tokenizer_process_integer_token(struct jes_context* ctx,
   return end_of_token;
 }
 
-static inline bool jes_tokenizer_process_string_token(struct jes_context* ctx,
-                                                      struct jes_token* token,
-                                                      const char* current,
-                                                      const char* end)
+/* Convert a stream 4 hexadecimal ascii encoded numbers into a 16-bit integer */
+static inline bool jes_tokenizer_get_utf_16_value(const char *xxyy, uint16_t *result)
+{
+  size_t index;
+  bool is_valid_utf_16 = true;
+  *result  = 0;
+
+  for (index = 0; index < sizeof("xxyy") - 1; index++) {
+    *result <<= 4; /* Each character represents a nibble. 4-bit left shift */
+    if (xxyy[index] >= '0' && xxyy[index] <= '9') { *result += xxyy[index] - '0'; }
+    else if (xxyy[index] >= 'A' && xxyy[index] <= 'F') { *result += xxyy[index] - 'A' + 0xA; }
+    else if (xxyy[index] >= 'a' && xxyy[index] <= 'f') { *result += xxyy[index] - 'a' + 0xA; }
+    else {
+      is_valid_utf_16 = false;
+      break;
+    }
+  }
+
+  return is_valid_utf_16;
+}
+
+static bool jes_tokenizer_process_escaped_utf_16_token(struct jes_context* ctx,
+                                                       struct jes_token* token,
+                                                       const char* current,
+                                                       const char* end)
+{
+  bool tokenizing_completed = false;
+  char ch = *current;
+  enum jes_status err = JES_NO_ERROR;
+
+  if ((ch == '\"') || (ch =='\b') || (ch =='\f') || (ch =='\n') || (ch =='\r') ||
+           (ch =='\t')) {
+    ctx->status = JES_UNEXPECTED_SYMBOL;
+    tokenizing_completed = true;
+  }
+  else {
+    token->length++;
+    ctx->serdes.tokenizer.escaped_utf_16_length++;
+  }
+  /*
+    Validate utf_16 if token has the right size.
+    Valid unicode code points
+    Basic Multilingual Plane: U+0000 - U+D7FF and U+E000 - U+FFFF
+    Surrogate pair: High Surrogate: U+D800 - U+DBFF
+                    Low Surrogate:  U+DC00 - U+DFFF
+  */
+  if (ctx->serdes.tokenizer.escaped_utf_16_length == (sizeof("\\uXXXX") - 1)) {
+    uint16_t utf_16_int;
+    err = JES_INVALID_UNICODE;
+
+    if ((ctx->serdes.tokenizer.escaped_utf_16[0] == '\\') && (ctx->serdes.tokenizer.escaped_utf_16[1] == 'u')) {
+      if (jes_tokenizer_get_utf_16_value(&ctx->serdes.tokenizer.escaped_utf_16[2], &utf_16_int)) {
+        if (utf_16_int < 0xD800 || utf_16_int < 0xDBFF) {
+          /* valid 16-bit BMP code point. Switch to normal string tokenizer. */
+          err = JES_NO_ERROR;
+          ctx->serdes.tokenizer.typed_tokenizer_fn = jes_tokenizer_process_string_token;
+        }
+        else {
+          /* NOP. The unicode value is in the range of Surrogate pair. Consume more
+            bytes and validate the pair later. */
+        }
+      }
+    }
+  }
+  else if (ctx->serdes.tokenizer.escaped_utf_16_length == (sizeof("\\uXXXX\\uXXXX") - 1)) {
+    /* Validating the Surrogate pair. */
+    uint16_t low_surrogate;
+    err = JES_INVALID_UNICODE;
+
+    if ((ctx->serdes.tokenizer.escaped_utf_16[6] == '\\') || (ctx->serdes.tokenizer.escaped_utf_16[7] == 'u')) {
+      if (jes_tokenizer_get_utf_16_value(&ctx->serdes.tokenizer.escaped_utf_16[8], &low_surrogate)) {
+        if (low_surrogate >= 0xDC00 && low_surrogate <= 0xDFFF) {
+          /* Unicode is valid. Switch to normal string tokenizer. */
+          err = JES_NO_ERROR;
+          ctx->serdes.tokenizer.typed_tokenizer_fn = jes_tokenizer_process_string_token;
+        }
+      }
+    }
+  }
+
+  ctx->status = err;
+  return ctx->status == JES_NO_ERROR ? false : true;
+}
+
+static bool jes_tokenizer_process_string_token(struct jes_context* ctx,
+                                               struct jes_token* token,
+                                               const char* current,
+                                               const char* end)
 {
   bool tokenizing_completed = false;
   char ch = *current;
@@ -235,8 +324,14 @@ static inline bool jes_tokenizer_process_string_token(struct jes_context* ctx,
   if (ch == '\"') { /* End of STRING. '\"' symbol isn't a part of token. */
     tokenizing_completed = true;
   }
+  else if ((ch == '\\') && JES_TOKENIZER_LOOK_AHEAD(current, end) == 'u') {
+    ctx->serdes.tokenizer.typed_tokenizer_fn = jes_tokenizer_process_escaped_utf_16_token;
+    ctx->serdes.tokenizer.escaped_utf_16_length = 0;
+    ctx->serdes.tokenizer.escaped_utf_16 = current;
+    ctx->serdes.tokenizer.typed_tokenizer_fn(ctx, token, current, end);
+  }
   else if ((ch =='\b') || (ch =='\f') || (ch =='\n') || (ch =='\r') ||
-           (ch =='\t') || (ch =='\\')) {
+           (ch =='\t')) {
     ctx->status = JES_UNEXPECTED_SYMBOL;
     tokenizing_completed = true;
   }
@@ -248,10 +343,10 @@ static inline bool jes_tokenizer_process_string_token(struct jes_context* ctx,
 }
 
 
-static inline bool jes_tokenizer_process_literal_token(struct jes_context* ctx,
-                                                       struct jes_token* token,
-                                                       char* str,
-                                                       uint16_t str_len)
+static bool jes_tokenizer_process_literal_token(struct jes_context* ctx,
+                                                struct jes_token* token,
+                                                char* str,
+                                                uint16_t str_len)
 {
   bool tokenizing_completed = false;
   token->length++;
@@ -264,10 +359,10 @@ static inline bool jes_tokenizer_process_literal_token(struct jes_context* ctx,
   return tokenizing_completed;
 }
 
-static inline bool jes_tokenizer_get_null_true_false(struct jes_context* ctx,
-                                                     struct jes_token* token,
-                                                     const char* current,
-                                                     const char* end)
+static bool jes_tokenizer_get_null_true_false(struct jes_context* ctx,
+                                              struct jes_token* token,
+                                              const char* current,
+                                              const char* end)
 {
   bool tokenizing_completed = true;
 
