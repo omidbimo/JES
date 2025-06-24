@@ -44,15 +44,10 @@ typedef uint16_t jes_node_descriptor;
 struct jes_element;
 
 enum jes_state {
-  //JES_START,
   JES_EXPECT_KEY,
   JES_EXPECT_COLON,
   JES_EXPECT_VALUE,
   JES_HAVE_VALUE,
-  //JES_EXPECT_KEY_VALUE,
-  //JES_HAVE_KEY_VALUE,
-  //JES_EXPECT_ARRAY_VALUE,
-  //JES_HAVE_ARRAY_VALUE,
   JES_EXPECT_EOF,
   JES_END,
 };
@@ -125,19 +120,22 @@ struct jes_node_mng_context {
 struct jes_cursor {
   /* Points to the next character in JSON document to be tokenized */
   const char* pos;
-  /*  */
+  /* The current column number in the JSON input that is being processed */
   size_t  column;
   /* The current line number in the JSON input that is being processed */
   size_t  line_number;
 };
 
 struct jes_tokenizer_context {
-  /*  */
+  /* The cursor contains the information about the current character in the
+     input JSON that is being processed. */
   struct jes_cursor cursor;
   /* To dynamically switch tokenizer functions when detecting Integers, fractions and exponents */
   bool (*typed_tokenizer_fn) (struct jes_context* ctx, struct jes_token* token, const char* current, const char* end);
   /* Holds the last token delivered by tokenizer. */
   struct jes_token token;
+  const char* escaped_utf_16;
+  size_t escaped_utf_16_length;
 };
 
 struct jes_serdes_context {

@@ -17,7 +17,7 @@ struct jes_context* jes_init(void* buffer, size_t buffer_size)
   if ((buffer == NULL) || buffer_size < sizeof(struct jes_context)) {
     return NULL;
   }
-  printf("\n size of jes_context: %d",sizeof(*ctx));
+
   memset(ctx, 0, sizeof(*ctx));
 
   ctx->status = JES_NO_ERROR;
@@ -756,3 +756,7 @@ struct jes_element* jes_load(struct jes_context* ctx, const char* json_data, uin
   return ctx->status == JES_NO_ERROR ? (struct jes_element*)ctx->node_mng.root : NULL;
 }
 
+size_t jes_get_context_size(void)
+{
+  return sizeof(struct jes_context);
+}
