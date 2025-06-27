@@ -130,12 +130,8 @@ struct jes_tokenizer_context {
   /* The cursor contains the information about the current character in the
      input JSON that is being processed. */
   struct jes_cursor cursor;
-  /* To dynamically switch tokenizer functions when detecting Integers, fractions and exponents */
-  bool (*typed_tokenizer_fn) (struct jes_context* ctx, struct jes_token* token, const char* current, const char* end);
   /* Holds the last token delivered by tokenizer. */
   struct jes_token token;
-  const char* escaped_utf_16;
-  size_t escaped_utf_16_length;
 };
 
 struct jes_serdes_context {

@@ -20,6 +20,7 @@ static char jes_status_str[][JES_HELPER_STR_LENGTH] = {
   "BROKEN_TREE",
   "DUPLICATE_KEY",
   "INVALID_UNICODE",
+  "INVALID_NUMBER",
 };
 
 static char jes_token_type_str[][JES_HELPER_STR_LENGTH] = {

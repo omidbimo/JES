@@ -89,7 +89,6 @@
 //#define JES_ALLOW_TOPLEVEL_ARRAY
 #define JES_ALLOW_TOPLEVEL_ANY
 
-
 #define JES_TAB_SIZE 2
 
 #define JES_ENABLE_TOKEN_LOG
@@ -113,6 +112,7 @@ typedef enum jes_status {
   JES_BROKEN_TREE,
   JES_DUPLICATE_KEY,
   JES_INVALID_UNICODE,
+  JES_INVALID_NUMBER,
 } jes_status;
 
 enum jes_type {
