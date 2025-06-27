@@ -32,6 +32,8 @@ int main(void)
         "{\"key\": [\"value\", {}]}",
         "     {    \"key\"     :   \"value\"    }   ",
         "{\"key\": {\"key\": [\"value1\", [{\"key\": \"value\"}, \"value\", [{}]]]}}",
+        "{\"\": \"value\"}",
+        "{\"\": \"\"}",
         };
 
   const char json_str_negative_tests[][500] = {
@@ -121,7 +123,7 @@ int main(void)
       return -1;
     }
     for (idx = 2; idx <= sizeof("{\"key\":\"value\"}"); idx++) {
-      printf("\n Parsing %.*s ", sizeof("{\"key\":\"value\"}")-idx, "{\"key\":\"value\"}");
+      printf("\n Parsing: %.*s ", sizeof("{\"key\":\"value\"}")-idx, "{\"key\":\"value\"}");
       if (NULL == jes_load(doc, "{\"key\":\"value\"}", sizeof("{\"key\":\"value\"}")-idx)) {
         printf("  %s", jes_stringify_status(doc, err_msg, sizeof(err_msg)));
       }
