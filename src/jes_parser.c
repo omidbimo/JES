@@ -302,18 +302,18 @@ static inline void jes_parser_process_expect_colon_state(struct jes_context* ctx
 void jes_parse(struct jes_context *ctx)
 {
   assert(ctx != NULL);
-  assert(ctx->json_data != NULL);
-  assert(ctx->json_length != 0);
+  assert(ctx->serdes.tokenizer.json_data != NULL);
+  assert(ctx->serdes.tokenizer.json_length != 0);
 
   ctx->serdes.state = JES_EXPECT_VALUE;
 
-  jes_tokenizer_reset_cursor(ctx);
+  jes_tokenizer_reset_cursor(&ctx->serdes.tokenizer);
 
 #if defined(JES_ENABLE_PARSER_STATE_LOG)
     JES_LOG_STATE("\nJES.Parser.State: ", ctx->serdes.state, "");
 #endif
 
-  while ((ctx->status == JES_NO_ERROR) && (ctx->serdes.state != JES_END) && (jes_tokenizer_get_token(ctx) == JES_NO_ERROR)) {
+  while ((ctx->status == JES_NO_ERROR) && (ctx->serdes.state != JES_END) && (jes_tokenizer_get_token(&ctx->serdes.tokenizer) == JES_NO_ERROR)) {
 
     switch (ctx->serdes.state) {
       case JES_EXPECT_KEY:

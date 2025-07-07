@@ -63,13 +63,14 @@ static char jes_state_str[][JES_HELPER_STR_LENGTH] = {
 
 void jes_log_token(uint16_t token_type,
                    size_t line_numebr,
+                   size_t column,
                    size_t token_pos,
                    size_t token_len,
                    const char *token_value)
 {
-  printf("\nJES.Token: [Ln: %4d, Pos: %5d, Len: %3d] %-16s \"%.*s\"",
-          line_numebr, token_pos, token_len, jes_token_type_str[token_type],
-          token_len, token_value);
+  printf("\nJES.Token: [Ln: %u, Col: %u, Pos: %u, Len: %d] %-16s \"%.*s\"",
+          line_numebr, column, token_pos, token_len,
+          jes_token_type_str[token_type], token_len, token_value);
 }
 
 void jes_log_node(const char *pre_msg,

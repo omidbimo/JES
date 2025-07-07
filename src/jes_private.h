@@ -120,13 +120,23 @@ struct jes_node_mng_context {
 struct jes_cursor {
   /* Points to the next character in JSON document to be tokenized */
   const char* pos;
+  const char* end;
   /* The current column number in the JSON input that is being processed */
   size_t  column;
   /* The current line number in the JSON input that is being processed */
   size_t  line_number;
+
+
 };
 
 struct jes_tokenizer_context {
+  /* Pointer to the JSON data buffer to be parsed.
+   * Must remain valid throughout the parsing operation.
+   * The library does not take ownership - caller must manage memory. */
+  const char* json_data;
+  /* Size of the JSON data buffer in bytes.
+   * Must accurately reflect the length of data at json_data pointer (without NUL termination) */
+  uint32_t  json_length;
   /* The cursor contains the information about the current character in the
      input JSON that is being processed. */
   struct jes_cursor cursor;
@@ -188,13 +198,6 @@ struct jes_context {
   /* Indicates success/failure state of the most recent JES operation.
    * Check against JES_STATUS_* constants for specific meanings. */
   uint32_t status;
-  /* Pointer to the JSON data buffer to be parsed.
-   * Must remain valid throughout the parsing operation.
-   * The library does not take ownership - caller must manage memory. */
-  const char* json_data;
-  /* Size of the JSON data buffer in bytes.
-   * Must accurately reflect the length of data at json_data pointer (without NUL termination) */
-  uint32_t  json_length;
   /* User-provided working memory buffer for all JES operations.
    * It will be fragmented to hold the jes context, node allocations and the hash table entries.
    * Must remain available throughout the context's lifetime. */

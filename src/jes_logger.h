@@ -7,6 +7,7 @@
 /* */
 void jes_log_token(uint16_t token_type,
                    size_t line_numebr,
+                   size_t column,
                    size_t token_pos,
                    size_t token_len,
                    const char* token_value);

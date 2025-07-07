@@ -22,8 +22,6 @@ struct jes_context* jes_init(void* buffer, size_t buffer_size)
 
   ctx->status = JES_NO_ERROR;
 
-  ctx->json_data = NULL;
-  ctx->json_length = 0;
   ctx->workspace = buffer;
   ctx->workspace_size = buffer_size;
   jes_tree_init(ctx, (struct jes_context*)ctx->workspace + 1, ctx->workspace_size - sizeof(*ctx));
@@ -36,7 +34,7 @@ void jes_reset(struct jes_context* ctx)
 {
   if ((ctx != NULL) && JES_IS_INITIATED(ctx)) {
     ctx->status = JES_NO_ERROR;
-    ctx->json_data = NULL;
+    ctx->serdes.tokenizer.json_data = NULL;
     jes_tree_init(ctx, (struct jes_context*)ctx->workspace + 1, ctx->workspace_size - sizeof(*ctx));
   }
 }
@@ -749,8 +747,8 @@ struct jes_element* jes_load(struct jes_context* ctx, const char* json_data, uin
 
   jes_reset(ctx);
 
-  ctx->json_data = json_data;
-  ctx->json_length = json_length;
+  ctx->serdes.tokenizer.json_data = json_data;
+  ctx->serdes.tokenizer.json_length = json_length;
   jes_parse(ctx);
 
   return ctx->status == JES_NO_ERROR ? (struct jes_element*)ctx->node_mng.root : NULL;
