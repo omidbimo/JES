@@ -338,7 +338,7 @@ static void jes_tokenizer_process_escaped_utf_16_token(struct jes_cursor* cursor
       uint16_t utf_16_int;
 
       if (jes_tokenizer_utf_16_str2hex(&escaped_utf_16[0], &utf_16_int)) {
-        if (utf_16_int > 0xD800 || utf_16_int < 0xDFFF) {
+        if (utf_16_int < 0xD800 || utf_16_int > 0xDFFF) {
           /* valid 16-bit BMP code point. Switch to normal string tokenizer. */
           *status = JES_NO_ERROR;
           break;
