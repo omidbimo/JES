@@ -125,8 +125,6 @@ struct jes_cursor {
   size_t  column;
   /* The current line number in the JSON input that is being processed */
   size_t  line_number;
-
-
 };
 
 struct jes_tokenizer_context {
