@@ -506,6 +506,7 @@ enum jes_status jes_tokenizer_get_token(struct jes_tokenizer_context* ctx)
   JES_LOG_TOKEN(token.type, ctx->cursor.line_number, ctx->cursor.column, (token.value - ctx->json_data) + 1, token.length, token.value);
 #endif
   ctx->token = token;
+  printf("\n %d", status);
   return status;
 }
 

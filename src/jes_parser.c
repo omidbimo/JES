@@ -108,13 +108,8 @@ static inline void jes_parser_process_closing_bracket(struct jes_context* ctx)
   }
 
   if (ctx->serdes.iter == NULL) {
-#if defined(JES_ALLOW_TOPLEVEL_ARRAY)
     /* We've reached the root level, expect end of file */
     ctx->serdes.state = JES_EXPECT_EOF;
-#else
-    /* We've reached the root level, This should never inside an array happen */
-    ctx->status = JES_PARSING_FAILED;
-#endif
     return;
   }
 
@@ -141,19 +136,16 @@ static inline void jes_parser_process_comma(struct jes_context* ctx)
 
 static inline void jes_parser_process_start_state(struct jes_context* ctx)
 {
+        printf("\nhere");
   switch (ctx->serdes.tokenizer.token.type) {
     case JES_TOKEN_OPENING_BRACE:
       jes_parser_process_opening_brace(ctx);
       break;
     case JES_TOKEN_OPENING_BRACKET:
-#if defined(JES_ALLOW_TOPLEVEL_ARRAY) || defined(JES_ALLOW_TOPLEVEL_ANY)
       jes_parser_process_opening_bracket(ctx);
-#else
-      ctx->serdes.state = JES_UNEXPECTED_TOKEN;
-#endif
       break;
-#if defined(JES_ALLOW_TOPLEVEL_ANY)
     case JES_TOKEN_STRING:
+
       ctx->serdes.iter = jes_tree_insert_node(ctx, ctx->serdes.iter, GET_LAST_CHILD(ctx->node_mng, ctx->serdes.iter),
                               JES_STRING, ctx->serdes.tokenizer.token.length, ctx->serdes.tokenizer.token.value);
       ctx->serdes.state = JES_EXPECT_EOF;
@@ -178,7 +170,6 @@ static inline void jes_parser_process_start_state(struct jes_context* ctx)
                               JES_NULL, ctx->serdes.tokenizer.token.length, ctx->serdes.tokenizer.token.value);
       ctx->serdes.state = JES_EXPECT_EOF;
       break;
-#endif
     default:
       ctx->status = JES_UNEXPECTED_TOKEN;
       break;
@@ -281,6 +272,14 @@ static inline void jes_parser_process_have_value_state(struct jes_context* ctx)
         default:
           ctx->status = JES_UNEXPECTED_TOKEN;
           break;
+      }
+      break;
+    case JES_TOKEN_EOF:
+      if (!HAS_PARENT(ctx->serdes.iter) && !HAS_CHILD(ctx->serdes.iter)) {
+        ctx->serdes.state = JES_END;
+      }
+      else {
+        ctx->status = JES_UNEXPECTED_TOKEN;
       }
       break;
     default:
