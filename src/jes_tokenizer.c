@@ -269,12 +269,13 @@ static inline bool jes_tokenizer_process_integer_token(struct jes_cursor* cursor
       break;
     }
     else { /* Got a digit */
+      token->length++;
       /* Integers with leading zeros are invalid JSON numbers */
-      if ((token->length == 1) && (*token->value == '0')) {
+      if ((token->length == 2) && (*token->value == '0')) {
         *status = JES_INVALID_NUMBER;
         break;
       }
-      token->length++;
+
     }
   }
 
@@ -506,7 +507,6 @@ enum jes_status jes_tokenizer_get_token(struct jes_tokenizer_context* ctx)
   JES_LOG_TOKEN(token.type, ctx->cursor.line_number, ctx->cursor.column, (token.value - ctx->json_data) + 1, token.length, token.value);
 #endif
   ctx->token = token;
-  printf("\n %d", status);
   return status;
 }
 
