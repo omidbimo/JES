@@ -191,6 +191,9 @@ static inline void jes_parser_process_expect_key_state(struct jes_context* ctx)
   case JES_TOKEN_CLOSING_BRACE:
     jes_parser_process_closing_brace(ctx);
     break;
+  case JES_TOKEN_EOF:
+    ctx->status = JES_UNEXPECTED_EOF;
+    break;
   default:
     ctx->status = JES_UNEXPECTED_TOKEN;
     break;
@@ -231,11 +234,24 @@ static inline void jes_parser_process_expect_value_state(struct jes_context* ctx
       ctx->serdes.state = JES_EXPECT_KEY;
       break;
     case JES_TOKEN_CLOSING_BRACKET:
-      jes_parser_process_closing_bracket(ctx);
+      if (ctx->serdes.iter == NULL) {
+        ctx->status = JES_UNEXPECTED_TOKEN;
+      }
+      else {
+        jes_parser_process_closing_bracket(ctx);
+      }
       return;
     case JES_TOKEN_CLOSING_BRACE:
-      jes_parser_process_closing_brace(ctx);
+      if (ctx->serdes.iter == NULL) {
+        ctx->status = JES_UNEXPECTED_TOKEN;
+      }
+      else {
+        jes_parser_process_closing_brace(ctx);
+      }
       return;
+  case JES_TOKEN_EOF:
+    ctx->status = JES_UNEXPECTED_EOF;
+    break;
     default:
       ctx->status = JES_UNEXPECTED_TOKEN;
       return;
@@ -279,7 +295,7 @@ static inline void jes_parser_process_have_value_state(struct jes_context* ctx)
         ctx->serdes.state = JES_END;
       }
       else {
-        ctx->status = JES_UNEXPECTED_TOKEN;
+        ctx->status = JES_UNEXPECTED_EOF;
       }
       break;
     default:
@@ -312,7 +328,11 @@ void jes_parse(struct jes_context *ctx)
     JES_LOG_STATE("\nJES.Parser.State: ", ctx->serdes.state, "");
 #endif
 
-  while ((ctx->status == JES_NO_ERROR) && (ctx->serdes.state != JES_END) && (jes_tokenizer_get_token(&ctx->serdes.tokenizer) == JES_NO_ERROR)) {
+  do {
+    ctx->status = jes_tokenizer_get_token(&ctx->serdes.tokenizer);
+    if (ctx->status != JES_NO_ERROR) {
+      break;
+    }
 
     switch (ctx->serdes.state) {
       case JES_EXPECT_KEY:
@@ -341,7 +361,7 @@ void jes_parse(struct jes_context *ctx)
 #if defined(JES_ENABLE_PARSER_STATE_LOG)
     JES_LOG_STATE("\nJES.Parser.State: ", ctx->serdes.state, "");
 #endif
-  }
+  } while ((ctx->status == JES_NO_ERROR) && (ctx->serdes.state != JES_END));
 
   if ((ctx->status == JES_NO_ERROR) && (ctx->serdes.state != JES_END) && (ctx->serdes.iter != NULL)) {
       ctx->status = JES_UNEXPECTED_EOF;
