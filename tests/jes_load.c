@@ -54,6 +54,8 @@ int main(void)
   const char json_str_negative_tests[][500] = {
         "{",                                                  /* Single Opening Brace */
         "}",                                                  /* Single Closing Brace */
+        "[",                                                  /* Single Opening Bracket */
+        "]",                                                  /* Single Closing Bracket */
         "{1}",                                                /*  */
         "{\"key\": }",                                        /* Empty Value */
         "{\"key\": \"val",                                    /* EOF in the middle of string */
@@ -64,11 +66,6 @@ int main(void)
         "\"key\": \"value\"",
         "{key: \"value\"}",                                   /* Missing Quotes Around Key */
         "{\"key\": \"value\",}",                              /* Trailing comma */
-
-#if 0
-        "{\"key2\": \"val"
-        "ue\"}",                                              /* Unescaped Control Character */
-#endif
         "{'key1': \"value\"}",                                /* Single Quotes Instead of Double Quotes */
         "{\"key\" \"value\"}",                                /* Missing Colon */
         "{\"key\": {}",                                       /* Missing closing Brace */
@@ -89,6 +86,10 @@ int main(void)
         "{\"key\": ,[]}",                                     /* Unexpected Comma before value */
         "{\"key\": [][]}",                                    /* Duplicate Array as value */
         "01",                                                 /* Standalone invalid number -Not Wrapped in an Object- */
+        "tru",
+        "fals",
+        "nul",
+        "trues",
 
         };
 
