@@ -34,6 +34,21 @@ int main(void)
         "{\"key\": {\"key\": [\"value1\", [{\"key\": \"value\"}, \"value\", [{}]]]}}",
         "{\"\": \"value\"}",
         "{\"\": \"\"}",
+        "[{\"\": \"\"}]",
+        "[1, null, true, false, \"string\", [], {}]",
+        "null",         /* Standalone null -Not Wrapped in an Object- */
+        "false",        /* Standalone false -Not Wrapped in an Object- */
+        "true",         /* Standalone true -Not Wrapped in an Object- */
+        "1",            /* Standalone number -Not Wrapped in an Object- */
+        "0",            /* Standalone number -Not Wrapped in an Object- */
+        "1.1",          /* Standalone number -Not Wrapped in an Object- */
+        "-1.0",         /* Standalone number -Not Wrapped in an Object- */
+        "0.6",          /* Standalone number -Not Wrapped in an Object- */
+        "-0.6",         /* Standalone number -Not Wrapped in an Object- */
+        "435000000000.1234567890", /* Standalone number -Not Wrapped in an Object- */
+        "4.35e-10",     /* Standalone number -Not Wrapped in an Object- */
+        "\"string\"",   /* Standalone string -Not Wrapped in an Object- */
+        "\"unicode: \\u4f60\\u597d\""
         };
 
   const char json_str_negative_tests[][500] = {
@@ -65,7 +80,6 @@ int main(void)
         "{\"key\": True}",                                    /* Incorrect Boolean Case */
         "{\"key\": False}",                                   /* Incorrect Boolean Case */
         "{\"key\": Null}",                                    /* Incorrect null Case */
-        "\"key\"",                                            /* Standalone string -Not Wrapped in an Object- */
         "{\"key\": []]}",                                     /* Unexpected closing bracket */
         "{\"key\": [[]}",                                     /* Missing closing Bracket */
         "{\"key\": [{,}]}",                                   /* Unexpected Comma in object */
@@ -74,6 +88,7 @@ int main(void)
         "{\"key\": [[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]}", /* Extra closing Brackets */
         "{\"key\": ,[]}",                                     /* Unexpected Comma before value */
         "{\"key\": [][]}",                                    /* Duplicate Array as value */
+        "01",                                                 /* Standalone invalid number -Not Wrapped in an Object- */
 
         };
 
