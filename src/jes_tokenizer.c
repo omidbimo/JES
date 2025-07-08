@@ -456,17 +456,19 @@ static inline bool jes_tokenizer_process_literal_token(struct jes_cursor* cursor
       literal_len = sizeof("true") -1;
       UPDATE_TOKEN(token, JES_TOKEN_TRUE, 0, cursor->pos);
       break;
-    default: is_literal_token = false;                             break;
+    default:
+      is_literal_token = false;
+      break;
   }
 
   if (is_literal_token) {
-    if ((cursor->pos + literal_len <= cursor->end) &&
-        (memcmp(cursor->pos, literal, literal_len) == 0)) {
+    if (((cursor->pos + literal_len) < cursor->end) &&
+         (memcmp(cursor->pos, literal, literal_len) == 0)) {
       cursor->pos += literal_len - 1;
       token->length += literal_len;
     }
     else {
-      *status == JES_UNEXPECTED_SYMBOL;
+      *status = JES_UNEXPECTED_SYMBOL;
     }
   }
 
