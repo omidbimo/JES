@@ -68,7 +68,7 @@ void jes_log_token(uint16_t token_type,
                    size_t token_len,
                    const char *token_value)
 {
-  printf("\nJES.Token: [Ln: %u, Col: %u, Pos: %u, Len: %d] %-16s \"%.*s\"",
+  printf("\nJES.Token: [Ln: %u, Col: %u, Pos: %u, Len: %u] %-16s \"%.*s\"",
           line_numebr, column, token_pos, token_len,
           jes_token_type_str[token_type], token_len, token_value);
 }
