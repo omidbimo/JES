@@ -9,6 +9,7 @@
 #include "jes_tokenizer.h"
 #include "jes_tree.h"
 #include "jes_parser.h"
+#include "jes_serializer.h"
 
 struct jes_context* jes_init(void* buffer, size_t buffer_size)
 {
@@ -757,4 +758,36 @@ struct jes_element* jes_load(struct jes_context* ctx, const char* json_data, uin
 size_t jes_get_context_size(void)
 {
   return sizeof(struct jes_context);
+}
+
+struct jes_stat jes_get_stat(struct jes_context* ctx)
+{
+  struct jes_stat stat = {0};
+
+  ctx->serdes.iter = NULL;
+
+  while (NULL != jes_serializer_get_node(ctx)) {
+    switch (ctx->serdes.iter->json_tlv.type) {
+      case JES_OBJECT:
+        stat.objects++;
+        break;
+      case JES_KEY:
+        stat.keys++;
+        break;
+      case JES_ARRAY:
+        stat.arrays++;
+        break;
+      case JES_STRING:
+      case JES_NUMBER:
+      case JES_TRUE:
+      case JES_FALSE:
+      case JES_NULL:
+        stat.values++;
+        break;
+      default:
+        assert(0);
+        break;
+    }
+  }
+  return stat;
 }

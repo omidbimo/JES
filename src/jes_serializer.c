@@ -6,6 +6,7 @@
 #include "jes.h"
 #include "jes_private.h"
 #include "jes_logger.h"
+#include "jes_serializer.h"
 
 #ifndef NDEBUG
   #define JES_LOG_NODE  jes_log_node
@@ -299,7 +300,7 @@ static inline void jes_serializer_process_have_value_state(struct jes_context* c
 
 /* Pre-order depth-first traversal
    visit node → visit children → visit siblings → backtrack to parent's siblings. */
-static inline struct jes_node* jes_serializer_get_node(struct jes_context* ctx)
+struct jes_node* jes_serializer_get_node(struct jes_context* ctx)
 {
   assert(ctx != NULL);
 
@@ -328,7 +329,6 @@ static inline struct jes_node* jes_serializer_get_node(struct jes_context* ctx)
   }
 
   if (ctx->serdes.iter == NULL) {
-    JES_LOG_STATE("\nJES.Serializer.State: ", ctx->serdes.state, "");
     assert(ctx->serdes.state == JES_HAVE_VALUE);
     ctx->serdes.state = JES_END;
   }

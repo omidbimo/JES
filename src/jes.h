@@ -137,6 +137,13 @@ struct jes_element {
 /* jes_context holds the internal state of the parser including JSON tree, pool management and process status. */
 struct jes_context;
 
+struct jes_stat {
+  size_t objects; /* Number of OBJECT elements in the JSON tree */
+  size_t keys;    /* Number of KEY elements in the JSON tree */
+  size_t arrays;  /* Number of ARRAY elements in the JSON tree */
+  size_t values;  /* Number of value(STRING, NUMBER, TRUE, FALSE, NULL) elements in the JSON tree */
+};
+
 /* Initialize a new JES context. The context will be placed at the start of the provided
  * working buffer.
  *
@@ -357,6 +364,8 @@ struct jes_element* jes_add_array_value(struct jes_context *ctx, struct jes_elem
 
 /* Add an element to another element. */
 struct jes_element* jes_add_element(struct jes_context *ctx, struct jes_element *parent, enum jes_type type, const char *value);
+
+struct jes_stat jes_get_stat(struct jes_context* ctx);
 
 #define JES_FOR_EACH(ctx_, elem_, type_) for(elem_ = (elem_->type == type_) ? jes_get_child(ctx_, elem_) : NULL; elem_ != NULL; elem_ = jes_get_sibling(ctx_, elem_))
 /* For loop to iterate over array elements.
