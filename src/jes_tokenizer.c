@@ -548,31 +548,62 @@ bool jes_tokenizer_validate_number(struct jes_context* ctx, const char* value, s
   return is_valid;
 }
 
-bool jes_tokenizer_validate_string(struct jes_context* ctx, const char* value, size_t length)
+enum jes_status jes_tokenizer_validate_string(struct jes_context* ctx, const char* value, size_t length)
 {
 
   struct jes_token token = { 0 };
-  const char* ch = NULL;
+  struct jes_cursor cursor = { 0 };
+  enum jes_status status = JES_NO_ERROR;
+  char ch;
   bool is_valid = false;
 
   assert(ctx != NULL);
   assert(value != NULL);
-  #if 0
+
   if (length == 0) {
-    /* We consider a string with zero length a valid string */
+    /* A string with zero length is a valid string */
     return true;
   }
 
-  (void)jes_tokenizer_process_string_token(ctx, &token, value, value + length);
-  /* The function will not return true until finding a double quoute symbol
-     which we don't have in this case. Ignore the return value and rely on the
-     token size instead. */
-  if ((token.length == length) && (ctx->status == JES_UNEXPECTED_EOF)) {
-    ctx->status = JES_NO_ERROR;
-    is_valid = true;
+  cursor.pos = value;
+  cursor.end = value + length;
+
+  jes_tokenizer_update_token(&token, JES_TOKEN_STRING, 0, cursor.pos);
+
+  while (status == JES_NO_ERROR) {
+
+    ch = jes_tokenizer_get_char(&cursor);
+
+    if ((ch == '\0') && (cursor.pos < cursor.end)) {
+      status = JES_UNEXPECTED_EOF;
+      break;
+    }
+
+    if (ch == '\\') {
+      token.length++;
+      jes_tokenizer_advance(&cursor);
+      if (jes_tokenizer_get_char(&cursor) == 'u') {
+        token.length++;
+        jes_tokenizer_advance(&cursor);
+        jes_tokenizer_process_escaped_utf_16_token(&cursor, &token, &status);
+      }
+      else {
+        status = JES_UNEXPECTED_SYMBOL;
+        break;
+      }
+    }
+    else if ((ch == '\"') || (ch =='\b') || (ch =='\f') || (ch =='\n') || (ch =='\r') || (ch =='\t')) {
+      status = JES_UNEXPECTED_SYMBOL;
+      break;
+    }
+    else {
+      token.length++;
+    }
+
+    jes_tokenizer_advance(&cursor);
   }
-#endif
-  return is_valid;
+
+  return status;
 }
 
 void jes_tokenizer_reset_cursor(struct jes_tokenizer_context* ctx)

@@ -168,7 +168,7 @@ void jes_reset(struct jes_context *ctx);
  *
  * return root of the tree which is always an OBJECT or NULL in case of a failure. (see also jes_get_status)
  */
-struct jes_element* jes_load(struct jes_context* ctx, const char* json_data, uint32_t json_length);
+struct jes_element* jes_load(struct jes_context* ctx, const char* json_data, size_t json_length);
 
 /* Render a tree of JSON elements into the destination buffer as a string of ascii characters. (not NUL terminated)
  * param [in] ctx the jes context containing a JSON tree.
@@ -184,7 +184,7 @@ struct jes_element* jes_load(struct jes_context* ctx, const char* json_data, uin
  * note: The output JSON is totally compact without any space characters.
  * note: It's possible to get the size of JSON string by calling the evaluate function.
  */
-uint32_t jes_render(struct jes_context *ctx, char *dst, size_t length, bool compact);
+size_t jes_render(struct jes_context *ctx, char *dst, size_t length, bool compact);
 
 /* Evaluates a tree of JSON elements to check if the structure is valid. It also
  * additionally calculates the size of the rendered JSON.
@@ -195,7 +195,7 @@ uint32_t jes_render(struct jes_context *ctx, char *dst, size_t length, bool comp
  * return the required buffer size to render the JSON into string including the NUL termination.
  *        If zero, there might be failures in the tree. use jes_get_status or jes_stringify_status.
  */
-uint32_t jes_evaluate(struct jes_context *ctx, bool compact);
+size_t jes_evaluate(struct jes_context *ctx, bool compact);
 
 /* Get the status of latest process
  * param [in] ctx: an Initialized jes context

@@ -152,7 +152,7 @@ struct jes_element* jes_get_key(struct jes_context* ctx, struct jes_element* par
 {
   struct jes_element* target_key = NULL;
   struct jes_node* iter = (struct jes_node*)parent;
-  uint32_t key_len;
+  size_t key_len;
   const char* key;
   char* dot;
 
@@ -312,7 +312,7 @@ static bool jes_validate_tlv(struct jes_context* ctx, enum jes_type type, size_t
 struct jes_element* jes_add_element(struct jes_context* ctx, struct jes_element* parent, enum jes_type type, const char* value)
 {
   struct jes_node* new_node = NULL;
-  uint32_t value_length = 0;
+  size_t value_length = 0;
 
   if ((ctx == NULL) || !JES_IS_INITIATED(ctx)) {
     return NULL;
@@ -436,7 +436,7 @@ struct jes_element* jes_add_key_before(struct jes_context* ctx, struct jes_eleme
   struct jes_node* iter = NULL;
   struct jes_node* before = NULL;
   struct jes_node* key_node = (struct jes_node*)key;
-  uint32_t keyword_length = 0;
+  size_t keyword_length = 0;
 
   if ((ctx == NULL) || !JES_IS_INITIATED(ctx)) {
     return NULL;
@@ -477,7 +477,7 @@ struct jes_element* jes_add_key_after(struct jes_context* ctx, struct jes_elemen
   struct jes_node* key_node = (struct jes_node*)key;
   struct jes_node* new_node = NULL;
   struct jes_node* parent = NULL;
-  uint32_t keyword_length = 0;
+  size_t keyword_length = 0;
 
   if ((ctx == NULL) || !JES_IS_INITIATED(ctx)) {
     return NULL;
@@ -507,7 +507,7 @@ struct jes_element* jes_add_key_after(struct jes_context* ctx, struct jes_elemen
 
 enum jes_status jes_update_key(struct jes_context* ctx, struct jes_element* key, const char* keyword)
 {
-  uint32_t keyword_length = 0;
+  size_t keyword_length = 0;
 
   if ((ctx == NULL) || !JES_IS_INITIATED(ctx)) {
     return JES_INVALID_CONTEXT;
@@ -576,7 +576,7 @@ struct jes_element* jes_update_key_value_to_null(struct jes_context* ctx, struct
 struct jes_element* jes_update_array_value(struct jes_context* ctx, struct jes_element* array, int32_t index, enum jes_type type, const char* value)
 {
   struct jes_node* target_node = NULL;
-  uint32_t value_length = 0;
+  size_t value_length = 0;
   int32_t array_size;
 
   if (!ctx || !JES_IS_INITIATED(ctx)) {
@@ -632,7 +632,7 @@ struct jes_element* jes_append_array_value(struct jes_context* ctx, struct jes_e
 {
   struct jes_node* anchor_node = NULL;
   struct jes_node* new_node = NULL;
-  uint32_t value_length = 0;
+  size_t value_length = 0;
 
   if (!ctx || !JES_IS_INITIATED(ctx)) {
     return NULL;
@@ -661,7 +661,7 @@ struct jes_element* jes_add_array_value(struct jes_context* ctx, struct jes_elem
   struct jes_node* anchor_node = NULL;
   struct jes_node* prev_node = NULL;
   struct jes_node* new_node = NULL;
-  uint32_t value_length = 0;
+  size_t value_length = 0;
   int32_t array_size;
 
   if (!ctx || !JES_IS_INITIATED(ctx)) {
@@ -735,7 +735,7 @@ size_t jes_get_element_capacity(struct jes_context* ctx)
   return 0;
 }
 
-struct jes_element* jes_load(struct jes_context* ctx, const char* json_data, uint32_t json_length)
+struct jes_element* jes_load(struct jes_context* ctx, const char* json_data, size_t json_length)
 {
   if ((ctx == NULL) || !JES_IS_INITIATED(ctx)) {
     return NULL;

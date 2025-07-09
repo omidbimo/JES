@@ -195,7 +195,7 @@ struct jes_context {
   uint32_t cookie;
   /* Indicates success/failure state of the most recent JES operation.
    * Check against JES_STATUS_* constants for specific meanings. */
-  uint32_t status;
+  enum jes_status status;
   /* User-provided working memory buffer for all JES operations.
    * It will be fragmented to hold the jes context, node allocations and the hash table entries.
    * Must remain available throughout the context's lifetime. */
