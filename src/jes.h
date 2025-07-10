@@ -256,6 +256,7 @@ struct jes_element* jes_get_key_value(struct jes_context* ctx, struct jes_elemen
               If parent is a KEY, then an OBJECT will be created and assigned as
               its value and the new KEY will be added to this OBJECT element.
  * param [in] keyword: The name of the new key
+ * param [in] keyword_length: The length of the new key name
  * return: The new KEY element or NULL in case of a failure
  *
  * Note: If the parent is a KEY, its value should be of type OBJECT or be empty.
@@ -326,14 +327,15 @@ struct jes_element* jes_get_array_value(struct jes_context* ctx, struct jes_elem
  * param [in] array is an element of type JES_ARRAY to update its value element
  * param [in] index is the index of target value to be updated.
  * param [in] type determines the jes_type of the value element
- * param [in] value is a NUL-terminated string
+ * param [in] Value is a string
+ * param [in] value_length
  *
  * note: The new value will not be copied and must be non-retentive for the life time of jes_context.
  * note: Negative indexes are also valid and help to get values from the end of array.
  * note: Out of the bound indexes will be rejected
  *
  * return the modified value element or NULL in case of a failure */
-struct jes_element* jes_update_array_value(struct jes_context* ctx, struct jes_element* array, int32_t index, enum jes_type type, const char* value);
+struct jes_element* jes_update_array_value(struct jes_context* ctx, struct jes_element* array, int32_t index, enum jes_type type, const char* value, size_t value_length);
 
 /* Append an element to a JES_ARRAY
  * param [in] ctx
@@ -344,7 +346,7 @@ struct jes_element* jes_update_array_value(struct jes_context* ctx, struct jes_e
  * note: The new value will not be copied and must be non-retentive for the life time of jes_context.
  *
  * return the modified value element or NULL in case of a failure */
-struct jes_element* jes_append_array_value(struct jes_context* ctx, struct jes_element* array, enum jes_type type, const char* value);
+struct jes_element* jes_append_array_value(struct jes_context* ctx, struct jes_element* array, enum jes_type type, const char* value, size_t value_length);
 
 /* Insert an element into a JES_ARRAY
  * param [in] ctx
@@ -360,7 +362,7 @@ struct jes_element* jes_append_array_value(struct jes_context* ctx, struct jes_e
  * note: Inserting an element to a target index, will shift the previous element to the right
  *
  * return the modified value element or NULL in case of a failure */
-struct jes_element* jes_add_array_value(struct jes_context* ctx, struct jes_element* array, int32_t index, enum jes_type type, const char *value);
+struct jes_element* jes_add_array_value(struct jes_context* ctx, struct jes_element* array, int32_t index, enum jes_type type, const char *value, size_t value_length);
 
 /* Add an element to another element. */
 struct jes_element* jes_add_element(struct jes_context* ctx, struct jes_element* parent, enum jes_type type, const char* value, size_t value_length);

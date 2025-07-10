@@ -535,10 +535,9 @@ struct jes_element* jes_update_key_value_to_null(struct jes_context* ctx, struct
   return jes_update_key_value(ctx, key, JES_NULL, "null", sizeof("null") - 1);
 }
 
-struct jes_element* jes_update_array_value(struct jes_context* ctx, struct jes_element* array, int32_t index, enum jes_type type, const char* value)
+struct jes_element* jes_update_array_value(struct jes_context* ctx, struct jes_element* array, int32_t index, enum jes_type type, const char* value, size_t value_length)
 {
   struct jes_node* target_node = NULL;
-  size_t value_length = 0;
   int32_t array_size;
 
   if (!ctx || !JES_IS_INITIATED(ctx)) {
@@ -548,12 +547,6 @@ struct jes_element* jes_update_array_value(struct jes_context* ctx, struct jes_e
   ctx->status = JES_NO_ERROR;
 
   if ((array == NULL) || !jes_validate_node(ctx, (struct jes_node*)array) || (array->type != JES_ARRAY) || (value == NULL)) {
-    ctx->status = JES_INVALID_PARAMETER;
-    return NULL;
-  }
-
-  value_length = strnlen(value, JES_MAX_VALUE_LENGTH);
-  if (value_length == JES_MAX_VALUE_LENGTH) {
     ctx->status = JES_INVALID_PARAMETER;
     return NULL;
   }
@@ -590,11 +583,10 @@ struct jes_element* jes_update_array_value(struct jes_context* ctx, struct jes_e
   return (struct jes_element*)target_node;
 }
 
-struct jes_element* jes_append_array_value(struct jes_context* ctx, struct jes_element* array, enum jes_type type, const char* value)
+struct jes_element* jes_append_array_value(struct jes_context* ctx, struct jes_element* array, enum jes_type type, const char* value, size_t value_length)
 {
   struct jes_node* anchor_node = NULL;
   struct jes_node* new_node = NULL;
-  size_t value_length = 0;
 
   if (!ctx || !JES_IS_INITIATED(ctx)) {
     return NULL;
@@ -607,23 +599,16 @@ struct jes_element* jes_append_array_value(struct jes_context* ctx, struct jes_e
     return NULL;
   }
 
-  value_length = strnlen(value, JES_MAX_VALUE_LENGTH);
-  if (value_length == JES_MAX_VALUE_LENGTH) {
-    ctx->status = JES_INVALID_PARAMETER;
-    return NULL;
-  }
-
   new_node = jes_tree_insert_node(ctx, (struct jes_node*)array, GET_LAST_CHILD(ctx->node_mng, (struct jes_node*)array), type, value_length, value);
 
   return (struct jes_element*)new_node;
 }
 
-struct jes_element* jes_add_array_value(struct jes_context* ctx, struct jes_element* array, int32_t index, enum jes_type type, const char* value)
+struct jes_element* jes_add_array_value(struct jes_context* ctx, struct jes_element* array, int32_t index, enum jes_type type, const char* value, size_t value_length)
 {
   struct jes_node* anchor_node = NULL;
   struct jes_node* prev_node = NULL;
   struct jes_node* new_node = NULL;
-  size_t value_length = 0;
   int32_t array_size;
 
   if (!ctx || !JES_IS_INITIATED(ctx)) {
@@ -645,13 +630,7 @@ struct jes_element* jes_add_array_value(struct jes_context* ctx, struct jes_elem
   /* Handling out of the bound indices as prepend or append */
   if (index < 0) { index = 0; }
   if (index >= array_size) {
-    return jes_append_array_value(ctx, array, type, value);
-  }
-
-  value_length = strnlen(value, JES_MAX_VALUE_LENGTH);
-  if (value_length == JES_MAX_VALUE_LENGTH) {
-    ctx->status = JES_INVALID_PARAMETER;
-    return NULL;
+    return jes_append_array_value(ctx, array, type, value, value_length);
   }
 
   for (anchor_node = GET_FIRST_CHILD(ctx->node_mng, (struct jes_node*)array); anchor_node != NULL; anchor_node = GET_SIBLING(ctx->node_mng, anchor_node)) {
