@@ -526,25 +526,23 @@ enum jes_status jes_tokenizer_get_token(struct jes_tokenizer_context* ctx)
   return status;
 }
 
-bool jes_tokenizer_validate_number(struct jes_context* ctx, const char* value, size_t length)
+enum jes_status jes_tokenizer_validate_number(struct jes_context* ctx, const char* value, size_t length)
 {
   struct jes_token token = { 0 };
-  const char* ch = NULL;
+  struct jes_cursor cursor = { 0 };
+  enum jes_status status = JES_NO_ERROR;
   bool is_valid = false;
 
   assert(ctx != NULL);
   assert(value != NULL);
-  #if 0
-  ch = JES_TOKENIZER_GET_CHAR(value, value + length);
 
-  if (IS_DIGIT(*ch) || (*ch == '-')) {
-    (void)jes_tokenizer_process_integer_token(ctx, &token, ch, value + length);
-    /* There are no more symbols to consume as a number. */
-    if ((token.length == length) && (ctx->status == JES_NO_ERROR)) {
-      is_valid = true;
-    }
+  cursor.pos = value;
+  cursor.end = value + length;
+
+  if (!jes_tokenizer_process_integer_token(&cursor, &token, &status)) {
+    status = JES_INVALID_NUMBER;
   }
-#endif
+
   return is_valid;
 }
 
