@@ -154,12 +154,12 @@ struct jes_stat {
  *
  * return pointer to context or NULL in case of a failure.
  */
-struct jes_context* jes_init(void *buffer, size_t buffer_size);
+struct jes_context* jes_init(void* buffer, size_t buffer_size);
 
 /* */
 size_t jes_get_context_size(void);
 
-void jes_reset(struct jes_context *ctx);
+void jes_reset(struct jes_context* ctx);
 
 /* Loads a string JSON and parse it into a tree of JSON nodes.
  * param [in] ctx is an initialized context
@@ -184,7 +184,7 @@ struct jes_element* jes_load(struct jes_context* ctx, const char* json_data, siz
  * note: The output JSON is totally compact without any space characters.
  * note: It's possible to get the size of JSON string by calling the evaluate function.
  */
-size_t jes_render(struct jes_context *ctx, char *dst, size_t length, bool compact);
+size_t jes_render(struct jes_context* ctx, char* dst, size_t length, bool compact);
 
 /* Evaluates a tree of JSON elements to check if the structure is valid. It also
  * additionally calculates the size of the rendered JSON.
@@ -195,40 +195,40 @@ size_t jes_render(struct jes_context *ctx, char *dst, size_t length, bool compac
  * return the required buffer size to render the JSON into string including the NUL termination.
  *        If zero, there might be failures in the tree. use jes_get_status or jes_stringify_status.
  */
-size_t jes_evaluate(struct jes_context *ctx, bool compact);
+size_t jes_evaluate(struct jes_context* ctx, bool compact);
 
 /* Get the status of latest process
  * param [in] ctx: an Initialized jes context
  */
-jes_status jes_get_status(struct jes_context *ctx);
+jes_status jes_get_status(struct jes_context* ctx);
 
 /* Delete an element and its whole branch.
   return: Status code
  */
-jes_status jes_delete_element(struct jes_context *ctx, struct jes_element *element);
+jes_status jes_delete_element(struct jes_context* ctx, struct jes_element* element);
 
 /* Number of JSON tree element count */
-size_t jes_get_element_count(struct jes_context *ctx);
+size_t jes_get_element_count(struct jes_context* ctx);
 
 /* Get maximum number of JSON elements that can be allocated */
-size_t jes_get_element_capacity(struct jes_context *ctx);
+size_t jes_get_element_capacity(struct jes_context* ctx);
 
 /* Delivers the root element of the JSON tree (which is always an OBJECT)
  * A NULL represents an empty tree.
  */
-struct jes_element* jes_get_root(struct jes_context *ctx);
+struct jes_element* jes_get_root(struct jes_context* ctx);
 
 /* Delivers the parent element of given JSON element */
-struct jes_element* jes_get_parent(struct jes_context *ctx, struct jes_element *element);
+struct jes_element* jes_get_parent(struct jes_context* ctx, struct jes_element* element);
 
 /* Delivers the first child of given JSON element */
-struct jes_element* jes_get_child(struct jes_context *ctx, struct jes_element *element);
+struct jes_element* jes_get_child(struct jes_context* ctx, struct jes_element* element);
 
 /* Delivers the sibling of given JSON element
  * Note: There is a singly link between siblings which means each element knows
  *       only the sibling on its right: element -> element -> element .
  */
-struct jes_element* jes_get_sibling(struct jes_context *ctx, struct jes_element *element);
+struct jes_element* jes_get_sibling(struct jes_context* ctx, struct jes_element* element);
 
 /* Returns a Key element inside the given object.
  * param [in] ctx
@@ -245,10 +245,10 @@ struct jes_element* jes_get_sibling(struct jes_context *ctx, struct jes_element 
  *
  * return an element of type JES_KEY or NULL if the key is not found or a failure has been occurred.
  */
-struct jes_element* jes_get_key(struct jes_context *ctx, struct jes_element *parent, const char *keys);
+struct jes_element* jes_get_key(struct jes_context* ctx, struct jes_element* parent, const char* keys);
 
 /* Returns value element of a given key. returns NULL if element has no value yet or in case of a failure */
-struct jes_element* jes_get_key_value(struct jes_context *ctx, struct jes_element *key);
+struct jes_element* jes_get_key_value(struct jes_context* ctx, struct jes_element* key);
 
 /* Append a key to the value of an existing key.
  * param [in] ctx
@@ -260,18 +260,18 @@ struct jes_element* jes_get_key_value(struct jes_context *ctx, struct jes_elemen
  *
  * Note: If the parent is a KEY, its value should be of type OBJECT or be empty.
  */
-struct jes_element* jes_add_key(struct jes_context *ctx, struct jes_element *parent, const char *keyword);
+struct jes_element* jes_add_key(struct jes_context* ctx, struct jes_element* parent, const char* keyword, size_t keyword_length);
 
 /* Insert a key before an existing key */
-struct jes_element* jes_add_key_before(struct jes_context *ctx, struct jes_element *key, const char *keyword);
+struct jes_element* jes_add_key_before(struct jes_context* ctx, struct jes_element* key, const char* keyword, size_t keyword_length);
 
 /* Insert a key after an existing key */
-struct jes_element* jes_add_key_after(struct jes_context *ctx, struct jes_element *key, const char *keyword);
+struct jes_element* jes_add_key_after(struct jes_context* ctx, struct jes_element* key, const char* keyword, size_t keyword_length);
 
 /* Update the name of a key element.
  * note: The keyword will not be copied and must be non-retentive for the life cycle of jes_context.
  * return a status code of type enum jes_status */
-enum jes_status jes_update_key(struct jes_context *ctx, struct jes_element *key, const char *keyword);
+enum jes_status jes_update_key(struct jes_context* ctx, struct jes_element* key, const char* keyword, size_t keyword_length);
 
 /* Update a key value
  * note: The new value will not be copied and must be non-retentive for the life cycle of jes_context.
@@ -280,35 +280,35 @@ enum jes_status jes_update_key(struct jes_context *ctx, struct jes_element *key,
  *
  * return the new key value element or NULL in case of a failure
  */
-struct jes_element* jes_update_key_value(struct jes_context *ctx, struct jes_element *key, enum jes_type type, const char *value);
+struct jes_element* jes_update_key_value(struct jes_context* ctx, struct jes_element* key, enum jes_type type, const char* value, size_t value_length);
 
 /* Convert the key value to a JES_OBJECT element. All the previous value elements will be lost.
  * return the new key value element or NULL in case of a failure
  */
-struct jes_element* jes_update_key_value_to_object(struct jes_context *ctx, struct jes_element *key);
+struct jes_element* jes_update_key_value_to_object(struct jes_context* ctx, struct jes_element* key);
 
 /* Convert the key value to a JES_ARRAY element. All the previous value elements will be lost.
  * return the new key value element or NULL in case of a failure
  */
-struct jes_element* jes_update_key_value_to_array(struct jes_context *ctx, struct jes_element *key);
+struct jes_element* jes_update_key_value_to_array(struct jes_context* ctx, struct jes_element* key);
 
 /* Convert the key value to a JES_TRUE element. All the previous value elements will be lost.
  * return the new key value element or NULL in case of a failure
  */
-struct jes_element* jes_update_key_value_to_true(struct jes_context *ctx, struct jes_element *key);
+struct jes_element* jes_update_key_value_to_true(struct jes_context* ctx, struct jes_element* key);
 
 /* Convert the key value to a JES_FALSE element. All the previous value elements will be lost.
  * return the new key value element or NULL in case of a failure
  */
-struct jes_element* jes_update_key_value_to_false(struct jes_context *ctx, struct jes_element *key);
+struct jes_element* jes_update_key_value_to_false(struct jes_context* ctx, struct jes_element* key);
 
 /* Convert the key value to a JES_NULL element. All the previous value elements will be lost.
  * return the new key value element or NULL in case of a failure
  */
-struct jes_element* jes_update_key_value_to_null(struct jes_context *ctx, struct jes_element *key);
+struct jes_element* jes_update_key_value_to_null(struct jes_context* ctx, struct jes_element* key);
 
 /* Get the number of elements of a JES_ARRAY */
-uint16_t jes_get_array_size(struct jes_context *ctx, struct jes_element *array);
+uint16_t jes_get_array_size(struct jes_context* ctx, struct jes_element* array);
 
 /* Get the value element of a JES_ARRAY.
  * param [in] ctx
@@ -319,7 +319,7 @@ uint16_t jes_get_array_size(struct jes_context *ctx, struct jes_element *array);
  *
  * return: value element of a JES_ARRAY or NULL if array is empty or in case of a failure.
  */
-struct jes_element* jes_get_array_value(struct jes_context *ctx, struct jes_element *array, int32_t index);
+struct jes_element* jes_get_array_value(struct jes_context* ctx, struct jes_element* array, int32_t index);
 
 /* Update an array value element.
  * param [in] ctx
@@ -333,7 +333,7 @@ struct jes_element* jes_get_array_value(struct jes_context *ctx, struct jes_elem
  * note: Out of the bound indexes will be rejected
  *
  * return the modified value element or NULL in case of a failure */
-struct jes_element* jes_update_array_value(struct jes_context *ctx, struct jes_element *array, int32_t index, enum jes_type type, const char *value);
+struct jes_element* jes_update_array_value(struct jes_context* ctx, struct jes_element* array, int32_t index, enum jes_type type, const char* value);
 
 /* Append an element to a JES_ARRAY
  * param [in] ctx
@@ -344,7 +344,7 @@ struct jes_element* jes_update_array_value(struct jes_context *ctx, struct jes_e
  * note: The new value will not be copied and must be non-retentive for the life time of jes_context.
  *
  * return the modified value element or NULL in case of a failure */
-struct jes_element* jes_append_array_value(struct jes_context *ctx, struct jes_element *array, enum jes_type type, const char *value);
+struct jes_element* jes_append_array_value(struct jes_context* ctx, struct jes_element* array, enum jes_type type, const char* value);
 
 /* Insert an element into a JES_ARRAY
  * param [in] ctx
@@ -360,10 +360,10 @@ struct jes_element* jes_append_array_value(struct jes_context *ctx, struct jes_e
  * note: Inserting an element to a target index, will shift the previous element to the right
  *
  * return the modified value element or NULL in case of a failure */
-struct jes_element* jes_add_array_value(struct jes_context *ctx, struct jes_element *array, int32_t index, enum jes_type type, const char *value);
+struct jes_element* jes_add_array_value(struct jes_context* ctx, struct jes_element* array, int32_t index, enum jes_type type, const char *value);
 
 /* Add an element to another element. */
-struct jes_element* jes_add_element(struct jes_context *ctx, struct jes_element *parent, enum jes_type type, const char *value);
+struct jes_element* jes_add_element(struct jes_context* ctx, struct jes_element* parent, enum jes_type type, const char* value, size_t value_length);
 
 struct jes_stat jes_get_stat(struct jes_context* ctx);
 

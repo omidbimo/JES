@@ -134,7 +134,7 @@ struct jes_tokenizer_context {
   const char* json_data;
   /* Size of the JSON data buffer in bytes.
    * Must accurately reflect the length of data at json_data pointer (without NUL termination) */
-  uint32_t  json_length;
+  size_t  json_length;
   /* The cursor contains the information about the current character in the
      input JSON that is being processed. */
   struct jes_cursor cursor;
