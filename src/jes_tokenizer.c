@@ -568,7 +568,7 @@ enum jes_status jes_tokenizer_validate_string(struct jes_context* ctx, const cha
 
   jes_tokenizer_update_token(&token, JES_TOKEN_STRING, 0, cursor.pos);
 
-  while (status == JES_NO_ERROR) {
+  while ((status == JES_NO_ERROR) && (ch != '\0')) {
 
     ch = jes_tokenizer_get_char(&cursor);
 
