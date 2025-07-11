@@ -156,6 +156,8 @@ struct jes_element* jes_get_key(struct jes_context* ctx, struct jes_element* par
   const char* key;
   char* dot;
 
+
+
   if (!ctx || !JES_IS_INITIATED(ctx)) {
     return NULL;
   }
@@ -175,6 +177,9 @@ struct jes_element* jes_get_key(struct jes_context* ctx, struct jes_element* par
     ctx->status = JES_INVALID_PARAMETER;
     return NULL;
   }
+
+  ctx->status = JES_NO_ERROR;
+
   /* TODO: Cleanup */
   while (iter != NULL) {
     key = keys;
@@ -332,14 +337,14 @@ struct jes_element* jes_add_element(struct jes_context* ctx, struct jes_element*
 
   switch (type) {
     case JES_NUMBER:
-      if (!jes_tokenizer_validate_number(ctx, value, value_length)) {
+      if (jes_tokenizer_validate_number(ctx, value, value_length) != JES_NO_ERROR) {
         ctx->status = JES_INVALID_PARAMETER;
         return NULL;
       }
       break;
     case JES_KEY: /* Fall through is intended */
     case JES_STRING:
-      if (!jes_tokenizer_validate_string(ctx, value, value_length)) {
+      if (jes_tokenizer_validate_string(ctx, value, value_length) != JES_NO_ERROR) {
         ctx->status = JES_INVALID_PARAMETER;
         return NULL;
       }
@@ -386,7 +391,7 @@ struct jes_element* jes_add_key(struct jes_context* ctx, struct jes_element* par
     return NULL;
   }
 
-  if (!jes_tokenizer_validate_string(ctx, keyword, keyword_length)) {
+  if (jes_tokenizer_validate_string(ctx, keyword, keyword_length) != JES_NO_ERROR) {
     ctx->status = JES_INVALID_PARAMETER;
     return NULL;
   }
@@ -488,7 +493,7 @@ enum jes_status jes_update_key(struct jes_context* ctx, struct jes_element* key,
     return ctx->status;
   }
 
-  if (!jes_tokenizer_validate_string(ctx, keyword, keyword_length)) {
+  if (jes_tokenizer_validate_string(ctx, keyword, keyword_length) != JES_NO_ERROR) {
     ctx->status = JES_INVALID_PARAMETER;
     return ctx->status;
   }
