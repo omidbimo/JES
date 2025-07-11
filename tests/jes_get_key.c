@@ -22,7 +22,7 @@ int main(void)
   char err_msg[250] = {'\0'};
   uint8_t work_buffer[BUFFER_SIZE];
   char output[0xFFFF];
-  char keywords[10][10];
+  char keywords[10][10] = { 0 };
   struct jes_element *it = NULL;
   struct jes_element *array = NULL;
   struct jes_element *key = NULL;
@@ -104,6 +104,7 @@ int main(void)
     return -1;
   }
 
+  printf("\n jes_get_key(doc, jes_get_root(doc), \"value\")");
   key = jes_get_key(doc, jes_get_root(doc), "value");
   if (key) {
     printf("\nError! Unexpected KEY element when a non-existing keyword is used.");
@@ -114,6 +115,7 @@ int main(void)
     return -1;
   }
 
+  printf("\n jes_get_key(doc, jes_get_root(doc), \"\")");
   key = jes_get_key(doc, jes_get_root(doc), "");
   if (key) {
     printf("\nError! Unexpected KEY element when an empty keyword is used.");
@@ -124,6 +126,7 @@ int main(void)
     return -1;
   }
 
+  printf("\n jes_get_key(doc, jes_get_root(doc), \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\")");
   key = jes_get_key(doc, jes_get_root(doc), "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
   if (key) {
     printf("\nError! Unexpected KEY element when an invalid keyword is used.");
@@ -134,6 +137,7 @@ int main(void)
     return -1;
   }
 
+  printf("\n jes_get_key(doc, jes_get_root(doc), \"............................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................\")");
   key = jes_get_key(doc, jes_get_root(doc), "............................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................");
   if (key) {
     printf("\nError! Unexpected KEY element when an invalid keyword is used.");
@@ -144,6 +148,7 @@ int main(void)
     return -1;
   }
 
+  printf("\n jes_get_key(doc, jes_get_root(doc), \"\n\t\r\"");
   key = jes_get_key(doc, jes_get_root(doc), "\n\t\r");
   if (key) {
     printf("\nError! Unexpected KEY element when an invalid keyword is used.");
@@ -154,6 +159,7 @@ int main(void)
     return -1;
   }
 
+  printf("\n jes_get_key(doc, jes_get_root(doc), \"key1\")");
   key = jes_get_key(doc, jes_get_root(doc), "key1");
   if (key == NULL) {
     printf("\n Error: %d - %s", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)));
@@ -168,8 +174,8 @@ int main(void)
 
   for (idx = 0; idx < 10; idx++) {
     snprintf(keywords[idx], sizeof(keywords[idx]), "key%d", idx+2);
+    key = jes_add_key(doc, key, keywords[idx], strnlen(keywords[idx], 10));
 
-    key = jes_add_key(doc, key, keywords[idx]);
     if (key == NULL) {
       printf("\n    %s", jes_stringify_status(doc, err_msg, sizeof(err_msg)));
       //printf("\n Error: %d - %s", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)));
