@@ -440,7 +440,7 @@ static inline bool jes_tokenizer_process_string_token(struct jes_cursor* cursor,
           break;
         default:
           *status = JES_UNEXPECTED_SYMBOL;
-          break;
+          return true;
       }
     }
     else if ((ch =='\b') || (ch =='\f') || (ch =='\n') || (ch =='\r') || (ch =='\t')) {
