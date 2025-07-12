@@ -48,7 +48,9 @@ int main(void)
         "435000000000.1234567890", /* Standalone number -Not Wrapped in an Object- */
         "4.35e-10",     /* Standalone number -Not Wrapped in an Object- */
         "\"string\"",   /* Standalone string -Not Wrapped in an Object- */
-        "\"unicode: \\u4f60\\u597d\""
+        "\"unicode: \\u4f60\\u597d\"",
+        "\"Hello\\tWorld\"",
+        "\"My name is \\\"Hope\\\"\""
         };
 
   const char json_str_negative_tests[][500] = {
