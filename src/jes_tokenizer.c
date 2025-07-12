@@ -373,7 +373,7 @@ static void jes_tokenizer_process_escaped_utf_16_token(struct jes_cursor* cursor
       uint16_t low_surrogate;
       *status = JES_INVALID_UNICODE;
 
-      if ((escaped_utf_16[4] == '\\') || (escaped_utf_16[5] == 'u')) {
+      if ((escaped_utf_16[4] == '\\') && (escaped_utf_16[5] == 'u')) {
         if (jes_tokenizer_utf_16_str2hex(&escaped_utf_16[6], &low_surrogate)) {
           if (low_surrogate >= 0xDC00 && low_surrogate <= 0xDFFF) {
             /* Unicode is valid. Switch to normal string tokenizer. */
@@ -531,7 +531,6 @@ enum jes_status jes_tokenizer_validate_number(struct jes_context* ctx, const cha
   struct jes_token token = { 0 };
   struct jes_cursor cursor = { 0 };
   enum jes_status status = JES_NO_ERROR;
-  bool is_valid = false;
 
   assert(ctx != NULL);
   assert(value != NULL);
@@ -543,7 +542,7 @@ enum jes_status jes_tokenizer_validate_number(struct jes_context* ctx, const cha
     status = JES_INVALID_NUMBER;
   }
 
-  return is_valid;
+  return status;
 }
 
 enum jes_status jes_tokenizer_validate_string(struct jes_context* ctx, const char* value, size_t length)
@@ -553,7 +552,6 @@ enum jes_status jes_tokenizer_validate_string(struct jes_context* ctx, const cha
   struct jes_cursor cursor = { 0 };
   enum jes_status status = JES_NO_ERROR;
   char ch;
-  bool is_valid = false;
 
   assert(ctx != NULL);
   assert(value != NULL);
