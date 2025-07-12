@@ -421,14 +421,26 @@ static inline bool jes_tokenizer_process_string_token(struct jes_cursor* cursor,
     else if (ch == '\\') {
       token->length++;
       jes_tokenizer_advance(cursor);
-      if (jes_tokenizer_get_char(cursor) == 'u') {
-        token->length++;
-        jes_tokenizer_advance(cursor);
-        jes_tokenizer_process_escaped_utf_16_token(cursor, token, status);
-      }
-      else {
-        *status = JES_UNEXPECTED_SYMBOL;
-        break;
+
+      switch (ch) {
+        case '"':
+        case '\\':
+        case '/':
+        case 'b':
+        case 'f':
+        case 'n':
+        case 'r':
+        case 't':
+            token->length++;
+            break;
+        case 'u':
+          token->length++;
+          jes_tokenizer_advance(cursor);
+          jes_tokenizer_process_escaped_utf_16_token(cursor, token, status);
+          break;
+        default:
+          *status = JES_UNEXPECTED_SYMBOL;
+          break;
       }
     }
     else if ((ch =='\b') || (ch =='\f') || (ch =='\n') || (ch =='\r') || (ch =='\t')) {
