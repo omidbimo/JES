@@ -65,20 +65,20 @@
 
 typedef enum jes_status {
   JES_NO_ERROR = 0,
-  JES_PARSING_FAILED,
-  JES_RENDER_FAILED,
-  JES_OUT_OF_MEMORY,
-  JES_UNEXPECTED_SYMBOL,
-  JES_UNEXPECTED_TOKEN,
-  JES_UNEXPECTED_ELEMENT,
-  JES_UNEXPECTED_EOF,
-  JES_INVALID_PARAMETER,
-  JES_ELEMENT_NOT_FOUND,
-  JES_INVALID_CONTEXT,
-  JES_BROKEN_TREE,
-  JES_DUPLICATE_KEY,
-  JES_INVALID_UNICODE,
-  JES_INVALID_NUMBER,
+  JES_UNEXPECTED_SYMBOL,  /* Tokenizer error */
+  JES_INVALID_UNICODE,    /* Tokenizer error */
+  JES_INVALID_NUMBER,     /* Tokenizer error */
+  JES_UNEXPECTED_EOF,     /* Tokenizer, parser and serializer error */
+  JES_OUT_OF_MEMORY,      /* Parser error */
+  JES_UNEXPECTED_TOKEN,   /* Parser error */
+  JES_UNEXPECTED_STATE,   /* Parser and Serializer error */
+  JES_UNEXPECTED_ELEMENT, /* Serializer and Tree management error */
+  JES_INVALID_PARAMETER,  /* API error */
+  JES_ELEMENT_NOT_FOUND,  /* API error */
+  JES_INVALID_CONTEXT,    /* API error */
+  JES_BROKEN_TREE,        /* API and Tree management error */
+  JES_DUPLICATE_KEY,      /* Tree management error */
+
 } jes_status;
 
 enum jes_type {
@@ -252,7 +252,10 @@ struct jes_element* jes_add_array_value(struct jes_context* ctx, struct jes_elem
 /* Generic add helper */
 struct jes_element* jes_add_element(struct jes_context* ctx, struct jes_element* parent, enum jes_type type, const char* value, size_t value_length);
 
-/* To get the number of elements distinguished by their types. See jes_stat structure. */
+/**
+ * Provides a summary of the number of elements in the parsed tree,
+ * categorized by their types. It can be used for diagnostics, validation, or
+ * performance analysis. */
 struct jes_stat jes_get_stat(struct jes_context* ctx);
 
 /* Iteration macros */

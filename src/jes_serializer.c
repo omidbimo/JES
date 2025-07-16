@@ -367,7 +367,7 @@ static void jes_serializer_state_machine(struct jes_context* ctx, struct jes_ser
         break;
       default:
         assert(0);
-        ctx->status = JES_RENDER_FAILED;
+        ctx->status = JES_UNEXPECTED_STATE;
         break;
     }
 

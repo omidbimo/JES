@@ -355,7 +355,7 @@ void jes_parse(struct jes_context *ctx)
         ctx->status = JES_UNEXPECTED_TOKEN;
         break;
       default:
-        ctx->status = JES_PARSING_FAILED;
+        ctx->status = JES_UNEXPECTED_STATE;
         break;
     }
 #if defined(JES_ENABLE_PARSER_STATE_LOG)
