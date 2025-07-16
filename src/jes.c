@@ -28,6 +28,7 @@ struct jes_context* jes_init(void* buffer, size_t buffer_size)
   jes_tree_init(ctx, (struct jes_context*)ctx->workspace + 1, ctx->workspace_size - sizeof(*ctx));
 
   ctx->cookie = JES_CONTEXT_COOKIE;
+  ctx->path_separator = '.';
   return ctx;
 }
 
@@ -36,6 +37,7 @@ void jes_reset(struct jes_context* ctx)
   if ((ctx != NULL) && JES_IS_INITIATED(ctx)) {
     ctx->status = JES_NO_ERROR;
     ctx->serdes.tokenizer.json_data = NULL;
+    ctx->path_separator = '.';
     jes_tree_init(ctx, (struct jes_context*)ctx->workspace + 1, ctx->workspace_size - sizeof(*ctx));
   }
 }
@@ -154,9 +156,7 @@ struct jes_element* jes_get_key(struct jes_context* ctx, struct jes_element* par
   struct jes_node* iter = (struct jes_node*)parent;
   size_t key_len;
   const char* key;
-  char* dot;
-
-
+  char* separator;
 
   if (!ctx || !JES_IS_INITIATED(ctx)) {
     return NULL;
@@ -167,8 +167,8 @@ struct jes_element* jes_get_key(struct jes_context* ctx, struct jes_element* par
     return NULL;
   }
 
-  key_len = strnlen(keys, JES_MAX_VALUE_LENGTH);
-  if (key_len == JES_MAX_VALUE_LENGTH) {
+  key_len = strnlen(keys, JES_MAX_PATH_LENGTH);
+  if (key_len == JES_MAX_PATH_LENGTH) {
     ctx->status = JES_INVALID_PARAMETER;
     return NULL;
   }
@@ -183,10 +183,10 @@ struct jes_element* jes_get_key(struct jes_context* ctx, struct jes_element* par
   /* TODO: Cleanup */
   while (iter != NULL) {
     key = keys;
-    dot = strchr(keys, '.');
-    if (dot) {
-      key_len = dot - keys;
-      keys = keys + key_len + sizeof(*dot);
+    separator = strchr(keys, ctx->path_separator);
+    if (separator) {
+      key_len = separator - keys;
+      keys = keys + key_len + sizeof(*separator);
     }
     else {
       /* keys length has already been validated to make sure a buffer over read won't happen. */
@@ -701,9 +701,19 @@ struct jes_element* jes_load(struct jes_context* ctx, const char* json_data, siz
   return ctx->status == JES_NO_ERROR ? (struct jes_element*)ctx->node_mng.root : NULL;
 }
 
+void jes_set_path_separator(struct jes_context* ctx, char delimiter)
+{
+  ctx->path_separator = delimiter;
+}
+
 size_t jes_get_context_size(void)
 {
   return sizeof(struct jes_context);
+}
+
+size_t jes_get_node_size(void)
+{
+  return sizeof(struct jes_node);
 }
 
 struct jes_stat jes_get_stat(struct jes_context* ctx)

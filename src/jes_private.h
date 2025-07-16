@@ -212,6 +212,8 @@ struct jes_context {
   /* Hash table state for accelerated key lookups */
   struct jes_hash_table_context hash_table;
 #endif
+
+  char path_separator;
 };
 
 #endif
