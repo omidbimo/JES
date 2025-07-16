@@ -414,7 +414,6 @@ void jes_tree_init(struct jes_context* ctx, void *buffer, size_t buffer_size)
                      ? mng_ctx->size / sizeof(struct jes_node)
                      : JES_INVALID_INDEX -1;
 
-  JES_LOG("\n Setup node pool. size=%d bytes, capacity=%d nodes", ctx->node_mng.size, ctx->node_mng.capacity);
 #ifndef JES_ENABLE_FAST_KEY_SEARCH
   mng_ctx->find_key_fn = jes_tree_find_key;
 #else

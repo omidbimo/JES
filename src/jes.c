@@ -703,7 +703,9 @@ struct jes_element* jes_load(struct jes_context* ctx, const char* json_data, siz
 
 void jes_set_path_separator(struct jes_context* ctx, char delimiter)
 {
-  ctx->path_separator = delimiter;
+  if ((ctx != NULL) && JES_IS_INITIATED(ctx)) {
+    ctx->path_separator = delimiter;
+  }
 }
 
 size_t jes_get_context_size(void)
@@ -718,7 +720,11 @@ size_t jes_get_node_size(void)
 
 struct jes_stat jes_get_stat(struct jes_context* ctx)
 {
-  struct jes_stat stat = {0};
+  struct jes_stat stat = { 0 };
+
+  if ((ctx == NULL) || !JES_IS_INITIATED(ctx)) {
+    return stat;
+  }
 
   ctx->serdes.iter = NULL;
 
@@ -745,5 +751,20 @@ struct jes_stat jes_get_stat(struct jes_context* ctx)
         break;
     }
   }
+  return stat;
+}
+
+struct jes_workspace_stat jes_get_workspace_stat(struct jes_context* ctx)
+{
+  struct jes_workspace_stat stat = { 0 };
+
+  if ((ctx != NULL) && JES_IS_INITIATED(ctx)) {
+    stat.context = jes_get_context_size();
+    stat.node_mng = ctx->node_mng.size;
+    stat.node_mng_used = sizeof(struct jes_node_mng_context) + ctx->node_mng.node_count * sizeof(struct jes_node);
+    stat.hash_table = ctx->hash_table.size;
+    stat.hash_table_used = 0; /* TODO: Not implemented yet. */
+  }
+
   return stat;
 }

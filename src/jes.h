@@ -55,8 +55,14 @@
  */
 // #define JES_ENABLE_FALL_BACK_TO_LINEAR_SEARCH
 
+/**
+ * JES_TAB_SIZE
+ *
+ * Determines the size of the indention when pretty printing the JSON.
+ */
 #define JES_TAB_SIZE 2
 
+/* Logging output control in debug mode */
 #define JES_ENABLE_TOKEN_LOG
 #define JES_ENABLE_PARSER_NODE_LOG
 #define JES_ENABLE_PARSER_STATE_LOG
@@ -110,6 +116,20 @@ struct jes_stat {
   size_t keys;    /* Number of KEY elements */
   size_t arrays;  /* Number of ARRAY elements */
   size_t values;  /* Number of value elements (STRING, NUMBER, TRUE, FALSE, NULL) */
+};
+
+/**
+ * Memory allocation breakdown for a JES workspace.
+ *
+ * This structure provides detailed information about how the user-provided
+ * workspace buffer is divided among different JES components.
+ */
+struct jes_workspace_stat {
+    size_t context;         /* Bytes allocated for JES context data */
+    size_t node_mng;        /* Bytes dedicated to the node management module */
+    size_t node_mng_used;   /* Bytes allocated */
+    size_t hash_table;      /* Bytes dedicated to the hash table module (0 if disabled) */
+    size_t hash_table_used; /* Bytes allocated */
 };
 
 /**
@@ -257,6 +277,15 @@ struct jes_element* jes_add_element(struct jes_context* ctx, struct jes_element*
  * categorized by their types. It can be used for diagnostics, validation, or
  * performance analysis. */
 struct jes_stat jes_get_stat(struct jes_context* ctx);
+
+/**
+ * Retrieves memory usage statistics for a JES workspace.
+ *
+ * This function analyzes the current workspace allocation and returns
+ * a breakdown of how the user-provided buffer is segmented among the
+ * JES context, node management system, and optional hash table.
+ */
+struct jes_workspace_stat jes_get_workspace_stat(struct jes_context* ctx);
 
 /* Iteration macros */
 

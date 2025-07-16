@@ -203,10 +203,6 @@ static enum jes_status jes_hash_table_resize(struct jes_context* ctx)
                              ? ctx->hash_table.size / sizeof(*ctx->hash_table.pool)
                              : JES_INVALID_INDEX -1;
     ctx->hash_table.pool = (struct jes_hash_entry*)((uint8_t*)ctx->node_mng.pool + ctx->node_mng.size);
-
-    JES_LOG("\n Node pool restructured. Extended hash table.");
-    JES_LOG("\n    Node Pool: size=%d bytes, capacity=%d nodes", ctx->node_mng.size, ctx->node_mng.capacity);
-    JES_LOG("\n    hashed key Pool: size=%d bytes, capacity=%d entries", ctx->hash_table.size, ctx->hash_table.capacity);
   }
   return JES_NO_ERROR;
 }
