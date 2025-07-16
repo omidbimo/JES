@@ -329,7 +329,6 @@ struct jes_node* jes_serializer_get_node(struct jes_context* ctx)
   }
 
   if (ctx->serdes.iter == NULL) {
-    assert(ctx->serdes.state == JES_HAVE_VALUE);
     ctx->serdes.state = JES_END;
   }
   /* Return NULL if traversal is complete */
