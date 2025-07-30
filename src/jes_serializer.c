@@ -345,7 +345,7 @@ static void jes_serializer_state_machine(struct jes_context* ctx, struct jes_ser
 
   ctx->serdes.state = JES_EXPECT_VALUE;
   ctx->serdes.iter = NULL;
-  serializer->out_length = sizeof(char); /* NUL termination */
+  serializer->out_length = 0;
   serializer->indention = 0;
 
   do {
@@ -408,6 +408,7 @@ size_t jes_render(struct jes_context *ctx, char* buffer, size_t buffer_length, b
     return 0;
   }
 
+  /* First pass: just evaluate the JSON structure and calculate the required output buffer length. */
   serializer.renderer.opening_brace = jes_serializer_calculate_delimiter;
   serializer.renderer.closing_brace = jes_serializer_calculate_delimiter;
   serializer.renderer.opening_bracket = jes_serializer_calculate_delimiter;
@@ -426,9 +427,10 @@ size_t jes_render(struct jes_context *ctx, char* buffer, size_t buffer_length, b
   serializer.evaluated = false;
 
   jes_serializer_state_machine(ctx, &serializer);
+  serializer.out_length += sizeof(char); /* NUL termination */
 
   if ((ctx->status == JES_NO_ERROR) && (buffer_length >= serializer.out_length)) {
-
+    /* Second pass: Render the JSON tree into the string buffer. */
     serializer.renderer.opening_brace = jes_serializer_render_opening_brace;
     serializer.renderer.closing_brace = jes_serializer_render_closing_brace;
     serializer.renderer.opening_bracket = jes_serializer_render_opening_bracket;
@@ -485,6 +487,7 @@ size_t jes_evaluate(struct jes_context *ctx, bool compact)
                                : jes_serializer_calculate_new_line;
 
   jes_serializer_state_machine(ctx, &serializer);
+  serializer.out_length += sizeof(char); /* NUL termination */
 
   return (ctx->status == JES_NO_ERROR) ? serializer.out_length : 0;
 }
