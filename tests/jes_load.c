@@ -48,9 +48,20 @@ int main(void)
         "435000000000.1234567890", /* Standalone number -Not Wrapped in an Object- */
         "4.35e-10",     /* Standalone number -Not Wrapped in an Object- */
         "\"string\"",   /* Standalone string -Not Wrapped in an Object- */
-        "\"unicode: \\u4f60\\u597d\"",
+
         "\"Hello\\tWorld\"",
-        "\"My name is \\\"Hope\\\"\""
+        "\"My name is \\\"Hope\\\"\"",
+        "\"Escaped \\\" \"",
+        "\"Escaped \\\\ \"",
+        "\"Escaped \\/ \"",
+        "\"Escaped \\b \"",
+        "\"Escaped \\f \"",
+        "\"Escaped \\n \"",
+        "\"Escaped \\r \"",
+        "\"Escaped \\t \"",
+        "\"unicode: \\u4f60\"",
+        "\"unicode: \\u4f60\\u597d\"", /* Basic plane utf16 unicode values */
+        "\"unicode: \\ud801\\udc01\"", /* Surrogate pair utf16 unicode values */
         };
 
   const char json_str_negative_tests[][500] = {
@@ -92,7 +103,11 @@ int main(void)
         "fals",
         "nul",
         "trues",
-
+        "\"Escaped \\a \"",
+        "\"Escaped \\1 \"",
+        "\"Escaped \\  \"",
+        "\"Escaped \\. \"",
+        "\"unicode: \\u4f60\\g597d\"",
         };
 
   printf("\nRunning parser positive tests...");
