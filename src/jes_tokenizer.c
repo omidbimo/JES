@@ -361,8 +361,8 @@ static void jes_tokenizer_process_escaped_utf_16_token(struct jes_cursor* cursor
         else {
           /* NOP. The unicode value is in the range of Surrogate pair. Consume more
             bytes and validate the pair later. */
-    jes_tokenizer_advance(cursor);
-    continue;
+        jes_tokenizer_advance(cursor);
+        continue;
         }
       }
 
@@ -421,6 +421,7 @@ static inline bool jes_tokenizer_process_string_token(struct jes_cursor* cursor,
     else if (ch == '\\') {
       token->length++;
       jes_tokenizer_advance(cursor);
+      ch = jes_tokenizer_get_char(cursor);
 
       switch (ch) {
         case '"':
@@ -439,7 +440,7 @@ static inline bool jes_tokenizer_process_string_token(struct jes_cursor* cursor,
           jes_tokenizer_process_escaped_utf_16_token(cursor, token, status);
           break;
         default:
-          *status = JES_UNEXPECTED_SYMBOL;
+          *status = JES_INVALID_ESCAPED_SYMBOL;
           return true;
       }
     }

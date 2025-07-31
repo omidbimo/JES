@@ -3,13 +3,14 @@
 #include "jes_private.h"
 #include "jes_logger.h"
 
-#define JES_HELPER_STR_LENGTH 20
+#define JES_HELPER_STR_LENGTH 25
 
 static char jes_status_str[][JES_HELPER_STR_LENGTH] = {
   "NO_ERROR",
   "UNEXPECTED_SYMBOL",
   "INVALID_UNICODE",
   "INVALID_NUMBER",
+  "INVALID_ESCAPED_SYMBOL",
   "UNEXPECTED_EOF",
   "OUT_OF_MEMORY",
   "UNEXPECTED_TOKEN",

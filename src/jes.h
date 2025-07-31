@@ -71,19 +71,20 @@
 
 typedef enum jes_status {
   JES_NO_ERROR = 0,
-  JES_UNEXPECTED_SYMBOL,  /* Tokenizer error */
-  JES_INVALID_UNICODE,    /* Tokenizer error */
-  JES_INVALID_NUMBER,     /* Tokenizer error */
-  JES_UNEXPECTED_EOF,     /* Tokenizer, parser and serializer error */
-  JES_OUT_OF_MEMORY,      /* Parser error */
-  JES_UNEXPECTED_TOKEN,   /* Parser error */
-  JES_UNEXPECTED_STATE,   /* Parser and Serializer error */
-  JES_UNEXPECTED_ELEMENT, /* Serializer and Tree management error */
-  JES_INVALID_PARAMETER,  /* API error */
-  JES_ELEMENT_NOT_FOUND,  /* API error */
-  JES_INVALID_CONTEXT,    /* API error */
-  JES_BROKEN_TREE,        /* API and Tree management error */
-  JES_DUPLICATE_KEY,      /* Tree management error */
+  JES_UNEXPECTED_SYMBOL,      /* Tokenizer error */
+  JES_INVALID_UNICODE,        /* Tokenizer error */
+  JES_INVALID_NUMBER,         /* Tokenizer error */
+  JES_INVALID_ESCAPED_SYMBOL, /* Tokenizer error */
+  JES_UNEXPECTED_EOF,         /* Tokenizer, parser and serializer error */
+  JES_OUT_OF_MEMORY,          /* Parser error */
+  JES_UNEXPECTED_TOKEN,       /* Parser error */
+  JES_UNEXPECTED_STATE,       /* Parser and Serializer error */
+  JES_UNEXPECTED_ELEMENT,     /* Serializer and Tree management error */
+  JES_INVALID_PARAMETER,      /* API error */
+  JES_ELEMENT_NOT_FOUND,      /* API error */
+  JES_INVALID_CONTEXT,        /* API error */
+  JES_BROKEN_TREE,            /* API and Tree management error */
+  JES_DUPLICATE_KEY,          /* Tree management error */
 
 } jes_status;
 
