@@ -69,22 +69,23 @@ The library behavior can be configured by defining the following macros:
 
 Defines the possible status codes for JES operations:
 
-| Status Code              | Description                                 |
-| ------------------------ | ------------------------------------------- |
-| `JES_NO_ERROR`           | No error occurred.                          |
-| `JES_UNEXPECTED_SYMBOL`  | Tokenizer error - unexpected character.     |
-| `JES_INVALID_UNICODE`    | Tokenizer error - invalid Unicode sequence. |
-| `JES_INVALID_NUMBER`     | Tokenizer error - malformed number.         |
-| `JES_UNEXPECTED_EOF`     | Unexpected end of JSON data.                |
-| `JES_OUT_OF_MEMORY`      | Insufficient memory for operation.          |
-| `JES_UNEXPECTED_TOKEN`   | Parser error - unexpected token.            |
-| `JES_UNEXPECTED_STATE`   | Parser/Serializer error - invalid state.    |
-| `JES_UNEXPECTED_ELEMENT` | Serializer/Tree management error.           |
-| `JES_INVALID_PARAMETER`  | Invalid parameter passed to function.       |
-| `JES_ELEMENT_NOT_FOUND`  | Requested JSON element not found.           |
-| `JES_INVALID_CONTEXT`    | Context validation failed.                  |
-| `JES_BROKEN_TREE`        | Malformed JSON tree detected.               |
-| `JES_DUPLICATE_KEY`      | Duplicate key detected in object.           |
+| Status Code                   | Description                                 |
+| ------------------------------| ------------------------------------------- |
+| `JES_NO_ERROR`                | No error occurred.                          |
+| `JES_UNEXPECTED_SYMBOL`       | Tokenizer error - unexpected character.     |
+| `JES_INVALID_UNICODE`         | Tokenizer error - invalid Unicode sequence. |
+| `JES_INVALID_NUMBER`          | Tokenizer error - malformed number.         |
+| `JES_INVALID_ESCAPED_SYMBOL`  | Tokenizer error - invalid escaped symbol.   |
+| `JES_UNEXPECTED_EOF`          | Unexpected end of JSON data.                |
+| `JES_OUT_OF_MEMORY`           | Insufficient memory for operation.          |
+| `JES_UNEXPECTED_TOKEN`        | Parser error - unexpected token.            |
+| `JES_UNEXPECTED_STATE`        | Parser/Serializer error - invalid state.    |
+| `JES_UNEXPECTED_ELEMENT`      | Serializer/Tree management error.           |
+| `JES_INVALID_PARAMETER`       | Invalid parameter passed to function.       |
+| `JES_ELEMENT_NOT_FOUND`       | Requested JSON element not found.           |
+| `JES_INVALID_CONTEXT`         | Context validation failed.                  |
+| `JES_BROKEN_TREE`             | Malformed JSON tree detected.               |
+| `JES_DUPLICATE_KEY`           | Duplicate key detected in object.           |
 
 ### JSON Element Types
 
