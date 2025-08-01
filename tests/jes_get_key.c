@@ -115,6 +115,28 @@ int main(void)
     return -1;
   }
 
+  printf("\n jes_get_key(doc, jes_get_root(doc), \"key1.\")");
+  key = jes_get_key(doc, jes_get_root(doc), "key1.");
+  if (key) {
+    printf("\nError! Unexpected KEY element!.");
+    return -1;
+  }
+  if (jes_get_status(doc) != JES_ELEMENT_NOT_FOUND) {
+    printf("\nError! Unexpected status code: %s when expected JES_ELEMENT_NOT_FOUND.", jes_stringify_status(doc, err_msg, sizeof(err_msg)));
+    return -1;
+  }
+
+  printf("\n jes_get_key(doc, jes_get_root(doc), \".key1\")");
+  key = jes_get_key(doc, jes_get_root(doc), ".key1");
+  if (key) {
+    printf("\nError! Unexpected KEY element!");
+    return -1;
+  }
+  if (jes_get_status(doc) != JES_ELEMENT_NOT_FOUND) {
+    printf("\nError! Unexpected status code: %s when expected JES_ELEMENT_NOT_FOUND.", jes_stringify_status(doc, err_msg, sizeof(err_msg)));
+    return -1;
+  }
+
   printf("\n jes_get_key(doc, jes_get_root(doc), \"\")");
   key = jes_get_key(doc, jes_get_root(doc), "");
   if (key) {

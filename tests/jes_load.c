@@ -27,7 +27,7 @@ int main(void)
   struct jes_element *value = NULL;
   struct jes_element dummy;
 
-  const char json_str_positive_tests[][500] = {
+  const char json_str_positive_tests[][200] = {
         "{\"key\": \"value\"}",
         "{\"key\": [\"value\", {}]}",
         "     {    \"key\"     :   \"value\"    }   ",
@@ -64,7 +64,7 @@ int main(void)
         "\"unicode: \\ud801\\udc01\"", /* Surrogate pair utf16 unicode values */
         };
 
-  const char json_str_negative_tests[][500] = {
+  const char json_str_negative_tests[][200] = {
         "{",                                                  /* Single Opening Brace */
         "}",                                                  /* Single Closing Brace */
         "[",                                                  /* Single Opening Bracket */
@@ -177,6 +177,4 @@ int main(void)
 
   printf("\nTest finished successfully.");
   return 0;
-
-
 }
