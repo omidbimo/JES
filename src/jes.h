@@ -218,6 +218,7 @@ size_t jes_get_element_capacity(struct jes_context* ctx);
 
 /**
  * Sets path delimiter when searching for a key using a path of keys.
+ * The default separator is '.'
  */
 void jes_set_path_separator(struct jes_context* ctx, char delimiter);
 /**
@@ -264,7 +265,7 @@ struct jes_element* jes_update_key_value_to_false(struct jes_context* ctx, struc
 struct jes_element* jes_update_key_value_to_null(struct jes_context* ctx, struct jes_element* key);
 
 /* Array operations */
-uint16_t jes_get_array_size(struct jes_context* ctx, struct jes_element* array);
+size_t jes_get_array_size(struct jes_context* ctx, struct jes_element* array);
 struct jes_element* jes_get_array_value(struct jes_context* ctx, struct jes_element* array, int32_t index);
 struct jes_element* jes_update_array_value(struct jes_context* ctx, struct jes_element* array, int32_t index, enum jes_type type, const char* value, size_t value_length);
 struct jes_element* jes_append_array_value(struct jes_context* ctx, struct jes_element* array, enum jes_type type, const char* value, size_t value_length);

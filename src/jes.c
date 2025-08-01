@@ -136,17 +136,15 @@ jes_status jes_delete_element(struct jes_context* ctx, struct jes_element* eleme
 
   ctx->status = JES_NO_ERROR;
 
-  if (element == NULL) {
-    return JES_NO_ERROR;
+  if (element != NULL) {
+    if (!jes_validate_node(ctx, (struct jes_node*)element)) {
+      ctx->status = JES_INVALID_PARAMETER;
+    }
+    else {
+      jes_tree_delete_node(ctx, (struct jes_node*)element);
+    }
   }
 
-  if (!jes_validate_node(ctx, (struct jes_node*)element)) {
-    ctx->status = JES_INVALID_PARAMETER;
-    return ctx->status;
-  }
-
-  ctx->status = JES_NO_ERROR;
-  jes_tree_delete_node(ctx, (struct jes_node*)element);
   return ctx->status;
 }
 
@@ -180,34 +178,40 @@ struct jes_element* jes_get_key(struct jes_context* ctx, struct jes_element* par
 
   ctx->status = JES_NO_ERROR;
 
-  /* TODO: Cleanup */
+  /* The keys will be break into several keywords separated by a predefined separator char.
+     The search is only successful When all keys are found. */
   while (iter != NULL) {
     key = keys;
     separator = strchr(keys, ctx->path_separator);
-    if (separator) {
+    if (separator != NULL) {
       key_len = separator - keys;
-      keys = keys + key_len + sizeof(*separator);
     }
     else {
-      /* keys length has already been validated to make sure a buffer over read won't happen. */
-      key_len = strlen(keys);
-      keys = keys + key_len;
+      key_len = strlen(keys); /* keys length has already been validated so using strlen is ok. */
     }
+
+    keys += key_len; /* This set the keys to the NUL terminator or the separator. */
 
     if (NODE_TYPE(iter) == JES_KEY) {
       iter = GET_FIRST_CHILD(ctx->node_mng, iter);
     }
+
     iter = ctx->node_mng.find_key_fn(ctx, iter, key, key_len);
 
+    /* This was the last element to find. */
     if ((iter != NULL) && (*keys == '\0')) {
       target_key = (struct jes_element*)iter;
       break;
     }
+
+    /* The keys points to a separator move it on char forward to get the next key. */
+    keys += sizeof(char); /* +1 byte for the size of separator symbol */
   }
 
   if ((target_key == NULL) && (ctx->status == JES_NO_ERROR)) {
     ctx->status = JES_ELEMENT_NOT_FOUND;
   }
+
 
   return target_key;
 }
@@ -229,9 +233,9 @@ struct jes_element* jes_get_key_value(struct jes_context* ctx, struct jes_elemen
   return (struct jes_element*)node;
 }
 
-uint16_t jes_get_array_size(struct jes_context* ctx, struct jes_element* array)
+size_t jes_get_array_size(struct jes_context* ctx, struct jes_element* array)
 {
-  uint16_t array_size = 0;
+  size_t array_size = 0;
   struct jes_node* iter = NULL;
 
   if ((ctx == NULL) || !JES_IS_INITIATED(ctx)) {
@@ -259,7 +263,7 @@ struct jes_element* jes_get_array_value(struct jes_context* ctx, struct jes_elem
 {
   struct jes_node* iter = NULL;
   /* Skip checking ctx and array only when calling jes_get_array_size */
-  uint16_t array_size = jes_get_array_size(ctx, array);
+  size_t array_size = jes_get_array_size(ctx, array);
 
   if (ctx->status != JES_NO_ERROR) {
     return NULL;
