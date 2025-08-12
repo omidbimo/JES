@@ -40,10 +40,11 @@ The library behavior can be configured by defining the following macros:
 
 /* Enable hash table based key lookup to accelerate access in large JSON objects
  * Useful for frequent key access in large documents
- * Note: Requires more memory for the internal hash table
- * In small JSON objects, linear search may be more efficient
+ * Note:
+ *    - Requires more memory for the internal hash table
+ *    - In small JSON objects, linear search may be more efficient
  */
-#define JES_ENABLE_FAST_KEY_SEARCH
+#define JES_ENABLE_KEY_HASHING
 
 /* Allow fallback to linear search when node buffer is exhausted
  * On node buffer exhaustion, hash table memory is reclaimed to continue parsing
