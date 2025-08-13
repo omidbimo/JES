@@ -36,7 +36,6 @@ static char jes_token_type_str[][JES_HELPER_STR_LENGTH] = {
   "TRUE",
   "FALSE",
   "NULL",
-  "ESC",
   "INVALID_TOKEN",
 };
 

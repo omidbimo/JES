@@ -88,6 +88,28 @@ Defines the possible status codes for JES operations:
 | `JES_BROKEN_TREE`             | Malformed JSON tree detected.               |
 | `JES_DUPLICATE_KEY`           | Duplicate key detected in object.           |
 
+### JSON Token Types
+
+### `jes_token_type`
+
+Defines the types of JSON elements:
+
+| Type                        | Description               |
+| --------------------------- | ------------------------- |
+| `JES_TOKEN_EOF`             | End Of File               |
+| `JES_TOKEN_OPENING_BRACE`   | Opening/Left Brace `{`    |
+| `JES_TOKEN_CLOSING_BRACE`   | Closing/right Brace `}`   |
+| `JES_TOKEN_OPENING_BRACKET` | Opening/left Bracket `[`  |
+| `JES_TOKEN_CLOSING_BRACKET` | Closing/right Bracket `]` |
+| `JES_TOKEN_COLON`           | Colon `:`                 |
+| `JES_TOKEN_COMMA`           | Comma `,`                 |
+| `JES_TOKEN_STRING`          | String `""`               |
+| `JES_TOKEN_NUMBER`          | Number                    |
+| `JES_TOKEN_TRUE`            | Boolean literal `true`    |
+| `JES_TOKEN_FALSE`           | Boolean literal `false`   |
+| `JES_TOKEN_NULL`            | Literal `null`            |
+| `JES_TOKEN_INVALID`         | Unknown/Invalid           |
+
 ### JSON Element Types
 
 ### `jes_type`
@@ -142,6 +164,18 @@ Memory allocation breakdown for a JES workspace:
 | `node_mng_used`   | `size_t` | Bytes currently allocated in node manager     |
 | `hash_table`      | `size_t` | Bytes dedicated to hash table (0 if disabled) |
 | `hash_table_used` | `size_t` | Bytes currently allocated in hash table       |
+
+### `jes_status_block`
+
+JES Status Block:
+
+| Field             | Type                  | Description                                       |
+| ----------------- | --------------------- | ------------------------------------------------- |
+| `status`          | `enum jes_status`     | Status form last operation                        |
+| `token_type`      | `enum jes_token_type` | Type of the last processed token                  |
+| `element_type`    | `enum jes_type`       | Type of the last processed element                |
+| `cursor_line`     | `size_t`              | The last processed line of the JSON document      |
+| `cursor_pos`      | `size_t`              | The last processed position of the JSON document  |
 
 ## Functions
 
@@ -672,6 +706,12 @@ jes_status jes_get_status(struct jes_context* ctx);
 - `ctx`: Initialized JES context
 
 **Returns** Status code of the latest operation
+
+### `jes_get_status_block`
+
+```c
+struct jes_status_block jes_get_status_block(struct jes_context* ctx);
+```
 
 ## Iteration Macros
 

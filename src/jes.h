@@ -101,7 +101,6 @@ enum jes_token_type {
   JES_TOKEN_TRUE,
   JES_TOKEN_FALSE,
   JES_TOKEN_NULL,
-  JES_TOKEN_ESC,
   JES_TOKEN_INVALID,
 };
 
@@ -154,7 +153,7 @@ struct jes_status_block {
   /* Status form last operation */
   enum jes_status status;
   /* Type of the last processed token */
-  enum jes_type token_type;
+  enum jes_token_type token_type;
   /* Type of the last processed element */
   enum jes_type element_type;
   /* The last processed line of the JSON document */
@@ -228,10 +227,15 @@ size_t jes_evaluate(struct jes_context* ctx, bool compact);
 jes_status jes_get_status(struct jes_context* ctx);
 
 /**
- * Returns the current JES state information to provide a more comprehensive error report.
+ * Returns the current JES status block, containing detailed diagnostic information
+ *         about the parser or serializer state. This function is useful when
+ *         jes_get_status() alone is insufficient to understand the cause of an error.
+ * Note: The returned jes_status_block contains context-specific fields whose
+ *       meaning depends on the status code.
  *
  * @param ctx JES context.
- * @return Status block structure.
+ * @return jes_status_block structure.
+ *
  */
 struct jes_status_block jes_get_status_block(struct jes_context* ctx);
 

@@ -68,6 +68,12 @@ int main(void)
     printf("\n\n%.*s\n\n", out_size, output);
   }
 
+  struct jes_status_block sb = jes_get_status_block(doc);
+  printf("\n status: %i", sb.status);
+  printf("\n token type: %i", sb.token_type);
+  printf("\n element type: %i", sb.element_type);
+  printf("\n line: %u", sb.cursor_line);
+  printf("\n pos: %u", sb.cursor_pos);
 
 
   return 0;
