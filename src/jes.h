@@ -88,6 +88,23 @@ typedef enum jes_status {
 
 } jes_status;
 
+enum jes_token_type {
+  JES_TOKEN_EOF = 0,
+  JES_TOKEN_OPENING_BRACE,   /* { */
+  JES_TOKEN_CLOSING_BRACE,   /* } */
+  JES_TOKEN_OPENING_BRACKET, /* [ */
+  JES_TOKEN_CLOSING_BRACKET, /* ] */
+  JES_TOKEN_COLON,
+  JES_TOKEN_COMMA,
+  JES_TOKEN_STRING,
+  JES_TOKEN_NUMBER,
+  JES_TOKEN_TRUE,
+  JES_TOKEN_FALSE,
+  JES_TOKEN_NULL,
+  JES_TOKEN_ESC,
+  JES_TOKEN_INVALID,
+};
+
 enum jes_type {
   JES_UNKNOWN = 0,
   JES_OBJECT,
@@ -131,6 +148,19 @@ struct jes_workspace_stat {
     size_t node_mng_used;   /* Bytes allocated */
     size_t hash_table;      /* Bytes dedicated to the hash table module (0 if disabled) */
     size_t hash_table_used; /* Bytes allocated */
+};
+
+struct jes_status_block {
+  /* Status form last operation */
+  enum jes_status status;
+  /* Type of the last processed token */
+  enum jes_type token_type;
+  /* Type of the last processed element */
+  enum jes_type element_type;
+  /* The last processed line of the JSON document */
+  size_t cursor_line;
+  /* The last processed position of the JSON document */
+  size_t cursor_pos;
 };
 
 /**
@@ -196,6 +226,14 @@ size_t jes_evaluate(struct jes_context* ctx, bool compact);
  * @return Status code.
  */
 jes_status jes_get_status(struct jes_context* ctx);
+
+/**
+ * Returns the current JES state information to provide a more comprehensive error report.
+ *
+ * @param ctx JES context.
+ * @return Status block structure.
+ */
+struct jes_status_block jes_get_status_block(struct jes_context* ctx);
 
 /**
  * Deletes an element and its children from the JSON tree.

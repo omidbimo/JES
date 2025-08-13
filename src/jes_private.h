@@ -52,23 +52,6 @@ enum jes_state {
   JES_END,
 };
 
-enum jes_token_type {
-  JES_TOKEN_EOF = 0,
-  JES_TOKEN_OPENING_BRACE,   /* { */
-  JES_TOKEN_CLOSING_BRACE,   /* } */
-  JES_TOKEN_OPENING_BRACKET, /* [ */
-  JES_TOKEN_CLOSING_BRACKET, /* ] */
-  JES_TOKEN_COLON,
-  JES_TOKEN_COMMA,
-  JES_TOKEN_STRING,
-  JES_TOKEN_NUMBER,
-  JES_TOKEN_TRUE,
-  JES_TOKEN_FALSE,
-  JES_TOKEN_NULL,
-  JES_TOKEN_ESC,
-  JES_TOKEN_INVALID,
-};
-
 struct jes_token {
   enum jes_token_type type;
   size_t length;

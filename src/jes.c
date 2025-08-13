@@ -772,3 +772,18 @@ struct jes_workspace_stat jes_get_workspace_stat(struct jes_context* ctx)
 
   return stat;
 }
+
+struct jes_status_block jes_get_status_block(struct jes_context* ctx)
+{
+  struct jes_status_block status_block = { 0 };
+
+  if ((ctx != NULL) && JES_IS_INITIATED(ctx)) {
+    status_block.status = ctx->status;
+    status_block.token_type = ctx->serdes.tokenizer.token.type;
+    status_block.element_type = ctx->serdes.iter->json_tlv.type;
+    status_block.cursor_line = ctx->serdes.tokenizer.cursor.line_number;
+    status_block.cursor_pos = ctx->serdes.tokenizer.cursor.pos - ctx->serdes.tokenizer.json_data;
+  }
+
+  return status_block;
+}
