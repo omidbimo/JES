@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#ifdef JES_ENABLE_FAST_KEY_SEARCH
+#ifdef JES_ENABLE_KEY_HASHING
   #include "jes_hash_table.h"
 #endif
 
@@ -208,7 +208,7 @@ struct jes_context {
   /* Node management subsystem state. */
   struct jes_node_mng_context node_mng;
 
-#ifdef JES_ENABLE_FAST_KEY_SEARCH
+#ifdef JES_ENABLE_KEY_HASHING
   /* Hash table state for accelerated key lookups */
   struct jes_hash_table_context hash_table;
 #endif

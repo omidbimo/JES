@@ -25,7 +25,7 @@ static struct jes_node* jes_allocate(struct jes_context* ctx)
   assert(ctx != NULL);
   mng_ctx = &ctx->node_mng;
 
-#ifdef JES_ENABLE_FAST_KEY_SEARCH
+#ifdef JES_ENABLE_KEY_HASHING
   #ifdef JES_ENABLE_FALL_BACK_TO_LINEAR_SEARCH
   if ((mng_ctx->node_count >= mng_ctx->capacity) && (mng_ctx->find_key_fn != jes_tree_find_key)) {
     /* Reclaim the original buffer size provided to jes */
@@ -263,7 +263,7 @@ struct jes_node* jes_tree_insert_key_node(struct jes_context* ctx,
   }
 
   if (new_node) {
-#ifdef JES_ENABLE_FAST_KEY_SEARCH
+#ifdef JES_ENABLE_KEY_HASHING
     assert(ctx->hash_table.add_fn != NULL);
     ctx->hash_table.add_fn(ctx, parent_object, new_node);
 #endif
@@ -319,7 +319,7 @@ void jes_tree_delete_node(struct jes_context* ctx, struct jes_node* node)
                   iter->parent, iter->sibling, iter->first_child, iter->last_child, "");
 #endif
     /* Remove key from hash table if applicable */
-#ifdef JES_ENABLE_FAST_KEY_SEARCH
+#ifdef JES_ENABLE_KEY_HASHING
     if (NODE_TYPE(iter) == JES_KEY) {
       assert(ctx->hash_table.remove_fn != NULL);
       ctx->hash_table.remove_fn(ctx, parent, iter);
@@ -365,7 +365,7 @@ void jes_tree_delete_node(struct jes_context* ctx, struct jes_node* node)
                 node->parent, node->sibling, node->first_child, node->last_child, "");
 #endif
 /* Remove from hash table if it's a key */
-#ifdef JES_ENABLE_FAST_KEY_SEARCH
+#ifdef JES_ENABLE_KEY_HASHING
   if (NODE_TYPE(node) == JES_KEY) {
     assert(ctx->hash_table.remove_fn != NULL);
     ctx->hash_table.remove_fn(ctx, parent, node);
@@ -414,7 +414,7 @@ void jes_tree_init(struct jes_context* ctx, void *buffer, size_t buffer_size)
                      ? mng_ctx->size / sizeof(struct jes_node)
                      : JES_INVALID_INDEX -1;
 
-#ifndef JES_ENABLE_FAST_KEY_SEARCH
+#ifndef JES_ENABLE_KEY_HASHING
   mng_ctx->find_key_fn = jes_tree_find_key;
 #else
   jes_hash_table_init(ctx);

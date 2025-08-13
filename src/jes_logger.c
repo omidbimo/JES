@@ -126,7 +126,7 @@ char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len)
       break;
 
     case JES_OUT_OF_MEMORY:
-#ifdef JES_ENABLE_FAST_KEY_SEARCH
+#ifdef JES_ENABLE_KEY_HASHING
       snprintf( msg, msg_len, "%s(#%d) - element capacity: %d, hash table capacity: %d, node count: %d",
                 jes_status_str[ctx->status],
                 ctx->status,
