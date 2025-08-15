@@ -85,7 +85,7 @@ typedef enum jes_status {
   JES_INVALID_CONTEXT,        /* API error */
   JES_BROKEN_TREE,            /* API and Tree management error */
   JES_DUPLICATE_KEY,          /* Tree management error */
-
+  JES_INVALID_OPERATION,      /* API error */
 } jes_status;
 
 enum jes_token_type {
@@ -330,6 +330,10 @@ struct jes_stat jes_get_stat(struct jes_context* ctx);
  * JES context, node management system, and optional hash table.
  */
 struct jes_workspace_stat jes_get_workspace_stat(struct jes_context* ctx);
+
+size_t jes_get_workspace_size(struct jes_context *ctx);
+
+struct jes_context* jes_resize_workspace(struct jes_context *ctx, void *new_buffer, size_t new_size);
 
 /* Iteration macros */
 

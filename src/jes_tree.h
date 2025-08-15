@@ -45,5 +45,6 @@ struct jes_node* jes_tree_get_child_node(struct jes_context* ctx,
 struct jes_node* jes_tree_get_sibling_node(struct jes_context* ctx,
                                           struct jes_node* node);
 
+void jes_tree_resize_pool(struct jes_node_mng_context* ctx, void *buffer, size_t buffer_size);
 
 #endif

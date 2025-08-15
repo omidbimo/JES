@@ -29,7 +29,7 @@
 #define JES_NODE_INDEX(node_mng_, node_ptr) ((node_ptr != NULL) ? (jes_node_descriptor)((node_ptr) - node_mng_.pool) : JES_INVALID_INDEX)
 
 #define JES_CONTEXT_COOKIE 0xABC09DEF
-#define JES_IS_INITIATED(ctx_) (ctx_->cookie == JES_CONTEXT_COOKIE)
+#define JES_IS_INITIATED(ctx_) ((ctx_)->cookie == JES_CONTEXT_COOKIE)
 
 #ifdef JES_USE_32BIT_NODE_DESCRIPTOR
 /* A 32bit node descriptor limits the total number of nodes to 4294967295.
@@ -83,7 +83,7 @@ struct jes_node_mng_context {
    * The buffer will be used to allocate the context structure at first.
    * The remaining memory will be used as a pool of nodes (max. 65535 nodes). */
    struct jes_node* pool;
-  /* Node pool size in bytes. (buffer size - context size) */
+  /* Node pool size in bytes. (buffer size - context size - hash table size) */
   size_t size;
   /* Number of nodes that can be allocated on the given buffer. The value will
      be limited to 65535 in case of 16-bit node descriptors. */

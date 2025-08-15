@@ -186,43 +186,26 @@ static void jes_hash_table_remove(struct jes_context* ctx, struct jes_node* pare
   }
 }
 
-static enum jes_status jes_hash_table_resize(struct jes_context* ctx)
+void jes_hash_table_resize_pool(struct jes_hash_table_context* ctx, void *buffer, size_t buffer_size)
 {
-  if (ctx->hash_table.size == 0) {
-#if 0
-    ctx->hash_table.pool = ctx->node_mng.pool + ctx->node_mng.size;
-#else
-    ctx->hash_table.pool = (struct jes_hash_entry*)(ctx->node_mng.pool + ctx->node_mng.size);
-#endif
-    ctx->hash_table.size = ctx->node_mng.size / 4;
-    ctx->node_mng.size -= ctx->hash_table.size;
-    ctx->node_mng.capacity = (ctx->node_mng.size / sizeof(*ctx->node_mng.pool)) < JES_INVALID_INDEX
-                           ? ctx->node_mng.size / sizeof(struct jes_node)
-                           : JES_INVALID_INDEX -1;
-    ctx->hash_table.capacity = (ctx->hash_table.size / sizeof(*ctx->hash_table.pool)) < JES_INVALID_INDEX
-                             ? ctx->hash_table.size / sizeof(*ctx->hash_table.pool)
-                             : JES_INVALID_INDEX -1;
-    ctx->hash_table.pool = (struct jes_hash_entry*)((uint8_t*)ctx->node_mng.pool + ctx->node_mng.size);
-  }
-  return JES_NO_ERROR;
+    ctx->size = buffer_size;
+    ctx->capacity = (buffer_size / sizeof(ctx->pool[0])) < JES_INVALID_INDEX
+                  ? buffer_size / sizeof(ctx->pool[0])
+                  : JES_INVALID_INDEX -1;
+    ctx->pool = (struct jes_hash_entry*)buffer;
 }
 
-enum jes_status jes_hash_table_init(struct jes_context* ctx)
+void jes_hash_table_init(struct jes_context* ctx, void *buffer, size_t buffer_size)
 {
   struct jes_hash_table_context* hash_table_ctx = &ctx->hash_table;
-  enum jes_status status = JES_NO_ERROR;
-  ctx->hash_table.size = 0;
-  ctx->hash_table.capacity = 0;
-  status = jes_hash_table_resize(ctx);
+
+  jes_hash_table_resize_pool(&ctx->hash_table, buffer, buffer_size);
   hash_table_ctx->hash_fn = jes_fnv1a_compound_hash;
 
   memset(hash_table_ctx->pool, 0, hash_table_ctx->size);
 
-
   hash_table_ctx->add_fn = jes_hash_table_add;
   hash_table_ctx->remove_fn = jes_hash_table_remove;
-
-  return JES_NO_ERROR;
 }
 
 static jes_status jes_hash_table_add_noop(struct jes_context* ctx, struct jes_node* parent_object, struct jes_node* key)
