@@ -178,24 +178,8 @@ struct jes_node* jes_tree_insert_node(struct jes_context* ctx,
                                       struct jes_node* parent, struct jes_node* anchor,
                                       uint16_t type, uint16_t length, const char* value)
 {
-
   struct jes_node *new_node = NULL;
-#if 0
-  if (parent) {
-    if (!anchor) {
-      ctx->JES_INVALID_PARAMETER;
-      return NULL;
-    }
-    else if (anchor->parent != JES_NODE_INDEX(ctx->node_mng, parent) {
-      ctx->JES_INVALID_PARAMETER;
-      return NULL;
-    }
-  }
-  else {
-    ctx->JES_INVALID_PARAMETER;
-    return NULL;
-  }
-#endif
+
   new_node = jes_allocate(ctx);
 
   if (new_node) {
@@ -220,7 +204,7 @@ struct jes_node* jes_tree_insert_node(struct jes_context* ctx,
       }
     }
     else {
-      assert(!ctx->node_mng.root);
+      assert(ctx->node_mng.root == NULL);
       ctx->node_mng.root = new_node;
     }
 
@@ -418,6 +402,7 @@ void jes_tree_reset(struct jes_node_mng_context* ctx)
   ctx->node_count = 0;
   ctx->next_free = 0;
   ctx->freed = NULL;
+  ctx->root = NULL;
 }
 
 void jes_tree_init(struct jes_context* ctx, void *buffer, size_t buffer_size)
