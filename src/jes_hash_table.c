@@ -17,7 +17,6 @@
   #define JES_LOG(...) //printf(__VA_ARGS__)
 #endif
 
-#define REVERSE_TABLE
 
 /**
  * @brief Generates a compound hash using the FNV-1a algorithm.
@@ -79,28 +78,19 @@ struct jes_node* jes_hash_table_find_key(struct jes_context* ctx,
   assert(parent_object != NULL);
 
   hash = table->hash_fn(JES_NODE_INDEX(ctx->node_mng, parent_object), keyword, keyword_length);
-
-#ifdef REVERSE_TABLE
-    index = table->capacity - (hash % table->capacity) - 1;
-#else
-    index = hash % table->capacity;
-#endif
+  index = hash % table->capacity;
 
   size_t start_index = index;
   /* Linear probing to handle collisions */
   while (table->pool[index].key_element != NULL) {
-
     if ((table->pool[index].hash == hash) &&
         (table->pool[index].key_element->length == keyword_length) &&
         (memcmp(table->pool[index].key_element->value, keyword, keyword_length) == 0)) {
       key = (struct jes_node*)table->pool[index].key_element;
       break;
     }
-#ifdef REVERSE_TABLE
-    index =  ((index - 1) % table->capacity) ;
-#else
-    index = (index + 1) % table->capacity;
-#endif
+
+    index =  ((index + table->capacity - 1) % table->capacity) ;
     if (start_index == index) break;
   }
 
@@ -115,11 +105,7 @@ static jes_status jes_hash_table_add(struct jes_context* ctx, struct jes_node* p
   size_t start_index = index;
   size_t iterations = 0;
 
-#ifdef REVERSE_TABLE
-    index = table->capacity - (hash % table->capacity) - 1;
-#else
-    index = hash % table->capacity;
-#endif
+  index = hash % table->capacity;
   start_index = index;
   ctx->status = JES_OUT_OF_MEMORY;
 
@@ -142,11 +128,8 @@ static jes_status jes_hash_table_add(struct jes_context* ctx, struct jes_node* p
       break;
     }
     /* Move to next slot */
-#ifdef REVERSE_TABLE
-    index =  ((index - 1) % table->capacity);
-#else
-    index = (index + 1) % table->capacity;
-#endif
+    index =  ((index + table->capacity - 1) % table->capacity) ;
+
   } while (index != start_index);
 
   return ctx->status;
@@ -162,12 +145,7 @@ static void jes_hash_table_remove(struct jes_context* ctx, struct jes_node* pare
   assert(parent_object != NULL);
 
   hash = table->hash_fn(JES_NODE_INDEX(ctx->node_mng, parent_object), key->json_tlv.value, key->json_tlv.length);
-
-#ifdef REVERSE_TABLE
-    index = table->capacity - ((index + 1) % table->capacity) - 1;
-#else
-    index = hash % table->capacity;
-#endif
+  index = hash % table->capacity;
 
   /* Linear probing to find the key */
   while (lookup_entries[index].key_element != NULL) {
@@ -178,11 +156,8 @@ static void jes_hash_table_remove(struct jes_context* ctx, struct jes_node* pare
       lookup_entries[index].key_element = NULL;
       break;
     }
-#ifdef REVERSE_TABLE
-    index =  ((index - 1) % table->capacity);
-#else
-    index = (index + 1) % table->capacity;
-#endif
+
+    index =  ((index + table->capacity - 1) % table->capacity) ;
   }
 }
 
