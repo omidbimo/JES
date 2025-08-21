@@ -181,8 +181,9 @@ static inline void jes_parser_process_expect_key_state(struct jes_context* ctx)
   switch (ctx->serdes.tokenizer.token.type) {
     case JES_TOKEN_STRING:
       /* Append the key */
-      ctx->serdes.iter = jes_tree_insert_key_node(ctx, ctx->serdes.iter, GET_LAST_CHILD(ctx->node_mng, ctx->serdes.iter),
-                           ctx->serdes.tokenizer.token.length, ctx->serdes.tokenizer.token.value);
+      ctx->serdes.iter = jes_tree_insert_key_node(ctx, ctx->serdes.iter,
+                          GET_LAST_CHILD(ctx->node_mng, ctx->serdes.iter),
+                          ctx->serdes.tokenizer.token.length, ctx->serdes.tokenizer.token.value);
       if (ctx->serdes.iter == NULL) { /* Something went wrong. exit the process */
         break;
       }
@@ -314,21 +315,14 @@ static inline void jes_parser_process_expect_colon_state(struct jes_context* ctx
   }
 }
 
-void jes_parse(struct jes_context *ctx)
+void jes_parser_state_machine(struct jes_context *ctx)
 {
-  assert(ctx != NULL);
-  assert(ctx->serdes.tokenizer.json_data != NULL);
-  assert(ctx->serdes.tokenizer.json_length != 0);
-
-  ctx->serdes.state = JES_EXPECT_VALUE;
-
-  jes_tokenizer_reset_cursor(&ctx->serdes.tokenizer);
-
-#if defined(JES_ENABLE_PARSER_STATE_LOG)
+  #if defined(JES_ENABLE_PARSER_STATE_LOG)
     JES_LOG_STATE("\nJES.Parser.State: ", ctx->serdes.state, "");
 #endif
 
   do {
+
     ctx->status = jes_tokenizer_get_token(&ctx->serdes.tokenizer);
     if (ctx->status != JES_NO_ERROR) {
       break;
@@ -358,10 +352,24 @@ void jes_parse(struct jes_context *ctx)
         ctx->status = JES_UNEXPECTED_STATE;
         break;
     }
+
 #if defined(JES_ENABLE_PARSER_STATE_LOG)
     JES_LOG_STATE("\nJES.Parser.State: ", ctx->serdes.state, "");
 #endif
+
   } while ((ctx->status == JES_NO_ERROR) && (ctx->serdes.state != JES_END));
+}
+
+void jes_parse(struct jes_context *ctx)
+{
+  assert(ctx != NULL);
+  assert(ctx->serdes.tokenizer.json_data != NULL);
+  assert(ctx->serdes.tokenizer.json_length != 0);
+
+  ctx->serdes.state = JES_EXPECT_VALUE;
+
+  jes_tokenizer_reset_cursor(&ctx->serdes.tokenizer);
+  jes_parser_state_machine(ctx);
 
   if ((ctx->status == JES_NO_ERROR) && (ctx->serdes.state != JES_END) && (ctx->serdes.iter != NULL)) {
       ctx->status = JES_UNEXPECTED_EOF;

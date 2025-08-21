@@ -222,9 +222,10 @@ struct jes_node* jes_tree_insert_node(struct jes_context* ctx,
 }
 
 struct jes_node* jes_tree_insert_key_node(struct jes_context* ctx,
-                                     struct jes_node* parent_object,
-                                     struct jes_node* anchor,
-                                     uint16_t keyword_length, const char* keyword)
+                                          struct jes_node* parent_object,
+                                          struct jes_node* anchor,
+                                          uint16_t keyword_length,
+                                          const char* keyword)
 {
   struct jes_node* new_node = NULL;
 
@@ -252,6 +253,7 @@ struct jes_node* jes_tree_insert_key_node(struct jes_context* ctx,
     ctx->hash_table.add_fn(ctx, parent_object, new_node);
 #endif
   }
+
   return new_node;
 }
 

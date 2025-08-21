@@ -41,7 +41,7 @@ void jes_reset(struct jes_context* ctx)
   if ((ctx != NULL) && JES_IS_INITIATED(ctx)) {
     ctx->status = JES_NO_ERROR;
     ctx->serdes.tokenizer.json_data = NULL;
-    ctx->path_separator = '.';
+
 #ifdef JES_ENABLE_KEY_HASHING
   jes_tree_init(ctx, (struct jes_context*)ctx->workspace + 1, (ctx->workspace_size - sizeof(*ctx)) * 3 / 4);
   jes_hash_table_init(ctx, (uint8_t*)ctx->workspace + sizeof(*ctx) + ctx->node_mng.size, (ctx->workspace_size - sizeof(*ctx)) / 4);
@@ -783,11 +783,14 @@ struct jes_workspace_stat jes_get_workspace_stat(struct jes_context* ctx)
   struct jes_workspace_stat stat = { 0 };
 
   if ((ctx != NULL) && JES_IS_INITIATED(ctx)) {
+    stat.workspace = ctx->workspace_size;
     stat.context = jes_get_context_size();
     stat.node_mng = ctx->node_mng.size;
-    stat.node_mng_used = sizeof(struct jes_node_mng_context) + ctx->node_mng.node_count * sizeof(struct jes_node);
+    stat.node_mng_used = ctx->node_mng.node_count * sizeof(struct jes_node);
+    stat.node_mng_capacity = ctx->node_mng.capacity;
     stat.hash_table = ctx->hash_table.size;
     stat.hash_table_used = 0; /* TODO: Not implemented yet. */
+    stat.hash_table_capacity = ctx->hash_table.capacity;
   }
 
   return stat;
@@ -829,9 +832,9 @@ struct jes_context* jes_resize_workspace(struct jes_context* ctx, void* new_buff
 
     new_ctx = (struct jes_context*)new_buffer;
 
-    if (new_buffer_size > old_workspace_size) {
-      size_t index;
-      memset(new_buffer, 0, new_buffer_size);
+    if ((new_buffer_size > old_workspace_size) &&
+        ((new_buffer_size - sizeof(*ctx)) / sizeof(struct jes_node) > (old_workspace_size - sizeof(*ctx)) / sizeof(struct jes_node))) {
+
       /* Relocate the hash table to the new buffer.
          The hash table in JES is implemented to grow backward from the end of
          the workspace buffer. This layout allows us to easily reposition it by
@@ -843,19 +846,28 @@ struct jes_context* jes_resize_workspace(struct jes_context* ctx, void* new_buff
       memmove((uint8_t*)new_buffer + new_buffer_size - old_hash_table_size,
               (uint8_t*)ctx->workspace + ctx->workspace_size - old_hash_table_size,
               old_hash_table_size);
-      /* Relocate the JES context and node pool. */
-      memmove(new_buffer, ctx, sizeof(*ctx) + old_node_mng_size);
 
-      new_ctx->workspace = new_buffer;
+      if (new_buffer != ctx->workspace) {
+        /* Relocate the JES context and node pool. */
+        memmove(new_buffer, ctx, sizeof(*ctx) + old_node_mng_size);
+        new_ctx->workspace = new_buffer;
+      }
       new_ctx->workspace_size = new_buffer_size;
       new_ctx->node_mng.pool = (struct jes_node*)((struct jes_context*)new_buffer + 1);
 
       if (old_hash_table_size > 0) {
+        size_t index;
         /* The workspace is shared between node_mng and the hash table */
         /* Configuring the node mng */
-        jes_tree_resize_pool(&ctx->node_mng, (struct jes_context*)new_buffer + 1, (new_buffer_size - sizeof(*new_ctx)) * 3 / 4);
+        jes_tree_resize_pool(&new_ctx->node_mng,
+                             (struct jes_context*)new_buffer + 1,
+                             (new_buffer_size - sizeof(*new_ctx)) * 3 / 4);
         /* Configuring the hash table */
-        jes_hash_table_resize_pool(&ctx->hash_table, (uint8_t*)new_ctx->node_mng.pool + new_ctx->node_mng.size, (new_buffer_size - sizeof(*new_ctx)) / 4);
+        jes_hash_table_resize_pool(&new_ctx->hash_table,
+                                   (uint8_t*)new_ctx->node_mng.pool + new_ctx->node_mng.size,
+                                   (new_buffer_size - sizeof(*new_ctx)) / 4);
+        /* Clear the free section of the hash table */
+        memset(new_ctx->hash_table.pool, 0, new_ctx->hash_table.size - old_hash_table_size);
       }
       else {
         /* No Hash table is allocated */

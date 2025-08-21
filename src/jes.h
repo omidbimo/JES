@@ -143,11 +143,14 @@ struct jes_stat {
  * workspace buffer is divided among different JES components.
  */
 struct jes_workspace_stat {
-    size_t context;         /* Bytes allocated for JES context data */
-    size_t node_mng;        /* Bytes dedicated to the node management module */
-    size_t node_mng_used;   /* Bytes allocated */
-    size_t hash_table;      /* Bytes dedicated to the hash table module (0 if disabled) */
-    size_t hash_table_used; /* Bytes allocated */
+    size_t workspace;           /* Total bytes available as workspace */
+    size_t context;             /* Bytes allocated for JES context data */
+    size_t node_mng;            /* Bytes dedicated to the node management module */
+    size_t node_mng_used;       /* Bytes currently allocated */
+    size_t node_mng_capacity;   /* Number of total available nodes. */
+    size_t hash_table;          /* Bytes dedicated to the hash table module (0 if disabled) */
+    size_t hash_table_used;     /* Bytes currently allocated */
+    size_t hash_table_capacity; /* Number of total available hash entries. */
 };
 
 struct jes_status_block {
@@ -198,8 +201,6 @@ void jes_reset(struct jes_context* ctx);
  * @return Root element, or NULL on failure.
  */
 struct jes_element* jes_load(struct jes_context* ctx, const char* json_data, size_t json_length);
-
-struct jes_element* jes_resume(struct jes_context* ctx);
 
 /**
  * Serializes JSON tree to a buffer.
@@ -336,6 +337,28 @@ struct jes_workspace_stat jes_get_workspace_stat(struct jes_context* ctx);
 
 size_t jes_get_workspace_size(struct jes_context *ctx);
 
+/**
+ * Resize the workspace buffer of a JES context.
+ *
+ * This function re-initializes the workspace of the given JES context
+ * to use a new memory buffer provided by the caller. The caller is responsible
+ * for allocating and managing the lifetime of this buffer. Any previous buffer
+ * associated with the context is not freed by this function.
+ *
+ * @param ctx JES context to update.
+ * @param new_buffer new memory buffer to be used as the workspace. Can be the
+          current buffer resized in-place (using realloc)
+ * @param new_size Size (in bytes) must be larger than the current workspace.
+ *
+ * @return
+ *    Pointer to the updated JES context on success,
+ *    or NULL if the context could not be resized.
+ *
+ * @note
+ *    - The function does not allocate or free memory; ownership of buffer
+ *      remains with the caller.
+ *    - Resizing doesn't invalidate the current context.
+ */
 struct jes_context* jes_resize_workspace(struct jes_context *ctx, void *new_buffer, size_t new_size);
 
 /* Iteration macros */
