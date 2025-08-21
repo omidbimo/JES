@@ -429,7 +429,11 @@ size_t jes_render(struct jes_context *ctx, char* buffer, size_t buffer_length, b
   jes_serializer_state_machine(ctx, &serializer);
   serializer.out_length += sizeof(char); /* NUL termination */
 
-  if ((ctx->status == JES_NO_ERROR) && (buffer_length >= serializer.out_length)) {
+  if (buffer_length < serializer.out_length) {
+    ctx->status = JES_BUFFER_TOO_SMALL;
+  }
+
+  if (ctx->status == JES_NO_ERROR) {
     /* Second pass: Render the JSON tree into the string buffer. */
     serializer.renderer.opening_brace = jes_serializer_render_opening_brace;
     serializer.renderer.closing_brace = jes_serializer_render_closing_brace;

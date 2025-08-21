@@ -63,11 +63,11 @@
 #define JES_TAB_SIZE 2
 
 /* Logging output control in debug mode */
-#define JES_ENABLE_TOKEN_LOG
-#define JES_ENABLE_PARSER_NODE_LOG
-#define JES_ENABLE_PARSER_STATE_LOG
-#define JES_ENABLE_SERIALIZER_NODE_LOG
-#define JES_ENABLE_SERIALIZER_STATE_LOG
+//#define JES_ENABLE_TOKEN_LOG
+//#define JES_ENABLE_PARSER_NODE_LOG
+//#define JES_ENABLE_PARSER_STATE_LOG
+//#define JES_ENABLE_SERIALIZER_NODE_LOG
+//#define JES_ENABLE_SERIALIZER_STATE_LOG
 
 typedef enum jes_status {
   JES_NO_ERROR = 0,
@@ -80,6 +80,7 @@ typedef enum jes_status {
   JES_UNEXPECTED_TOKEN,       /* Parser error */
   JES_UNEXPECTED_STATE,       /* Parser and Serializer error */
   JES_UNEXPECTED_ELEMENT,     /* Serializer and Tree management error */
+  JES_BUFFER_TOO_SMALL,       /* Serializer error */
   JES_INVALID_PARAMETER,      /* API error */
   JES_ELEMENT_NOT_FOUND,      /* API error */
   JES_INVALID_CONTEXT,        /* API error */
@@ -197,6 +198,8 @@ void jes_reset(struct jes_context* ctx);
  * @return Root element, or NULL on failure.
  */
 struct jes_element* jes_load(struct jes_context* ctx, const char* json_data, size_t json_length);
+
+struct jes_element* jes_resume(struct jes_context* ctx);
 
 /**
  * Serializes JSON tree to a buffer.
