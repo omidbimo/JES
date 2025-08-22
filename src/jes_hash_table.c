@@ -116,6 +116,7 @@ static jes_status jes_hash_table_add(struct jes_context* ctx, struct jes_node* p
       /* Store the key */
       table->pool[index].hash = hash;
       table->pool[index].key_element = (struct jes_element*)key;
+      table->entry_count++;
       ctx->status = JES_NO_ERROR;
       break;
     }
@@ -152,7 +153,8 @@ static void jes_hash_table_remove(struct jes_context* ctx, struct jes_node* pare
     if ((lookup_entries[index].hash == hash) &&
         (lookup_entries[index].key_element->length == key->json_tlv.length) &&
         (memcmp(lookup_entries[index].key_element->value, key->json_tlv.value, key->json_tlv.length) == 0)) {
-
+      assert(table->entry_count > 0);
+      table->entry_count--;
       lookup_entries[index].key_element = NULL;
       break;
     }
@@ -161,20 +163,23 @@ static void jes_hash_table_remove(struct jes_context* ctx, struct jes_node* pare
   }
 }
 
-void jes_hash_table_resize_pool(struct jes_hash_table_context* ctx, void *buffer, size_t buffer_size)
+void jes_hash_table_resize(struct jes_hash_table_context* ctx, void *buffer, size_t buffer_size)
 {
     ctx->size = buffer_size;
     ctx->capacity = (buffer_size / sizeof(ctx->pool[0])) < JES_INVALID_INDEX
                   ? buffer_size / sizeof(ctx->pool[0])
                   : JES_INVALID_INDEX -1;
     ctx->pool = (struct jes_hash_entry*)buffer;
+    ctx->entry_count = 0;
+    /* Clear the pool. Any old entry in the pool is not valid after resize. */
+    memset(buffer, 0, buffer_size);
 }
 
 void jes_hash_table_init(struct jes_context* ctx, void *buffer, size_t buffer_size)
 {
   struct jes_hash_table_context* hash_table_ctx = &ctx->hash_table;
 
-  jes_hash_table_resize_pool(&ctx->hash_table, buffer, buffer_size);
+  jes_hash_table_resize(&ctx->hash_table, buffer, buffer_size);
   hash_table_ctx->hash_fn = jes_fnv1a_compound_hash;
 
   memset(hash_table_ctx->pool, 0, hash_table_ctx->size);

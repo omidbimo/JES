@@ -146,11 +146,11 @@ struct jes_workspace_stat {
     size_t workspace;           /* Total bytes available as workspace */
     size_t context;             /* Bytes allocated for JES context data */
     size_t node_mng;            /* Bytes dedicated to the node management module */
-    size_t node_mng_used;       /* Bytes currently allocated */
     size_t node_mng_capacity;   /* Number of total available nodes. */
+    size_t node_mng_node_count; /* Number of allocated nodes. */
     size_t hash_table;          /* Bytes dedicated to the hash table module (0 if disabled) */
-    size_t hash_table_used;     /* Bytes currently allocated */
     size_t hash_table_capacity; /* Number of total available hash entries. */
+    size_t hash_table_entry_count; /* Number of allocated hash entries. */
 };
 
 struct jes_status_block {

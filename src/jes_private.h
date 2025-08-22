@@ -142,6 +142,8 @@ struct jes_hash_table_context {
   size_t size;
   /* Maximum number of entries the hash table can hold. */
   size_t capacity;
+  /* Number of hash entries currently allocated. */
+  size_t entry_count;
   /* Hash function pointer for generating table indices from keys.
    * @param parent_id   Unique identifier of the parent JSON object
    * @param key         key name to hash (non-NUL terminated)

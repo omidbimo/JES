@@ -786,11 +786,11 @@ struct jes_workspace_stat jes_get_workspace_stat(struct jes_context* ctx)
     stat.workspace = ctx->workspace_size;
     stat.context = jes_get_context_size();
     stat.node_mng = ctx->node_mng.size;
-    stat.node_mng_used = ctx->node_mng.node_count * sizeof(struct jes_node);
     stat.node_mng_capacity = ctx->node_mng.capacity;
+    stat.node_mng_node_count = ctx->node_mng.node_count;
     stat.hash_table = ctx->hash_table.size;
-    stat.hash_table_used = 0; /* TODO: Not implemented yet. */
     stat.hash_table_capacity = ctx->hash_table.capacity;
+    stat.hash_table_entry_count = ctx->hash_table.entry_count;
   }
 
   return stat;
@@ -811,6 +811,43 @@ struct jes_status_block jes_get_status_block(struct jes_context* ctx)
   return status_block;
 }
 
+/* Pre-order depth-first traversal
+   visit node → visit children → visit siblings → backtrack to parent's siblings. */
+static inline void jes_rehash(struct jes_context* ctx)
+{
+  assert(ctx != NULL);
+
+  struct jes_node* iter = ctx->node_mng.root;
+
+  while (iter != NULL) {
+
+    if (iter->json_tlv.type == JES_KEY) {
+      assert(GET_PARENT(ctx->node_mng, iter) != NULL);
+      ctx->hash_table.add_fn(ctx, GET_PARENT(ctx->node_mng, iter), iter);
+    }
+
+    /* If current node has children, get the first child */
+    if (HAS_CHILD(iter)) {
+      iter = GET_FIRST_CHILD(ctx->node_mng, iter);
+    }
+    /* No children available: try to move to next sibling (breadth at current level) */
+    else if (HAS_SIBLING(iter)) {
+      iter = GET_SIBLING(ctx->node_mng, iter);
+    }
+    else {
+      /* No children or siblings: backtrack up the tree to find next un-visited branch
+         Walk up parent chain until we find a parent with an un-visited sibling */
+      while ((iter = GET_PARENT(ctx->node_mng, iter))) {
+        /* Found a parent with a sibling - this is our next branch to explore */
+        if (HAS_SIBLING(iter)) {
+          iter = GET_SIBLING(ctx->node_mng, iter);
+          break;
+        }
+      }
+    }
+  }
+}
+
 struct jes_context* jes_resize_workspace(struct jes_context* ctx, void* new_buffer, size_t new_buffer_size)
 {
   struct jes_context *new_ctx = NULL;
@@ -819,6 +856,10 @@ struct jes_context* jes_resize_workspace(struct jes_context* ctx, void* new_buff
     size_t old_workspace_size = ctx->workspace_size;
     size_t old_node_mng_size = ctx->node_mng.size;
     size_t old_hash_table_size = 0;
+    size_t old_hash_table_entry_count = ctx->hash_table.entry_count;
+    jes_node_descriptor old_root_index = JES_NODE_INDEX(ctx->node_mng, ctx->node_mng.root);
+    jes_node_descriptor old_iter_index = JES_NODE_INDEX(ctx->node_mng, ctx->serdes.iter);
+
 #ifdef JES_ENABLE_KEY_HASHING
     old_hash_table_size = ctx->hash_table.size;
 #endif
@@ -859,21 +900,26 @@ struct jes_context* jes_resize_workspace(struct jes_context* ctx, void* new_buff
         size_t index;
         /* The workspace is shared between node_mng and the hash table */
         /* Configuring the node mng */
-        jes_tree_resize_pool(&new_ctx->node_mng,
-                             (struct jes_context*)new_buffer + 1,
-                             (new_buffer_size - sizeof(*new_ctx)) * 3 / 4);
+        jes_tree_resize(&new_ctx->node_mng,
+                        (struct jes_context*)new_buffer + 1,
+                        (new_buffer_size - sizeof(*new_ctx)) * 3 / 4);
         /* Configuring the hash table */
-        jes_hash_table_resize_pool(&new_ctx->hash_table,
-                                   (uint8_t*)new_ctx->node_mng.pool + new_ctx->node_mng.size,
-                                   (new_buffer_size - sizeof(*new_ctx)) / 4);
-        /* Clear the free section of the hash table */
-        memset(new_ctx->hash_table.pool, 0, new_ctx->hash_table.size - old_hash_table_size);
+        jes_hash_table_resize(&new_ctx->hash_table,
+                              (uint8_t*)new_ctx->node_mng.pool + new_ctx->node_mng.size,
+                              (new_buffer_size - sizeof(*new_ctx)) / 4);
       }
       else {
         /* No Hash table is allocated */
         /* Configuring the node pool */
-        jes_tree_resize_pool(&ctx->node_mng, (struct jes_context*)new_buffer + 1, new_buffer_size - sizeof(*new_ctx));
+        jes_tree_resize(&ctx->node_mng, (struct jes_context*)new_buffer + 1, new_buffer_size - sizeof(*new_ctx));
       }
+      new_ctx->node_mng.root = new_ctx->node_mng.pool + old_root_index;
+      new_ctx->serdes.iter = new_ctx->node_mng.pool + old_iter_index;
+
+#ifdef JES_ENABLE_KEY_HASHING
+      jes_rehash(new_ctx);
+      assert(old_hash_table_entry_count == new_ctx->hash_table.entry_count);
+#endif
     }
   }
 
