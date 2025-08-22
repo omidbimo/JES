@@ -788,9 +788,15 @@ struct jes_workspace_stat jes_get_workspace_stat(struct jes_context* ctx)
     stat.node_mng = ctx->node_mng.size;
     stat.node_mng_capacity = ctx->node_mng.capacity;
     stat.node_mng_node_count = ctx->node_mng.node_count;
+#ifdef JES_ENABLE_KEY_HASHING
     stat.hash_table = ctx->hash_table.size;
     stat.hash_table_capacity = ctx->hash_table.capacity;
     stat.hash_table_entry_count = ctx->hash_table.entry_count;
+#else
+    stat.hash_table = 0;
+    stat.hash_table_capacity = 0;
+    stat.hash_table_entry_count = 0;
+#endif
   }
 
   return stat;
@@ -811,6 +817,7 @@ struct jes_status_block jes_get_status_block(struct jes_context* ctx)
   return status_block;
 }
 
+#ifdef JES_ENABLE_KEY_HASHING
 /* Pre-order depth-first traversal
    visit node → visit children → visit siblings → backtrack to parent's siblings. */
 static inline void jes_rehash(struct jes_context* ctx)
@@ -847,6 +854,7 @@ static inline void jes_rehash(struct jes_context* ctx)
     }
   }
 }
+#endif
 
 struct jes_context* jes_resize_workspace(struct jes_context* ctx, void* new_buffer, size_t new_buffer_size)
 {
@@ -856,11 +864,11 @@ struct jes_context* jes_resize_workspace(struct jes_context* ctx, void* new_buff
     size_t old_workspace_size = ctx->workspace_size;
     size_t old_node_mng_size = ctx->node_mng.size;
     size_t old_hash_table_size = 0;
-    size_t old_hash_table_entry_count = ctx->hash_table.entry_count;
     jes_node_descriptor old_root_index = JES_NODE_INDEX(ctx->node_mng, ctx->node_mng.root);
     jes_node_descriptor old_iter_index = JES_NODE_INDEX(ctx->node_mng, ctx->serdes.iter);
 
 #ifdef JES_ENABLE_KEY_HASHING
+    size_t old_hash_table_entry_count = ctx->hash_table.entry_count;
     old_hash_table_size = ctx->hash_table.size;
 #endif
 
@@ -875,7 +883,7 @@ struct jes_context* jes_resize_workspace(struct jes_context* ctx, void* new_buff
 
     if ((new_buffer_size > old_workspace_size) &&
         ((new_buffer_size - sizeof(*ctx)) / sizeof(struct jes_node) > (old_workspace_size - sizeof(*ctx)) / sizeof(struct jes_node))) {
-
+      size_t index;
       /* Relocate the hash table to the new buffer.
          The hash table in JES is implemented to grow backward from the end of
          the workspace buffer. This layout allows us to easily reposition it by
@@ -896,8 +904,7 @@ struct jes_context* jes_resize_workspace(struct jes_context* ctx, void* new_buff
       new_ctx->workspace_size = new_buffer_size;
       new_ctx->node_mng.pool = (struct jes_node*)((struct jes_context*)new_buffer + 1);
 
-      if (old_hash_table_size > 0) {
-        size_t index;
+#ifdef JES_ENABLE_KEY_HASHING
         /* The workspace is shared between node_mng and the hash table */
         /* Configuring the node mng */
         jes_tree_resize(&new_ctx->node_mng,
@@ -907,12 +914,11 @@ struct jes_context* jes_resize_workspace(struct jes_context* ctx, void* new_buff
         jes_hash_table_resize(&new_ctx->hash_table,
                               (uint8_t*)new_ctx->node_mng.pool + new_ctx->node_mng.size,
                               (new_buffer_size - sizeof(*new_ctx)) / 4);
-      }
-      else {
+#else
         /* No Hash table is allocated */
         /* Configuring the node pool */
         jes_tree_resize(&ctx->node_mng, (struct jes_context*)new_buffer + 1, new_buffer_size - sizeof(*new_ctx));
-      }
+#endif
       new_ctx->node_mng.root = new_ctx->node_mng.pool + old_root_index;
       new_ctx->serdes.iter = new_ctx->node_mng.pool + old_iter_index;
 
