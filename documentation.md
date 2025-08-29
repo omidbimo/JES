@@ -82,11 +82,13 @@ Defines the possible status codes for JES operations:
 | `JES_UNEXPECTED_TOKEN`        | Parser error - unexpected token.            |
 | `JES_UNEXPECTED_STATE`        | Parser/Serializer error - invalid state.    |
 | `JES_UNEXPECTED_ELEMENT`      | Serializer/Tree management error.           |
+| `JES_BUFFER_TOO_SMALL`        | Serializer error.                           |
 | `JES_INVALID_PARAMETER`       | Invalid parameter passed to function.       |
 | `JES_ELEMENT_NOT_FOUND`       | Requested JSON element not found.           |
 | `JES_INVALID_CONTEXT`         | Context validation failed.                  |
 | `JES_BROKEN_TREE`             | Malformed JSON tree detected.               |
 | `JES_DUPLICATE_KEY`           | Duplicate key detected in object.           |
+| `JES_INVALID_OPERATION`       | API error                                   |
 
 ### JSON Token Types
 
@@ -196,6 +198,14 @@ struct jes_context* jes_init(void* buffer, size_t buffer_size);
 
 **Returns**  Pointer to the initialized context or NULL on failure
 **Note** The buffer must have enough space to hold the context and required JSON tree nodes
+
+### `jes_resize_workspace`
+
+Resize the workspace buffer of a JES context.
+
+```c
+struct jes_context* jes_resize_workspace(struct jes_context* ctx, void *new_buffer, size_t new_size);
+```
 
 ### `jes_get_context_size`
 
