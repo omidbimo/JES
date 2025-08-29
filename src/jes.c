@@ -41,6 +41,8 @@ void jes_reset(struct jes_context* ctx)
   if ((ctx != NULL) && JES_IS_INITIATED(ctx)) {
     ctx->status = JES_NO_ERROR;
     ctx->serdes.tokenizer.json_data = NULL;
+    ctx->serdes.tokenizer.json_length = 0;
+    ctx->serdes.iter = NULL;
 
 #ifdef JES_ENABLE_KEY_HASHING
   jes_tree_init(ctx, (struct jes_context*)ctx->workspace + 1, (ctx->workspace_size - sizeof(*ctx)) * 3 / 4);
@@ -785,11 +787,11 @@ struct jes_workspace_stat jes_get_workspace_stat(struct jes_context* ctx)
   if ((ctx != NULL) && JES_IS_INITIATED(ctx)) {
     stat.workspace = ctx->workspace_size;
     stat.context = jes_get_context_size();
-    stat.node_mng = ctx->node_mng.size;
+    stat.node_mng_size = ctx->node_mng.size;
     stat.node_mng_capacity = ctx->node_mng.capacity;
     stat.node_mng_node_count = ctx->node_mng.node_count;
 #ifdef JES_ENABLE_KEY_HASHING
-    stat.hash_table = ctx->hash_table.size;
+    stat.hash_table_size = ctx->hash_table.size;
     stat.hash_table_capacity = ctx->hash_table.capacity;
     stat.hash_table_entry_count = ctx->hash_table.entry_count;
 #else
@@ -860,73 +862,56 @@ struct jes_context* jes_resize_workspace(struct jes_context* ctx, void* new_buff
 {
   struct jes_context *new_ctx = NULL;
 
-  if ((ctx != NULL) && JES_IS_INITIATED(ctx)) {
-    size_t old_workspace_size = ctx->workspace_size;
-    size_t old_node_mng_size = ctx->node_mng.size;
-    size_t old_hash_table_size = 0;
-    jes_node_descriptor old_root_index = JES_NODE_INDEX(ctx->node_mng, ctx->node_mng.root);
-    jes_node_descriptor old_iter_index = JES_NODE_INDEX(ctx->node_mng, ctx->serdes.iter);
+  if ((ctx == NULL) && !JES_IS_INITIATED(ctx)) {
+    return new_ctx;
+  }
 
-#ifdef JES_ENABLE_KEY_HASHING
-    size_t old_hash_table_entry_count = ctx->hash_table.entry_count;
-    old_hash_table_size = ctx->hash_table.size;
-#endif
+  size_t old_workspace_size = ctx->workspace_size;
+  size_t old_node_mng_size = ctx->node_mng.size;
+  jes_node_descriptor old_root_index = JES_NODE_INDEX(ctx->node_mng, ctx->node_mng.root);
+  jes_node_descriptor old_iter_index = JES_NODE_INDEX(ctx->node_mng, ctx->serdes.iter);
 
-    ctx->status = JES_NO_ERROR;
+  ctx->status = JES_NO_ERROR;
 
-    if (new_buffer_size < old_workspace_size) {
-      ctx->status = JES_INVALID_OPERATION; /* Can not shrink memory */
-      return new_ctx;
+  if (new_buffer_size < old_workspace_size) {
+    ctx->status = JES_INVALID_OPERATION; /* Can not shrink memory */
+    return new_ctx;
+  }
+
+  new_ctx = (struct jes_context*)new_buffer;
+
+  if ((new_buffer_size > old_workspace_size) &&
+      ((new_buffer_size - sizeof(*ctx)) / sizeof(struct jes_node) > (old_workspace_size - sizeof(*ctx)) / sizeof(struct jes_node))) {
+
+    if (new_buffer != ctx->workspace) {
+      /* Relocate the JES context and node pool. */
+      memmove(new_buffer, ctx, sizeof(*ctx) + old_node_mng_size);
+      new_ctx->workspace = new_buffer;
     }
-
-    new_ctx = (struct jes_context*)new_buffer;
-
-    if ((new_buffer_size > old_workspace_size) &&
-        ((new_buffer_size - sizeof(*ctx)) / sizeof(struct jes_node) > (old_workspace_size - sizeof(*ctx)) / sizeof(struct jes_node))) {
-      size_t index;
-      /* Relocate the hash table to the new buffer.
-         The hash table in JES is implemented to grow backward from the end of
-         the workspace buffer. This layout allows us to easily reposition it by
-         placing it at the end of the resized buffer, without modifying its
-         internal structure. */
-      assert(old_hash_table_size < ctx->workspace_size);
-      assert(old_hash_table_size < new_buffer_size);
-
-      memmove((uint8_t*)new_buffer + new_buffer_size - old_hash_table_size,
-              (uint8_t*)ctx->workspace + ctx->workspace_size - old_hash_table_size,
-              old_hash_table_size);
-
-      if (new_buffer != ctx->workspace) {
-        /* Relocate the JES context and node pool. */
-        memmove(new_buffer, ctx, sizeof(*ctx) + old_node_mng_size);
-        new_ctx->workspace = new_buffer;
-      }
-      new_ctx->workspace_size = new_buffer_size;
-      new_ctx->node_mng.pool = (struct jes_node*)((struct jes_context*)new_buffer + 1);
+    new_ctx->workspace_size = new_buffer_size;
+    new_ctx->node_mng.pool = (struct jes_node*)((struct jes_context*)new_buffer + 1);
 
 #ifdef JES_ENABLE_KEY_HASHING
-        /* The workspace is shared between node_mng and the hash table */
-        /* Configuring the node mng */
-        jes_tree_resize(&new_ctx->node_mng,
-                        (struct jes_context*)new_buffer + 1,
-                        (new_buffer_size - sizeof(*new_ctx)) * 3 / 4);
-        /* Configuring the hash table */
-        jes_hash_table_resize(&new_ctx->hash_table,
-                              (uint8_t*)new_ctx->node_mng.pool + new_ctx->node_mng.size,
-                              (new_buffer_size - sizeof(*new_ctx)) / 4);
+      /* The workspace is partitioned between node_mng and the hash table */
+      /* Configuring the node mng */
+      jes_tree_resize(&new_ctx->node_mng,
+                      (struct jes_context*)new_buffer + 1,
+                      (new_buffer_size - sizeof(*new_ctx)) * 3 / 4);
+      /* Configuring the hash table */
+      jes_hash_table_resize(&new_ctx->hash_table,
+                            (uint8_t*)new_ctx->node_mng.pool + new_ctx->node_mng.size,
+                            (new_buffer_size - sizeof(*new_ctx)) / 4);
 #else
-        /* No Hash table is allocated */
-        /* Configuring the node pool */
-        jes_tree_resize(&ctx->node_mng, (struct jes_context*)new_buffer + 1, new_buffer_size - sizeof(*new_ctx));
+      /* No Hash table is allocated */
+      /* Configuring the node pool */
+      jes_tree_resize(&ctx->node_mng, (struct jes_context*)new_buffer + 1, new_buffer_size - sizeof(*new_ctx));
 #endif
-      new_ctx->node_mng.root = new_ctx->node_mng.pool + old_root_index;
-      new_ctx->serdes.iter = new_ctx->node_mng.pool + old_iter_index;
+    new_ctx->node_mng.root = new_ctx->node_mng.pool + old_root_index;
+    new_ctx->serdes.iter = new_ctx->node_mng.pool + old_iter_index;
 
 #ifdef JES_ENABLE_KEY_HASHING
-      jes_rehash(new_ctx);
-      assert(old_hash_table_entry_count == new_ctx->hash_table.entry_count);
+    jes_rehash(new_ctx);
 #endif
-    }
   }
 
   return new_ctx;

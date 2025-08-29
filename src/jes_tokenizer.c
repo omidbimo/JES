@@ -619,6 +619,6 @@ void jes_tokenizer_reset_cursor(struct jes_tokenizer_context* ctx)
 {
   ctx->cursor.pos = ctx->json_data;
   ctx->cursor.end = ctx->json_data + ctx->json_length;
-  ctx->cursor.line_number = 0;
-  ctx->cursor.column = 0;
+  ctx->cursor.line_number = 1;
+  ctx->cursor.column = 1;
 }

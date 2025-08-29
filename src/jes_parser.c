@@ -367,8 +367,9 @@ void jes_parse(struct jes_context *ctx)
   assert(ctx->serdes.tokenizer.json_length != 0);
 
   ctx->serdes.state = JES_EXPECT_VALUE;
-
+  ctx->serdes.iter = NULL;
   jes_tokenizer_reset_cursor(&ctx->serdes.tokenizer);
+
   jes_parser_state_machine(ctx);
 
   if ((ctx->status == JES_NO_ERROR) && (ctx->serdes.state != JES_END) && (ctx->serdes.iter != NULL)) {
