@@ -28,8 +28,6 @@ While JES is designed to be a robust and efficient JSON parser for embedded and 
 
 JES is optimized for small JSON documents (typically a few kilobytes) used in configuration or control systems. It is not intended for parsing or manipulating large, complex JSON structures. Below are key limitations to be aware of:
 
-- **No Unicode Support** - JES does not support Unicode encoding. All strings are expected to be ASCII-compatible.
-
 - **No Dynamic Memory Allocation** - JES avoids dynamic memory allocation and works with user-provided memory buffers. This has implications:
   
   - The user must pre-allocate enough memory based on an estimate of the maximum JSON size.
