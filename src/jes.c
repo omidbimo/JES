@@ -26,18 +26,24 @@ struct jes_context* jes_init(void* buffer, size_t buffer_size)
   ctx->workspace = buffer;
   ctx->workspace_size = buffer_size;
 #ifdef JES_ENABLE_KEY_HASHING
-  jes_tree_init(ctx, (struct jes_context*)ctx->workspace + 1, (ctx->workspace_size - sizeof(*ctx)) * 3 / 4);
-  jes_hash_table_init(ctx, (uint8_t*)ctx->workspace + sizeof(*ctx) + ctx->node_mng.size, (ctx->workspace_size - sizeof(*ctx)) / 4);
+  if ((JES_NO_ERROR != jes_tree_init(ctx, (struct jes_context*)ctx->workspace + 1, (ctx->workspace_size - sizeof(*ctx)) * 3 / 4)) ||
+      (JES_NO_ERROR != jes_hash_table_init(ctx, (uint8_t*)ctx->workspace + sizeof(*ctx) + ctx->node_mng.size, (ctx->workspace_size - sizeof(*ctx)) / 4))) {
+    return NULL;
+  }
 #else
-  jes_tree_init(ctx, (struct jes_context*)ctx->workspace + 1, ctx->workspace_size - sizeof(*ctx));
+  if (JES_NO_ERROR != jes_tree_init(ctx, (struct jes_context*)ctx->workspace + 1, ctx->workspace_size - sizeof(*ctx))) {
+    return NULL;
+  }
 #endif
   ctx->cookie = JES_CONTEXT_COOKIE;
   ctx->path_separator = '.';
+
   return ctx;
 }
 
 void jes_reset(struct jes_context* ctx)
 {
+  jes_status status;
   if ((ctx != NULL) && JES_IS_INITIATED(ctx)) {
     ctx->status = JES_NO_ERROR;
     ctx->serdes.tokenizer.json_data = NULL;
@@ -45,10 +51,10 @@ void jes_reset(struct jes_context* ctx)
     ctx->serdes.iter = NULL;
 
 #ifdef JES_ENABLE_KEY_HASHING
-  jes_tree_init(ctx, (struct jes_context*)ctx->workspace + 1, (ctx->workspace_size - sizeof(*ctx)) * 3 / 4);
-  jes_hash_table_init(ctx, (uint8_t*)ctx->workspace + sizeof(*ctx) + ctx->node_mng.size, (ctx->workspace_size - sizeof(*ctx)) / 4);
+  (void)jes_tree_init(ctx, (struct jes_context*)ctx->workspace + 1, (ctx->workspace_size - sizeof(*ctx)) * 3 / 4);
+  (void)jes_hash_table_init(ctx, (uint8_t*)ctx->workspace + sizeof(*ctx) + ctx->node_mng.size, (ctx->workspace_size - sizeof(*ctx)) / 4);
 #else
-    jes_tree_init(ctx, (struct jes_context*)ctx->workspace + 1, ctx->workspace_size - sizeof(*ctx));
+  (void)jes_tree_init(ctx, (struct jes_context*)ctx->workspace + 1, ctx->workspace_size - sizeof(*ctx));
 #endif
   }
 }
@@ -785,8 +791,8 @@ struct jes_workspace_stat jes_get_workspace_stat(struct jes_context* ctx)
   struct jes_workspace_stat stat = { 0 };
 
   if ((ctx != NULL) && JES_IS_INITIATED(ctx)) {
-    stat.workspace = ctx->workspace_size;
-    stat.context = jes_get_context_size();
+    stat.workspace_size = ctx->workspace_size;
+    stat.context_size = jes_get_context_size();
     stat.node_mng_size = ctx->node_mng.size;
     stat.node_mng_capacity = ctx->node_mng.capacity;
     stat.node_mng_node_count = ctx->node_mng.node_count;
@@ -795,7 +801,7 @@ struct jes_workspace_stat jes_get_workspace_stat(struct jes_context* ctx)
     stat.hash_table_capacity = ctx->hash_table.capacity;
     stat.hash_table_entry_count = ctx->hash_table.entry_count;
 #else
-    stat.hash_table = 0;
+    stat.hash_table_size = 0;
     stat.hash_table_capacity = 0;
     stat.hash_table_entry_count = 0;
 #endif
@@ -894,17 +900,25 @@ struct jes_context* jes_resize_workspace(struct jes_context* ctx, void* new_buff
 #ifdef JES_ENABLE_KEY_HASHING
       /* The workspace is partitioned between node_mng and the hash table */
       /* Configuring the node mng */
-      jes_tree_resize(&new_ctx->node_mng,
-                      (struct jes_context*)new_buffer + 1,
-                      (new_buffer_size - sizeof(*new_ctx)) * 3 / 4);
+      if (JES_NO_ERROR != jes_tree_resize(&new_ctx->node_mng,
+                                          (struct jes_context*)new_buffer + 1,
+                                          (new_buffer_size - sizeof(*new_ctx)) * 3 / 4)) {
+        return NULL;
+      }
       /* Configuring the hash table */
-      jes_hash_table_resize(&new_ctx->hash_table,
-                            (uint8_t*)new_ctx->node_mng.pool + new_ctx->node_mng.size,
-                            (new_buffer_size - sizeof(*new_ctx)) / 4);
+      if (JES_NO_ERROR != jes_hash_table_resize(&new_ctx->hash_table,
+                                                (uint8_t*)new_ctx->node_mng.pool + new_ctx->node_mng.size,
+                                                (new_buffer_size - sizeof(*new_ctx)) / 4)) {
+        return NULL;
+      }
 #else
       /* No Hash table is allocated */
       /* Configuring the node pool */
-      jes_tree_resize(&ctx->node_mng, (struct jes_context*)new_buffer + 1, new_buffer_size - sizeof(*new_ctx));
+      if (JES_NO_ERROR != jes_tree_resize(&ctx->node_mng,
+                                          (struct jes_context*)new_buffer + 1,
+                                          new_buffer_size - sizeof(*new_ctx))) {
+        return NULL;
+      }
 #endif
     new_ctx->node_mng.root = new_ctx->node_mng.pool + old_root_index;
     new_ctx->serdes.iter = new_ctx->node_mng.pool + old_iter_index;

@@ -143,8 +143,8 @@ struct jes_stat {
  * workspace buffer is divided among different JES components.
  */
 struct jes_workspace_stat {
-    size_t workspace;           /* Total bytes available as workspace */
-    size_t context;             /* Bytes allocated for JES context data */
+    size_t workspace_size;      /* Total bytes available as workspace */
+    size_t context_size;        /* Bytes allocated for JES context data */
     size_t node_mng_size;       /* Bytes dedicated to the node management module */
     size_t node_mng_capacity;   /* Number of total available nodes. */
     size_t node_mng_node_count; /* Number of allocated nodes. */

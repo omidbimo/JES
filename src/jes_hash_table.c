@@ -163,29 +163,31 @@ static void jes_hash_table_remove(struct jes_context* ctx, struct jes_node* pare
   }
 }
 
-void jes_hash_table_resize(struct jes_hash_table_context* ctx, void *buffer, size_t buffer_size)
+jes_status jes_hash_table_resize(struct jes_hash_table_context* ctx, void *buffer, size_t buffer_size)
 {
-    ctx->size = buffer_size;
-    ctx->capacity = (buffer_size / sizeof(ctx->pool[0])) < JES_INVALID_INDEX
-                  ? buffer_size / sizeof(ctx->pool[0])
-                  : JES_INVALID_INDEX -1;
-    ctx->pool = (struct jes_hash_entry*)buffer;
-    ctx->entry_count = 0;
-    /* Clear the pool. Any old entry in the pool is not valid after resize. */
-    memset(buffer, 0, buffer_size);
+  ctx->size = buffer_size;
+  ctx->capacity = (buffer_size / sizeof(ctx->pool[0])) < JES_INVALID_INDEX
+                ? buffer_size / sizeof(ctx->pool[0])
+                : JES_INVALID_INDEX -1;
+  ctx->pool = (struct jes_hash_entry*)buffer;
+  ctx->entry_count = 0;
+  /* Clear the pool. Any old entry in the pool is not valid after resize. */
+  memset(buffer, 0, buffer_size);
+
+  return ctx->capacity == 0 ? JES_BUFFER_TOO_SMALL : JES_NO_ERROR;
 }
 
-void jes_hash_table_init(struct jes_context* ctx, void *buffer, size_t buffer_size)
+jes_status jes_hash_table_init(struct jes_context* ctx, void *buffer, size_t buffer_size)
 {
   struct jes_hash_table_context* hash_table_ctx = &ctx->hash_table;
 
-  jes_hash_table_resize(&ctx->hash_table, buffer, buffer_size);
   hash_table_ctx->hash_fn = jes_fnv1a_compound_hash;
-
   memset(hash_table_ctx->pool, 0, hash_table_ctx->size);
 
   hash_table_ctx->add_fn = jes_hash_table_add;
   hash_table_ctx->remove_fn = jes_hash_table_remove;
+
+  return jes_hash_table_resize(&ctx->hash_table, buffer, buffer_size);
 }
 
 static jes_status jes_hash_table_add_noop(struct jes_context* ctx, struct jes_node* parent_object, struct jes_node* key)

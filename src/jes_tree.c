@@ -389,7 +389,7 @@ static struct jes_node* jes_tree_find_key(struct jes_context* ctx,
   return key;
 }
 
-void jes_tree_resize(struct jes_node_mng_context* ctx, void *buffer, size_t buffer_size)
+jes_status jes_tree_resize(struct jes_node_mng_context* ctx, void *buffer, size_t buffer_size)
 {
   ctx->pool = buffer;
   ctx->size = buffer_size;
@@ -397,6 +397,8 @@ void jes_tree_resize(struct jes_node_mng_context* ctx, void *buffer, size_t buff
   ctx->capacity = (ctx->size / sizeof(struct jes_node)) < JES_INVALID_INDEX
                 ? ctx->size / sizeof(struct jes_node)
                 : JES_INVALID_INDEX -1;
+
+  return ctx->capacity == 0 ? JES_BUFFER_TOO_SMALL : JES_NO_ERROR;
 }
 
 void jes_tree_reset(struct jes_node_mng_context* ctx)
@@ -407,11 +409,10 @@ void jes_tree_reset(struct jes_node_mng_context* ctx)
   ctx->root = NULL;
 }
 
-void jes_tree_init(struct jes_context* ctx, void *buffer, size_t buffer_size)
+jes_status jes_tree_init(struct jes_context* ctx, void *buffer, size_t buffer_size)
 {
   struct jes_node_mng_context* mng_ctx = &ctx->node_mng;
 
-  jes_tree_resize(&ctx->node_mng, buffer, buffer_size);
   jes_tree_reset(&ctx->node_mng);
 
 #ifndef JES_ENABLE_KEY_HASHING
@@ -419,5 +420,6 @@ void jes_tree_init(struct jes_context* ctx, void *buffer, size_t buffer_size)
 #else
   ctx->node_mng.find_key_fn = jes_hash_table_find_key;
 #endif
+  return jes_tree_resize(&ctx->node_mng, buffer, buffer_size);
 }
 

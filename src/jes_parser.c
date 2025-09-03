@@ -373,6 +373,6 @@ void jes_parse(struct jes_context *ctx)
   jes_parser_state_machine(ctx);
 
   if ((ctx->status == JES_NO_ERROR) && (ctx->serdes.state != JES_END) && (ctx->serdes.iter != NULL)) {
-      ctx->status = JES_UNEXPECTED_EOF;
+    ctx->status = JES_UNEXPECTED_EOF;
   }
 }
