@@ -28,4 +28,5 @@ char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len);
 /* Provides a textual type of a JES element */
 char* jes_stringify_element(struct jes_element *element, char *msg, size_t msg_len);
 
+void jes_print_workspace_stat(struct jes_workspace_stat ws_stat);
 #endif

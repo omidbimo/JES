@@ -230,3 +230,23 @@ char* jes_stringify_element(struct jes_element *element, char *msg, size_t msg_l
   snprintf(msg, msg_len, "%s(%d)", jes_node_type_str[element->type], element->type);
   return msg;
 }
+
+void jes_print_workspace_stat(struct jes_workspace_stat ws_stat)
+{
+  printf("\nMemory Usage:");
+
+  printf("\n- Workspace size: %zu bytes", ws_stat.workspace_size);
+  printf("\n- Context size: %zu bytes", ws_stat.context_size);
+
+  printf("\n- Node management:");
+  printf("\n  - Size: %zu bytes", ws_stat.node_mng_size);
+  printf("\n  - Capacity: %zu", ws_stat.node_mng_capacity);
+  printf("\n  - Used: %zu, (%.1f%%)", ws_stat.node_mng_node_count,
+      (double)ws_stat.node_mng_node_count / ws_stat.node_mng_capacity * 100.0);
+
+  printf("\n- Hash Table:");
+  printf("\n  - Size: %zu bytes",  ws_stat.hash_table_size);
+  printf("\n  - Capacity: %zu",  ws_stat.hash_table_capacity);
+  printf("\n  - Used: %zu, (load factory %.2f)\n", ws_stat.hash_table_entry_count,
+            (double)ws_stat.hash_table_entry_count / ws_stat.hash_table_capacity);
+}
