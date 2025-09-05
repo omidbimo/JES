@@ -37,3 +37,25 @@ JES is optimized for small JSON documents (typically a few kilobytes) used in co
 - **Not Thread-Safe** - JES does not provide internal synchronization and is not safe for use across multiple threads unless externally protected.
 
 - **Limited JSON Feature Support** - JES focuses on core JSON parsing and does not currently support advanced features such as JSON Pointer, JSONPath, or other modern JSON querying standards.
+
+- ## Building a project
+  
+  Using jes as a static library to build a demo project. This example generates a library with linear search.
+  
+  ```bash
+  gcc -c src\jes.c src\jes_tokenizer.c src\jes_parser.c src\jes_serializer.c src\jes_tree.c -O2 -s -DNDEBUG
+  ar rcs libjes.a jes.o jes_tokenizer.o jes_parser.o jes_serializer.o jes_tree.o
+  gcc demo.c -L. -ljes -o demo
+  ```
+
+- Using jes as a static library to build a demo project containg the hash_table module.
+  
+  Note that the hash table functionality must be enabled inside the jes.h simply by uncommenting  JES_ENABLE_KEY_HASHING.
+  
+  logger.c can also be used to output some useful stings.
+  
+  ```bash
+  gcc -c src\jes.c src\jes_tokenizer.c src\jes_parser.c src\jes_serializer.c src\jes_tree.c src\jes_hash_table.c src\jes_logger.c -O2 -s -DNDEBUG
+  ar rcs libjes.a jes.o jes_tokenizer.o jes_parser.o jes_serializer.o jes_tree.o jes_hash_table.o jes_logger.o
+  gcc demo.c -L. -ljes -o demo
+  ```
