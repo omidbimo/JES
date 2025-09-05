@@ -250,3 +250,51 @@ void jes_print_workspace_stat(struct jes_workspace_stat ws_stat)
   printf("\n  - Used: %zu, (load factory %.2f)\n", ws_stat.hash_table_entry_count,
             (double)ws_stat.hash_table_entry_count / ws_stat.hash_table_capacity);
 }
+
+void jes_print_context(struct jes_context* ctx)
+{
+  printf("\nJES context:");
+
+  if ((ctx == NULL) && !JES_IS_INITIATED(ctx)) {
+    return;
+  }
+
+  printf("\n- status: %u", ctx->status);
+  printf("\n- workspace: 0x%X", ctx->workspace);
+  printf("\n- workspace_size: %u", ctx->workspace_size);
+
+  printf("\n- Node management:");
+  printf("\n  - pool: 0x%X", ctx->node_mng.pool);
+  printf("\n  - size: 0%u", ctx->node_mng.size);
+  printf("\n  - capacity: %u", ctx->node_mng.capacity);
+  printf("\n  - next_free: %u", ctx->node_mng.next_free);
+  printf("\n  - freed: 0x%X", ctx->node_mng.freed);
+  printf("\n  - node_count: %u", ctx->node_mng.node_count);
+  printf("\n  - find_key_fn: 0x%X", ctx->node_mng.find_key_fn);
+  printf("\n  - root: %s", ctx->node_mng.root == NULL ? "NULL" : "ADDR");
+
+  printf("\n- SerDes:");
+  printf("\n  - state: %u", ctx->serdes.state);
+  if (ctx->serdes.iter) {printf("\n  - iter: 0x%X", ctx->serdes.iter);}
+  else {printf("\n  - iter: %s", "NULL");}
+  printf("\n  - Tokenizer:");
+  if (ctx->serdes.tokenizer.json_data){printf("\n    - json_data: 0x%X", ctx->serdes.tokenizer.json_data);}
+  else{printf("\n    - json_data: %s", "NULL");}
+  printf("\n    - json_length: %u", ctx->serdes.tokenizer.json_length);
+  printf("\n    - Cursor:");
+  printf("\n      - pos: 0x%X", ctx->serdes.tokenizer.cursor.pos);
+  printf("\n      - column: %u", ctx->serdes.tokenizer.cursor.column);
+  printf("\n      - line_number: %u", ctx->serdes.tokenizer.cursor.line_number);
+
+#ifdef JES_ENABLE_KEY_HASHING
+  printf("\n- Hash Table:");
+  if (ctx->hash_table.pool) {  printf("\n  - pool: 0x%X", ctx->hash_table.pool);}
+  else{  printf("\n  - pool:%s", "NULL");}
+  printf("\n  - size: %u", ctx->hash_table.size);
+  printf("\n  - capacity: %u", ctx->hash_table.capacity);
+  printf("\n  - entry_count: %u", ctx->hash_table.entry_count);
+  printf("\n  - hash_fn: 0x%X", ctx->hash_table.hash_fn);
+  printf("\n  - add_fn: 0x%X", ctx->hash_table.add_fn);
+  printf("\n  - remove_fn: 0x%X", ctx->hash_table.remove_fn);
+#endif
+}
