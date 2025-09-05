@@ -38,7 +38,7 @@
  * - Requires more memory for the internal hash table.
  * - In small JSON objects, linear search may be more efficient.
  */
-#define JES_ENABLE_KEY_HASHING
+//#define JES_ENABLE_KEY_HASHING
 
 /**
  * JES_ENABLE_FALL_BACK_TO_LINEAR_SEARCH
