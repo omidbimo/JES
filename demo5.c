@@ -22,7 +22,7 @@ int main(void)
   jes_status err;
 
   struct jes_element *root;
-  struct jes_context *doc;
+  struct jes_context *ctx;
 
 
   fp = fopen("demo.json", "rb");
@@ -36,45 +36,45 @@ int main(void)
     fclose(fp);
   }
 
-  doc = jes_init(working_buffer, sizeof(working_buffer));
-  if (!doc) {
+  ctx = jes_init(working_buffer, sizeof(working_buffer));
+  if (!ctx) {
     printf("\n Context initiation failed!");
     return -1;
   }
 
-  if ((root = jes_load(doc, file_data, strlen(file_data))) == NULL)
-  {
-    return -1;
+  /* Parse JSON */
+  if (jes_load(ctx, file_data, strlen(file_data)) != JES_NO_ERROR) {
+    fprintf(stderr, "Failed to parse JSON: %d\n", jes_get_status(ctx));
+    return 1;
   }
 
   printf("\nSize of JSON data: %lld bytes", strnlen(file_data, sizeof(file_data)));
-  printf("\nElement count: %d", jes_get_element_count(doc));
+  printf("\nElement count: %d", jes_get_element_count(ctx));
 
-  out_size = jes_render(doc, output, sizeof(output), true);
+  out_size = jes_render(ctx, output, sizeof(output), true);
   if (out_size == 0) {
-    printf("\nRender Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
+    printf("\nRender Error: %d - %s, size: %d", jes_get_status(ctx), jes_stringify_status(ctx, err_msg, sizeof(err_msg)), out_size);
   }
   else {
     printf("\nCompact JSON string size: %d", strlen(output));
     printf("\n\n%.*s\n\n", out_size, output);
   }
 
-  out_size = jes_render(doc, output, sizeof(output), false);
+  out_size = jes_render(ctx, output, sizeof(output), false);
   if (out_size == 0) {
-    printf("\nRender Error: %d - %s, size: %d", jes_get_status(doc), jes_stringify_status(doc, err_msg, sizeof(err_msg)), out_size);
+    printf("\nRender Error: %d - %s, size: %d", jes_get_status(ctx), jes_stringify_status(ctx, err_msg, sizeof(err_msg)), out_size);
   }
   else {
     printf("\n Formatted JSON string size: %d", out_size);
     printf("\n\n%.*s\n\n", out_size, output);
   }
 
-  struct jes_status_block sb = jes_get_status_block(doc);
+  struct jes_status_block sb = jes_get_status_block(ctx);
   printf("\n status: %i", sb.status);
   printf("\n token type: %i", sb.token_type);
   printf("\n element type: %i", sb.element_type);
   printf("\n line: %u", sb.cursor_line);
   printf("\n pos: %u", sb.cursor_pos);
-
 
   return 0;
 

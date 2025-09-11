@@ -13,10 +13,13 @@ int main() {
   const char *json = "{\"person\":{\"name\":\"John\",\"age\":30}}";
 
   /* Parse JSON */
-  struct jes_element *root = jes_load(ctx, json, strlen(json));
+  if (jes_load(ctx, json, strlen(json)) != JES_NO_ERROR) {
+    fprintf(stderr, "Failed to parse JSON: %d\n", jes_get_status(ctx));
+    return 1;
+  }
 
   /* Find the person object */
-  struct jes_element *person = jes_get_key(ctx, root, "person");
+  struct jes_element *person = jes_get_key(ctx, jes_get_root(ctx), "person");
 
   /* Add email key */
   const char *email_key = "email";

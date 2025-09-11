@@ -87,10 +87,14 @@ int main() {
     "}";
 
     /* Parse JSON */
-    struct jes_element *root = jes_load(ctx, json, strlen(json));
+  /* Parse JSON */
+  if (jes_load(ctx, json, strlen(json)) != JES_NO_ERROR) {
+    fprintf(stderr, "Failed to parse JSON: %d\n", jes_get_status(ctx));
+    return 1;
+  }
 
     printf("\nJSON Structure:\n");
-    print_object(ctx, root, 0);
+    print_object(ctx, jes_get_root(ctx), 0);
 
     /* Print statistics */
     struct jes_stat stats = jes_get_stat(ctx);
@@ -103,9 +107,9 @@ int main() {
     /* Print workspace statistics */
     struct jes_workspace_stat ws_stats = jes_get_workspace_stat(ctx);
     printf("\nWorkspace Usage:\n");
-    printf("Context: %zu bytes\n", ws_stats.context);
-    printf("Node Management: %zu/%zu bytes\n", ws_stats.node_mng_used, ws_stats.node_mng);
-    printf("Hash Table: %zu/%zu bytes\n", ws_stats.hash_table_used, ws_stats.hash_table);
+    printf("Context: %zu bytes\n", ws_stats.context_size);
+    printf("Node Management: %zu/%zu bytes\n", ws_stats.node_mng_node_count, ws_stats.node_mng_size);
+    printf("Hash Table: %zu/%zu bytes\n", ws_stats.hash_table_entry_count, ws_stats.hash_table_size);
 
     return 0;
 }
