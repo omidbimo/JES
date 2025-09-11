@@ -38,7 +38,7 @@
  * - Requires more memory for the internal hash table.
  * - In small JSON objects, linear search may be more efficient.
  */
-//#define JES_ENABLE_KEY_HASHING
+#define JES_ENABLE_KEY_HASHING
 
 /**
  * JES_ENABLE_FALL_BACK_TO_LINEAR_SEARCH
@@ -198,9 +198,9 @@ void jes_reset(struct jes_context* ctx);
  * @param ctx JES context.
  * @param json_data JSON text (not necessarily null-terminated).
  * @param json_length Length of JSON text in bytes.
- * @return Root element, or NULL on failure.
+ * @return Status code. JES_NO_ERROR on success.
  */
-struct jes_element* jes_load(struct jes_context* ctx, const char* json_data, size_t json_length);
+jes_status jes_load(struct jes_context* ctx, const char* json_data, size_t json_length);
 
 /**
  * Serializes JSON tree to a buffer.

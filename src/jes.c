@@ -702,15 +702,15 @@ size_t jes_get_element_capacity(struct jes_context* ctx)
   return 0;
 }
 
-struct jes_element* jes_load(struct jes_context* ctx, const char* json_data, size_t json_length)
+jes_status jes_load(struct jes_context* ctx, const char* json_data, size_t json_length)
 {
   if ((ctx == NULL) || !JES_IS_INITIATED(ctx)) {
-    return NULL;
+    return JES_INVALID_CONTEXT;
   }
 
   if ((json_data == NULL) || (json_length == 0)) {
     ctx->status = JES_INVALID_PARAMETER;
-    return NULL;
+    return ctx->status;
   }
 
   jes_reset(ctx);
@@ -719,7 +719,7 @@ struct jes_element* jes_load(struct jes_context* ctx, const char* json_data, siz
   ctx->serdes.tokenizer.json_length = json_length;
   jes_parse(ctx);
 
-  return ctx->status == JES_NO_ERROR ? (struct jes_element*)ctx->node_mng.root : NULL;
+  return ctx->status;
 }
 
 void jes_set_path_separator(struct jes_context* ctx, char delimiter)
