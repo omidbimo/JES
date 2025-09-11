@@ -247,7 +247,7 @@ void jes_print_workspace_stat(struct jes_workspace_stat ws_stat)
   printf("\n- Hash Table:");
   printf("\n  - Size: %zu bytes",  ws_stat.hash_table_size);
   printf("\n  - Capacity: %zu",  ws_stat.hash_table_capacity);
-  printf("\n  - Used: %zu, (load factory %.2f)\n", ws_stat.hash_table_entry_count,
+  printf("\n  - Used: %zu, (load factor %.2f)\n", ws_stat.hash_table_entry_count,
             (double)ws_stat.hash_table_entry_count / ws_stat.hash_table_capacity);
 }
 
