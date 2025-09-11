@@ -156,7 +156,7 @@ int main(void)
       return -1;
     }
 
-    if (NULL == jes_load(doc, json_str_positive_tests[idx], sizeof(json_str_positive_tests[idx])))
+    if (jes_load(doc, json_str_positive_tests[idx], sizeof(json_str_positive_tests[idx])) != JES_NO_ERROR)
     {
       printf("\n    %s", jes_stringify_status(doc, err_msg, sizeof(err_msg)));
       return -1;
@@ -177,7 +177,7 @@ int main(void)
       return -1;
     }
 
-    if (NULL == jes_load(doc, json_str_negative_tests[idx], sizeof(json_str_negative_tests[idx])))
+    if (jes_load(doc, json_str_negative_tests[idx], sizeof(json_str_negative_tests[idx])) != JES_NO_ERROR)
     {
       printf("  %s", jes_stringify_status(doc, err_msg, sizeof(err_msg)));
     }

@@ -70,6 +70,11 @@ int main(void)
         "[",                                                  /* Single Opening Bracket */
         "]",                                                  /* Single Closing Bracket */
         "{1}",                                                /*  */
+        "{\"key\"}",                                          /*  */
+        "{\\f}",                                              /* Unexpected vlank symbol */
+        "{\\t}",                                              /* Unexpected vlank symbol */
+        "{\\t}",                                              /* Unexpected vlank symbol */
+        "{\\r}",                                              /* Unexpected vlank symbol */
         "{\"key\": }",                                        /* Empty Value */
         "{\"key\": \"val",                                    /* EOF in the middle of string */
         "{\"key\": \"value\"",
@@ -119,7 +124,7 @@ int main(void)
       return -1;
     }
 
-    if (NULL == jes_load(doc, json_str_positive_tests[idx], sizeof(json_str_positive_tests[idx])))
+    if (jes_load(doc, json_str_positive_tests[idx], sizeof(json_str_positive_tests[idx])) != JES_NO_ERROR)
     {
       printf("\n    %s", jes_stringify_status(doc, err_msg, sizeof(err_msg)));
       return -1;
@@ -140,7 +145,7 @@ int main(void)
       return -1;
     }
 
-    if (NULL == jes_load(doc, json_str_negative_tests[idx], sizeof(json_str_negative_tests[idx]))) {
+    if (jes_load(doc, json_str_negative_tests[idx], sizeof(json_str_negative_tests[idx])) != JES_NO_ERROR) {
       printf("  %s", jes_stringify_status(doc, err_msg, sizeof(err_msg)));
     }
     else {
@@ -157,7 +162,7 @@ int main(void)
     }
     for (idx = 2; idx <= sizeof("{\"key\":\"value\"}"); idx++) {
       printf("\n Parsing: %.*s ", sizeof("{\"key\":\"value\"}")-idx, "{\"key\":\"value\"}");
-      if (NULL == jes_load(doc, "{\"key\":\"value\"}", sizeof("{\"key\":\"value\"}")-idx)) {
+      if (jes_load(doc, "{\"key\":\"value\"}", sizeof("{\"key\":\"value\"}")-idx) != JES_NO_ERROR) {
         printf("  %s", jes_stringify_status(doc, err_msg, sizeof(err_msg)));
       }
       else {
@@ -167,7 +172,7 @@ int main(void)
     }
 
     printf("\n Passing NULL as the json string parameter");
-    if (NULL == jes_load(doc, NULL, sizeof("{\"key\":\"value\"}"))) {
+    if (jes_load(doc, NULL, sizeof("{\"key\":\"value\"}")) != JES_NO_ERROR) {
       printf("  %s", jes_stringify_status(doc, err_msg, sizeof(err_msg)));
     }
     else {

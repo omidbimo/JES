@@ -40,7 +40,7 @@ int main(void)
   }
 
   printf("\nJES - parsing...");
-  if (NULL == jes_load(doc, json_str, sizeof(json_str)))
+  if (jes_load(doc, json_str, sizeof(json_str)) != JES_NO_ERROR)
   {
     printf("\n    %s", jes_stringify_status(doc, err_msg, sizeof(err_msg)));
     return -1;
