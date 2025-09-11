@@ -159,13 +159,16 @@ Statistics about parsed JSON elements:
 
 Memory allocation breakdown for a JES workspace:
 
-| Field             | Type     | Description                                   |
-| ----------------- | -------- | --------------------------------------------- |
-| `context`         | `size_t` | Bytes allocated for JES context data          |
-| `node_mng`        | `size_t` | Bytes dedicated to node management module     |
-| `node_mng_used`   | `size_t` | Bytes currently allocated in node manager     |
-| `hash_table`      | `size_t` | Bytes dedicated to hash table (0 if disabled) |
-| `hash_table_used` | `size_t` | Bytes currently allocated in hash table       |
+| Field                    | Type     | Description                                   |
+| ------------------------ | -------- | --------------------------------------------- |
+| `workspace_size`         | `size_t` | Bytes available as workspace                  |
+| `context_size`           | `size_t` | Bytes allocated for JES context data          |
+| `node_mng_size`          | `size_t` | Bytes dedicated to node management module     |
+| `node_mng_capacity`      | `size_t` | Number of total available nodes               |
+| `node_mng_node_count`    | `size_t` | Number of allocated nodes                     |
+| `hash_table_size`        | `size_t` | Bytes dedicated to hash table (0 if disabled) |
+| `hash_table_capacity`    | `size_t` | Number of total available hash entries        |
+| `hash_table_entry_count` | `size_t` | Number of allocated hash entries              |
 
 ### `jes_status_block`
 
@@ -246,7 +249,7 @@ void jes_reset(struct jes_context* ctx);
 Parse JSON into Tree
 
 ```c
-struct jes_element* jes_load(struct jes_context* ctx, const char* json_data, size_t json_length);
+jes_status jes_load(struct jes_context* ctx, const char* json_data, size_t json_length);
 ```
 
 **Parameters**
@@ -255,7 +258,7 @@ struct jes_element* jes_load(struct jes_context* ctx, const char* json_data, siz
 - `json_data` : String of JSON data (not necessarily NUL-terminated)
 - `json_length` : Length of the JSON data.
 
-**Returns**  Root element of the tree (always an OBJECT) or NULL on failure
+**Returns** Status code (JES_NO_ERROR on success) see `jes_status`
 
 ### `jes_render`
 
