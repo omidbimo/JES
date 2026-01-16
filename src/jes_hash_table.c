@@ -180,8 +180,6 @@ jes_status jes_hash_table_init(struct jes_context* ctx, void *buffer, size_t buf
   struct jes_hash_table_context* hash_table_ctx = &ctx->hash_table;
 
   hash_table_ctx->hash_fn = jes_fnv1a_compound_hash;
-  memset(hash_table_ctx->pool, 0, hash_table_ctx->size);
-
   hash_table_ctx->add_fn = jes_hash_table_add;
   hash_table_ctx->remove_fn = jes_hash_table_remove;
 
