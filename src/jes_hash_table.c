@@ -8,6 +8,7 @@
 #include "jes_private.h"
 #include "jes_hash_table.h"
 
+/* Constants from FNV-1a (Fowler–Noll–Vo) algorithm */
 #define JES_FNV_PRIME_32BIT         16777619
 #define JES_FNV_OFFSET_BASIS_32BIT  2166136261
 
@@ -90,7 +91,7 @@ struct jes_node* jes_hash_table_find_key(struct jes_context* ctx,
       break;
     }
 
-    index =  ((index + table->capacity - 1) % table->capacity) ;
+    index =  (index + 1) % table->capacity ;
     if (start_index == index) break;
   }
 
@@ -101,12 +102,10 @@ static jes_status jes_hash_table_add(struct jes_context* ctx, struct jes_node* p
 {
   struct jes_hash_table_context* table = &ctx->hash_table;
   size_t hash = table->hash_fn(JES_NODE_INDEX(ctx->node_mng, parent_object), key->json_tlv.value, key->json_tlv.length);
-  size_t index = table->capacity - (hash % table->capacity);
+  size_t index = hash % table->capacity;;
   size_t start_index = index;
   size_t iterations = 0;
 
-  index = hash % table->capacity;
-  start_index = index;
   ctx->status = JES_OUT_OF_MEMORY;
 
   /* Linear probing to find a free slot */
@@ -123,14 +122,13 @@ static jes_status jes_hash_table_add(struct jes_context* ctx, struct jes_node* p
 
     /* Key already exists, replace the value */
     if ((table->pool[index].hash == hash) &&
-        (key->json_tlv.length = table->pool[index].key_element->length) &&
+        (key->json_tlv.length == table->pool[index].key_element->length) &&
         (memcmp(table->pool[index].key_element->value, key->json_tlv.value, key->json_tlv.length) == 0)) {
       ctx->status = JES_DUPLICATE_KEY;
       break;
     }
     /* Move to next slot */
-    index =  ((index + table->capacity - 1) % table->capacity) ;
-
+    index =  (index + 1) % table->capacity ;
   } while (index != start_index);
 
   return ctx->status;
@@ -159,7 +157,7 @@ static void jes_hash_table_remove(struct jes_context* ctx, struct jes_node* pare
       break;
     }
 
-    index =  ((index + table->capacity - 1) % table->capacity) ;
+    index =  (index + 1) % table->capacity ;
   }
 }
 
@@ -168,7 +166,7 @@ jes_status jes_hash_table_resize(struct jes_hash_table_context* ctx, void *buffe
   ctx->size = buffer_size;
   ctx->capacity = (buffer_size / sizeof(ctx->pool[0])) < JES_INVALID_INDEX
                 ? buffer_size / sizeof(ctx->pool[0])
-                : JES_INVALID_INDEX -1;
+                : JES_INVALID_INDEX - 1;
   ctx->pool = (struct jes_hash_entry*)buffer;
   ctx->entry_count = 0;
   /* Clear the pool. Any old entry in the pool is not valid after resize. */
