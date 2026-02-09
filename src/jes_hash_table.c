@@ -18,6 +18,9 @@
   #define JES_LOG(...) //printf(__VA_ARGS__)
 #endif
 
+ /* Reserve an specific address as Tombstone marker */
+static struct jes_element TOMBSTONE_SENTINEL;
+#define JES_HASH_TABLE_TOMBSTONE (&TOMBSTONE_SENTINEL)
 
 /**
  * @brief Generates a compound hash using the FNV-1a algorithm.
@@ -31,6 +34,8 @@
  * The resulting hash uniquely represents the combination of a parent node and a
  * key, allowing keys with identical names to be distinguished when stored in
  * separate objects or namespaces.
+ *
+ * NOTE: hash values are architecture-endian dependent by design
  *
  * @param parent_id The ID of the parent node (typically another hash value)
  * @param keyword Pointer to the keyword string to be hashed
@@ -82,9 +87,10 @@ struct jes_node* jes_hash_table_find_key(struct jes_context* ctx,
   index = hash % table->capacity;
 
   size_t start_index = index;
-  /* Linear probing to handle collisions */
+  /* Linear probing */
   while (table->pool[index].key_element != NULL) {
-    if ((table->pool[index].hash == hash) &&
+    if ((table->pool[index].key_element != JES_HASH_TABLE_TOMBSTONE) &&
+        (table->pool[index].hash == hash) &&
         (table->pool[index].key_element->length == keyword_length) &&
         (memcmp(table->pool[index].key_element->value, keyword, keyword_length) == 0)) {
       key = (struct jes_node*)table->pool[index].key_element;
@@ -102,7 +108,7 @@ static jes_status jes_hash_table_add(struct jes_context* ctx, struct jes_node* p
 {
   struct jes_hash_table_context* table = &ctx->hash_table;
   size_t hash = table->hash_fn(JES_NODE_INDEX(ctx->node_mng, parent_object), key->json_tlv.value, key->json_tlv.length);
-  size_t index = hash % table->capacity;;
+  size_t index = hash % table->capacity;
   size_t start_index = index;
   size_t iterations = 0;
 
@@ -111,7 +117,8 @@ static jes_status jes_hash_table_add(struct jes_context* ctx, struct jes_node* p
   /* Linear probing to find a free slot */
   do {
     /* Empty slot found */
-    if (table->pool[index].key_element == NULL) {
+    if ((table->pool[index].key_element == NULL) ||
+        (table->pool[index].key_element == JES_HASH_TABLE_TOMBSTONE)) {
       /* Store the key */
       table->pool[index].hash = hash;
       table->pool[index].key_element = (struct jes_element*)key;
@@ -120,13 +127,14 @@ static jes_status jes_hash_table_add(struct jes_context* ctx, struct jes_node* p
       break;
     }
 
-    /* Key already exists, replace the value */
     if ((table->pool[index].hash == hash) &&
         (key->json_tlv.length == table->pool[index].key_element->length) &&
         (memcmp(table->pool[index].key_element->value, key->json_tlv.value, key->json_tlv.length) == 0)) {
+      /* Duplicate key found, cannot insert. */
       ctx->status = JES_DUPLICATE_KEY;
       break;
     }
+
     /* Move to next slot */
     index =  (index + 1) % table->capacity ;
   } while (index != start_index);
@@ -140,24 +148,30 @@ static void jes_hash_table_remove(struct jes_context* ctx, struct jes_node* pare
   struct jes_hash_entry* lookup_entries = table->pool;
   size_t hash;
   size_t index;
+  size_t start_index;
 
   assert(parent_object != NULL);
 
   hash = table->hash_fn(JES_NODE_INDEX(ctx->node_mng, parent_object), key->json_tlv.value, key->json_tlv.length);
   index = hash % table->capacity;
+  start_index = index;
 
   /* Linear probing to find the key */
   while (lookup_entries[index].key_element != NULL) {
-    if ((lookup_entries[index].hash == hash) &&
+    if ((lookup_entries[index].key_element != JES_HASH_TABLE_TOMBSTONE) &&
+        (lookup_entries[index].hash == hash) &&
         (lookup_entries[index].key_element->length == key->json_tlv.length) &&
         (memcmp(lookup_entries[index].key_element->value, key->json_tlv.value, key->json_tlv.length) == 0)) {
       assert(table->entry_count > 0);
       table->entry_count--;
-      lookup_entries[index].key_element = NULL;
+      lookup_entries[index].key_element = JES_HASH_TABLE_TOMBSTONE;
       break;
     }
 
-    index =  (index + 1) % table->capacity ;
+    index =  (index + 1) % table->capacity;
+    if (start_index == index) {
+      break;
+    }
   }
 }
 
