@@ -33,7 +33,7 @@ struct jes_renderer_set {
 
 struct jes_serializer {
   struct jes_renderer_set renderer;
-  size_t out_length;
+  size_t evaluated_length;
   size_t indention;
   char* out_buffer;
   char* buffer_end;
@@ -42,40 +42,40 @@ struct jes_serializer {
 
 static void jes_serializer_calculate_delimiter(struct jes_serializer* serializer)
 {
-  serializer->out_length += sizeof(char);
+  serializer->evaluated_length += sizeof(char);
 }
 
 static void jes_serializer_calculate_string(struct jes_serializer* serializer, struct jes_element* element)
 {
-  serializer->out_length += element->length + sizeof("\"\"") - 1;
+  serializer->evaluated_length += element->length + sizeof("\"\"") - 1;
 }
 
 static void jes_serializer_calculate_key(struct jes_serializer* serializer, struct jes_element* element)
 {
-  serializer->out_length += element->length;
-  serializer->out_length += sizeof("\"\": ") - 1;
+  serializer->evaluated_length += element->length;
+  serializer->evaluated_length += sizeof("\"\": ") - 1;
 }
 
 static void jes_serializer_calculate_number(struct jes_serializer* serializer, struct jes_element* element)
 {
-  serializer->out_length += element->length;
+  serializer->evaluated_length += element->length;
 }
 
 static void jes_serializer_calculate_literal(struct jes_serializer* serializer, struct jes_element* element)
 {
-  serializer->out_length += element->length;
+  serializer->evaluated_length += element->length;
 }
 
 static void jes_serializer_calculate_new_line(struct jes_serializer* serializer)
 {
-  serializer->out_length += serializer->indention;
-  serializer->out_length += sizeof("\n") - 1;
+  serializer->evaluated_length += serializer->indention;
+  serializer->evaluated_length += sizeof("\n") - 1;
 }
 
 static void jes_serializer_calculate_compact_key(struct jes_serializer* serializer, struct jes_element* element)
 {
-  serializer->out_length += element->length;
-  serializer->out_length += sizeof("\"\":") - 1;
+  serializer->evaluated_length += element->length;
+  serializer->evaluated_length += sizeof("\"\":") - 1;
 }
 
 static void jes_serializer_calculate_compact_new_line(struct jes_serializer* serializer)
@@ -86,52 +86,51 @@ static void jes_serializer_calculate_compact_new_line(struct jes_serializer* ser
 static void jes_serializer_render_opening_brace(struct jes_serializer* serializer)
 {
   assert(serializer->evaluated);
-  serializer->out_length += sizeof("{") - 1;
+  assert(serializer->out_buffer + sizeof(char) < serializer->buffer_end);
   *serializer->out_buffer++ = '{';
 }
 
 static void jes_serializer_render_closing_brace(struct jes_serializer* serializer)
 {
   assert(serializer->evaluated);
-  serializer->out_length += sizeof("}") - 1;
+  assert(serializer->out_buffer + sizeof(char) < serializer->buffer_end);
   *serializer->out_buffer++ = '}';
 }
 
 static void jes_serializer_render_opening_bracket(struct jes_serializer* serializer)
 {
   assert(serializer->evaluated);
-  serializer->out_length += sizeof("[") - 1;
+  assert(serializer->out_buffer + sizeof(char) < serializer->buffer_end);
   *serializer->out_buffer++ = '[';
 }
 
 static void jes_serializer_render_closing_bracket(struct jes_serializer* serializer)
 {
   assert(serializer->evaluated);
-  serializer->out_length += sizeof("]") - 1;
+  assert(serializer->out_buffer + sizeof(char) < serializer->buffer_end);
   *serializer->out_buffer++ = ']';
 }
 
 static void jes_serializer_render_string(struct jes_serializer* serializer, struct jes_element* element)
 {
   assert(serializer->evaluated);
-  serializer->out_length += element->length + sizeof("\"\"") - 1;
+  assert((serializer->out_buffer + element->length + 2*sizeof(char)) < serializer->buffer_end);
   *serializer->out_buffer++ = '"';
   /* The JSON string has already been validated for size and structure,
      so this memcpy can proceed safely without further boundary checks. */
-  assert((serializer->out_buffer + element->length) < serializer->buffer_end);
   memcpy(serializer->out_buffer, element->value, element->length);
   serializer->out_buffer += element->length;
   *serializer->out_buffer++ = '"';
+
 }
 
 static void jes_serializer_render_key(struct jes_serializer* serializer, struct jes_element* element)
 {
   assert(serializer->evaluated);
-  serializer->out_length += (element->length + sizeof("\"\": ") - 1);
+  assert((serializer->out_buffer + element->length + 4*sizeof(char)) < serializer->buffer_end);
   *serializer->out_buffer++ = '"';
   /* The JSON string has already been validated for size and structure,
      so this memcpy can proceed safely without further boundary checks. */
-  assert((serializer->out_buffer + element->length) < serializer->buffer_end);
   memcpy(serializer->out_buffer, element->value, element->length);
   serializer->out_buffer += element->length;
   *serializer->out_buffer++ = '"';
@@ -142,10 +141,9 @@ static void jes_serializer_render_key(struct jes_serializer* serializer, struct 
 static void jes_serializer_render_number(struct jes_serializer* serializer, struct jes_element* element)
 {
   assert(serializer->evaluated);
-  serializer->out_length += element->length;
+  assert((serializer->out_buffer + element->length) < serializer->buffer_end);
   /* The JSON string has already been validated for size and structure,
      so this memcpy can proceed safely without further boundary checks. */
-  assert((serializer->out_buffer + element->length) < serializer->buffer_end);
   memcpy(serializer->out_buffer, element->value, element->length);
   serializer->out_buffer += element->length;
 }
@@ -153,10 +151,9 @@ static void jes_serializer_render_number(struct jes_serializer* serializer, stru
 static void jes_serializer_render_literal(struct jes_serializer* serializer, struct jes_element* element)
 {
   assert(serializer->evaluated);
-  serializer->out_length += element->length;
+  assert((serializer->out_buffer + element->length) < serializer->buffer_end);
   /* The JSON string has already been validated for size and structure,
      so this memcpy can proceed safely without further boundary checks. */
-  assert((serializer->out_buffer + element->length) < serializer->buffer_end);
   memcpy(serializer->out_buffer, element->value, element->length);
   serializer->out_buffer += element->length;
 }
@@ -164,14 +161,14 @@ static void jes_serializer_render_literal(struct jes_serializer* serializer, str
 static void jes_serializer_render_comma(struct jes_serializer* serializer)
 {
   assert(serializer->evaluated);
-  serializer->out_length += sizeof(",") - 1;
+  assert((serializer->out_buffer + sizeof(char)) < serializer->buffer_end);
   *serializer->out_buffer++ = ',';
 }
 
 static void jes_serializer_render_new_line(struct jes_serializer* serializer)
 {
   assert(serializer->evaluated);
-  serializer->out_length += serializer->indention + sizeof("\n") - 1;
+  assert((serializer->out_buffer + serializer->indention + sizeof(char)) < serializer->buffer_end);
   *serializer->out_buffer++ = '\n';
   memset(serializer->out_buffer, ' ', serializer->indention);
   serializer->out_buffer += serializer->indention;
@@ -180,11 +177,10 @@ static void jes_serializer_render_new_line(struct jes_serializer* serializer)
 static void jes_serializer_render_compact_key(struct jes_serializer* serializer, struct jes_element* element)
 {
   assert(serializer->evaluated);
-  serializer->out_length += (element->length + sizeof("\"\":") - 1);
+  assert((serializer->out_buffer + element->length + 3*sizeof(char)) < serializer->buffer_end);
   *serializer->out_buffer++ = '"';
   /* The JSON string has already been validated for size and structure,
      so this memcpy can proceed safely without further boundary checks. */
-  assert((serializer->out_buffer + element->length) < serializer->buffer_end);
   memcpy(serializer->out_buffer, element->value, element->length);
   serializer->out_buffer += element->length;
   *serializer->out_buffer++ = '"';
@@ -345,7 +341,6 @@ static void jes_serializer_state_machine(struct jes_context* ctx, struct jes_ser
 
   ctx->serdes.state = JES_EXPECT_VALUE;
   ctx->serdes.iter = NULL;
-  serializer->out_length = 0;
   serializer->indention = 0;
 
   do {
@@ -427,9 +422,9 @@ size_t jes_render(struct jes_context *ctx, char* buffer, size_t buffer_length, b
   serializer.evaluated = false;
 
   jes_serializer_state_machine(ctx, &serializer);
-  serializer.out_length += sizeof(char); /* NUL termination */
+  serializer.evaluated_length += sizeof(char); /* NUL termination */
 
-  if (buffer_length < serializer.out_length) {
+  if (buffer_length < serializer.evaluated_length) {
     ctx->status = JES_BUFFER_TOO_SMALL;
   }
 
@@ -456,11 +451,12 @@ size_t jes_render(struct jes_context *ctx, char* buffer, size_t buffer_length, b
     jes_serializer_state_machine(ctx, &serializer);
 
     if (ctx->status == JES_NO_ERROR) {
-      buffer[serializer.out_length] = '\0';
+      assert(serializer.out_buffer + sizeof(char) == buffer + serializer.evaluated_length);
+      *serializer.out_buffer++ = '\0';
     }
   }
 
-  return (ctx->status == JES_NO_ERROR) ? serializer.out_length : 0;
+  return (ctx->status == JES_NO_ERROR) ? serializer.evaluated_length : 0;
 }
 
 size_t jes_evaluate(struct jes_context *ctx, bool compact)
@@ -491,7 +487,7 @@ size_t jes_evaluate(struct jes_context *ctx, bool compact)
                                : jes_serializer_calculate_new_line;
 
   jes_serializer_state_machine(ctx, &serializer);
-  serializer.out_length += sizeof(char); /* NUL termination */
+  serializer.evaluated_length += sizeof(char); /* NUL termination */
 
-  return (ctx->status == JES_NO_ERROR) ? serializer.out_length : 0;
+  return (ctx->status == JES_NO_ERROR) ? serializer.evaluated_length : 0;
 }
