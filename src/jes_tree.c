@@ -25,9 +25,10 @@ static struct jes_node* jes_allocate(struct jes_context* ctx)
   assert(ctx != NULL);
   mng_ctx = &ctx->node_mng;
 
-#ifdef JES_ENABLE_KEY_HASHING
-  #ifdef JES_ENABLE_FALL_BACK_TO_LINEAR_SEARCH
-  if ((mng_ctx->node_count >= mng_ctx->capacity) && (mng_ctx->find_key_fn != jes_tree_find_key)) {
+#ifdef JES_ENABLE_FALL_BACK_TO_LINEAR_SEARCH
+  if ((mng_ctx->node_count >= mng_ctx->capacity) && (JES_SEARCH_HASHED == ctx->mode)) {
+    assert(mng_ctx->find_key_fn != jes_tree_find_key);
+    ctx->mode = JES_SEARCH_LINEAR;
     /* Reclaim the original buffer size provided to jes */
     mng_ctx->size = ctx->workspace_size - sizeof(*ctx);
     mng_ctx->capacity = (mng_ctx->size / sizeof(struct jes_node)) < JES_INVALID_INDEX
@@ -37,7 +38,6 @@ static struct jes_node* jes_allocate(struct jes_context* ctx)
     mng_ctx->find_key_fn = jes_tree_find_key;
     JES_LOG("\n !!! Insufficient memory in node pool! Falling back to Linear search (performance degraded).");
   }
-  #endif
 #endif
 
   if (mng_ctx->node_count < mng_ctx->capacity) {
@@ -247,11 +247,9 @@ struct jes_node* jes_tree_insert_key_node(struct jes_context* ctx,
     new_node = jes_tree_insert_node(ctx, parent_object, anchor, JES_KEY, keyword_length, keyword);
   }
 
-  if (new_node) {
-#ifdef JES_ENABLE_KEY_HASHING
+  if ((new_node) && (JES_SEARCH_HASHED == ctx->mode)) {
     assert(ctx->hash_table.add_fn != NULL);
     ctx->hash_table.add_fn(ctx, parent_object, new_node);
-#endif
   }
 
   return new_node;
@@ -304,13 +302,15 @@ void jes_tree_delete_node(struct jes_context* ctx, struct jes_node* node)
                   iter->json_tlv.length, iter->json_tlv.value,
                   iter->parent, iter->sibling, iter->first_child, iter->last_child, "");
 #endif
+
     /* Remove key from hash table if applicable */
-#ifdef JES_ENABLE_KEY_HASHING
-    if (NODE_TYPE(iter) == JES_KEY) {
-      assert(ctx->hash_table.remove_fn != NULL);
-      ctx->hash_table.remove_fn(ctx, parent, iter);
+    if (JES_SEARCH_HASHED == ctx->mode) {
+      if (NODE_TYPE(iter) == JES_KEY) {
+        assert(ctx->hash_table.remove_fn != NULL);
+        ctx->hash_table.remove_fn(ctx, parent, iter);
+      }
     }
-#endif
+
     jes_free(ctx, iter);
     iter = parent;
   }
@@ -350,13 +350,14 @@ void jes_tree_delete_node(struct jes_context* ctx, struct jes_node* node)
                 node->json_tlv.length, node->json_tlv.value,
                 node->parent, node->sibling, node->first_child, node->last_child, "");
 #endif
-/* Remove from hash table if it's a key */
-#ifdef JES_ENABLE_KEY_HASHING
-  if (NODE_TYPE(node) == JES_KEY) {
-    assert(ctx->hash_table.remove_fn != NULL);
-    ctx->hash_table.remove_fn(ctx, parent, node);
+  /* Remove from hash table if it's a key */
+  if (JES_SEARCH_HASHED == ctx->mode) {
+    if (NODE_TYPE(node) == JES_KEY) {
+      assert(ctx->hash_table.remove_fn != NULL);
+      ctx->hash_table.remove_fn(ctx, parent, node);
+    }
   }
-#endif
+
   jes_free(ctx, node);
 }
 
@@ -415,11 +416,13 @@ jes_status jes_tree_init(struct jes_context* ctx, void *buffer, size_t buffer_si
 
   jes_tree_reset(&ctx->node_mng);
 
-#ifndef JES_ENABLE_KEY_HASHING
-  ctx->node_mng.find_key_fn = jes_tree_find_key;
-#else
-  ctx->node_mng.find_key_fn = jes_hash_table_find_key;
-#endif
+  if (JES_SEARCH_LINEAR == ctx->mode) {
+    ctx->node_mng.find_key_fn = jes_tree_find_key;
+  }
+  else {
+    ctx->node_mng.find_key_fn = jes_hash_table_find_key;
+  }
+
   return jes_tree_resize(&ctx->node_mng, buffer, buffer_size);
 }
 

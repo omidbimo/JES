@@ -127,22 +127,23 @@ char* jes_stringify_status(struct jes_context *ctx, char *msg, size_t msg_len)
       break;
 
     case JES_OUT_OF_MEMORY:
-#ifdef JES_ENABLE_KEY_HASHING
-      snprintf( msg, msg_len, "%s(#%d) - element capacity: %d, hash table capacity: %d, node count: %d",
-                jes_status_str[ctx->status],
-                ctx->status,
-                ctx->node_mng.capacity,
-                ctx->hash_table.capacity,
-                ctx->node_mng.node_count
-                );
-#else
-      snprintf( msg, msg_len, "%s(#%d) - element capacity: %lu, node count: %lu",
-                jes_status_str[ctx->status],
-                ctx->status,
-                ctx->node_mng.capacity,
-                ctx->node_mng.node_count
-                );
-#endif
+      if (JES_SEARCH_HASHED == ctx->mode) {
+        snprintf( msg, msg_len, "%s(#%d) - element capacity: %d, hash table capacity: %d, node count: %d",
+                  jes_status_str[ctx->status],
+                  ctx->status,
+                  ctx->node_mng.capacity,
+                  ctx->hash_table.capacity,
+                  ctx->node_mng.node_count
+                  );
+      }
+      else {
+        snprintf( msg, msg_len, "%s(#%d) - element capacity: %lu, node count: %lu",
+                  jes_status_str[ctx->status],
+                  ctx->status,
+                  ctx->node_mng.capacity,
+                  ctx->node_mng.node_count
+                  );
+      }
       break;
     case JES_UNEXPECTED_TOKEN:
       snprintf( msg, msg_len,
@@ -286,15 +287,15 @@ void jes_print_context(struct jes_context* ctx)
   printf("\n      - column: %u", ctx->serdes.tokenizer.cursor.column);
   printf("\n      - line_number: %u", ctx->serdes.tokenizer.cursor.line_number);
 
-#ifdef JES_ENABLE_KEY_HASHING
-  printf("\n- Hash Table:");
-  if (ctx->hash_table.pool) {  printf("\n  - pool: 0x%X", ctx->hash_table.pool);}
-  else{  printf("\n  - pool:%s", "NULL");}
-  printf("\n  - size: %u", ctx->hash_table.size);
-  printf("\n  - capacity: %u", ctx->hash_table.capacity);
-  printf("\n  - entry_count: %u", ctx->hash_table.entry_count);
-  printf("\n  - hash_fn: 0x%X", ctx->hash_table.hash_fn);
-  printf("\n  - add_fn: 0x%X", ctx->hash_table.add_fn);
-  printf("\n  - remove_fn: 0x%X", ctx->hash_table.remove_fn);
-#endif
+  if (JES_SEARCH_HASHED == ctx->mode) {
+    printf("\n- Hash Table:");
+    if (ctx->hash_table.pool) {  printf("\n  - pool: 0x%X", ctx->hash_table.pool);}
+    else{  printf("\n  - pool:%s", "NULL");}
+    printf("\n  - size: %u", ctx->hash_table.size);
+    printf("\n  - capacity: %u", ctx->hash_table.capacity);
+    printf("\n  - entry_count: %u", ctx->hash_table.entry_count);
+    printf("\n  - hash_fn: 0x%X", ctx->hash_table.hash_fn);
+    printf("\n  - add_fn: 0x%X", ctx->hash_table.add_fn);
+    printf("\n  - remove_fn: 0x%X", ctx->hash_table.remove_fn);
+  }
 }

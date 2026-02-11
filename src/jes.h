@@ -37,18 +37,6 @@
 #define JES_DEFAULT_PATH_SEPARATOR '.'
 
 /**
- * JES_ENABLE_KEY_HASHING
- *
- * Enables hash table based key lookup to accelerate access in large JSON objects.
- * Useful for frequent key access in large documents.
- *
- * Note:
- * - Requires more memory for the internal hash table.
- * - In small JSON objects, linear search may be more efficient.
- */
-#define JES_ENABLE_KEY_HASHING
-
-/**
  * JES_ENABLE_FALL_BACK_TO_LINEAR_SEARCH
  *
  * Allows fallback to linear search when node buffer is exhausted, reclaiming hash table memory.
@@ -71,11 +59,16 @@
 #define JES_TAB_SIZE 2
 
 /* Logging output control in debug mode */
-//#define JES_ENABLE_TOKEN_LOG
-//#define JES_ENABLE_PARSER_NODE_LOG
+#define JES_ENABLE_TOKEN_LOG
+#define JES_ENABLE_PARSER_NODE_LOG
 //#define JES_ENABLE_PARSER_STATE_LOG
 //#define JES_ENABLE_SERIALIZER_NODE_LOG
 //#define JES_ENABLE_SERIALIZER_STATE_LOG
+
+enum jes_search_mode {
+  JES_SEARCH_LINEAR = 0,
+  JES_SEARCH_HASHED,
+};
 
 typedef enum jes_status {
   JES_NO_ERROR = 0,
@@ -184,7 +177,7 @@ struct jes_status_block {
  *
  * Note: Buffer must be large enough for context and all nodes (and optional hash table).
  */
-struct jes_context* jes_init(void* buffer, size_t buffer_size);
+struct jes_context* jes_init(void* buffer, size_t buffer_size, enum jes_search_mode mode);
 
 /**
  * Returns the minimal size required for a JES context (excluding node pool and hash table).

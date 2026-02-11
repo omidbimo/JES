@@ -4,9 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#ifdef JES_ENABLE_KEY_HASHING
-  #include "jes_hash_table.h"
-#endif
+#include "jes_hash_table.h"
 
 #ifdef JES_USE_32BIT_NODE_DESCRIPTOR
   #define JES_INVALID_INDEX 0xFFFFFFFF
@@ -187,16 +185,14 @@ struct jes_context {
   void* workspace;
   /* Size of the workspace buffer in bytes. This will be used to reconstruct the workspace when needed. */
   size_t workspace_size;
-
+  /* Linear or hashed table key search */
+  enum jes_search_mode mode;
   /* Serialization/Deserialization subsystem state. */
   struct jes_serdes_context serdes;
   /* Node management subsystem state. */
   struct jes_node_mng_context node_mng;
-
-#ifdef JES_ENABLE_KEY_HASHING
   /* Hash table state for accelerated key lookups */
   struct jes_hash_table_context hash_table;
-#endif
 
   char path_separator;
 };

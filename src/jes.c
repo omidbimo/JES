@@ -11,7 +11,7 @@
 #include "jes_parser.h"
 #include "jes_serializer.h"
 
-struct jes_context* jes_init(void* buffer, size_t buffer_size)
+struct jes_context* jes_init(void* buffer, size_t buffer_size, enum jes_search_mode mode)
 {
   struct jes_context* ctx = buffer;
 
@@ -25,31 +25,43 @@ struct jes_context* jes_init(void* buffer, size_t buffer_size)
 
   ctx->workspace = buffer;
   ctx->workspace_size = buffer_size;
+  ctx->mode = mode;
 
-#ifdef JES_ENABLE_KEY_HASHING
-  size_t tree_space = (buffer_size - sizeof(*ctx)) * 3 / 4;
-  size_t hash_space = buffer_size - sizeof(*ctx) - tree_space;
+  switch (mode) {
+    case JES_SEARCH_LINEAR:
 
-  if (JES_NO_ERROR != jes_tree_init(ctx,
-                                    (uint8_t*)ctx->workspace + sizeof(*ctx),
-                                    tree_space)) {
-    return NULL;
+      if (JES_NO_ERROR != jes_tree_init(ctx,
+                                        (uint8_t*)ctx->workspace + sizeof(*ctx),
+                                        ctx->workspace_size - sizeof(*ctx))) {
+        return NULL;
+      }
+      break;
+
+    case JES_SEARCH_HASHED:
+      {
+        size_t tree_space = (buffer_size - sizeof(*ctx)) * 3 / 4;
+        size_t hash_space = buffer_size - sizeof(*ctx) - tree_space;
+
+        if (JES_NO_ERROR != jes_tree_init(ctx,
+                                          (uint8_t*)ctx->workspace + sizeof(*ctx),
+                                          tree_space)) {
+          return NULL;
+        }
+
+        if (JES_NO_ERROR != jes_hash_table_init(ctx,
+                                                (uint8_t*)ctx->workspace + sizeof(*ctx) + tree_space,
+                                                hash_space)) {
+          return NULL;
+        }
+      }
+      break;
+
+    default:
+      return NULL;
   }
 
-  if (JES_NO_ERROR != jes_hash_table_init(ctx,
-                                          (uint8_t*)ctx->workspace + sizeof(*ctx) + tree_space,
-                                          hash_space)) {
-    return NULL;
-  }
-
-#else
-  if (JES_NO_ERROR != jes_tree_init(ctx, (struct jes_context*)ctx->workspace + 1, ctx->workspace_size - sizeof(*ctx))) {
-    return NULL;
-  }
-#endif
   ctx->cookie = JES_CONTEXT_COOKIE;
   ctx->path_separator = JES_DEFAULT_PATH_SEPARATOR;
-
   return ctx;
 }
 
@@ -60,13 +72,20 @@ void jes_reset(struct jes_context* ctx)
     ctx->serdes.tokenizer.json_data = NULL;
     ctx->serdes.tokenizer.json_length = 0;
     ctx->serdes.iter = NULL;
-/* TODO: use return values */
-#ifdef JES_ENABLE_KEY_HASHING
-  (void)jes_tree_init(ctx, (struct jes_context*)ctx->workspace + 1, (ctx->workspace_size - sizeof(*ctx)) * 3 / 4);
-  (void)jes_hash_table_init(ctx, (uint8_t*)ctx->workspace + sizeof(*ctx) + ctx->node_mng.size, (ctx->workspace_size - sizeof(*ctx)) / 4);
-#else
-  (void)jes_tree_init(ctx, (struct jes_context*)ctx->workspace + 1, ctx->workspace_size - sizeof(*ctx));
-#endif
+    /* TODO: use return values */
+    if (JES_SEARCH_LINEAR == ctx->mode) {
+      (void)jes_tree_init(ctx,
+                          (uint8_t*)ctx->workspace + sizeof(*ctx),
+                          ctx->workspace_size - sizeof(*ctx));
+    }
+    else {
+      (void)jes_tree_init(ctx,
+                          (uint8_t*)ctx->workspace + sizeof(*ctx),
+                          (ctx->workspace_size - sizeof(*ctx)) * 3 / 4);
+      (void)jes_hash_table_init(ctx,
+                                (uint8_t*)ctx->workspace + sizeof(*ctx) + ctx->node_mng.size,
+                                (ctx->workspace_size - sizeof(*ctx)) / 4);
+    }
   }
 }
 
@@ -807,15 +826,16 @@ struct jes_workspace_stat jes_get_workspace_stat(struct jes_context* ctx)
     stat.node_mng_size = ctx->node_mng.size;
     stat.node_mng_capacity = ctx->node_mng.capacity;
     stat.node_mng_node_count = ctx->node_mng.node_count;
-#ifdef JES_ENABLE_KEY_HASHING
-    stat.hash_table_size = ctx->hash_table.size;
-    stat.hash_table_capacity = ctx->hash_table.capacity;
-    stat.hash_table_entry_count = ctx->hash_table.entry_count;
-#else
-    stat.hash_table_size = 0;
-    stat.hash_table_capacity = 0;
-    stat.hash_table_entry_count = 0;
-#endif
+    if (JES_SEARCH_HASHED == ctx->mode) {
+      stat.hash_table_size = ctx->hash_table.size;
+      stat.hash_table_capacity = ctx->hash_table.capacity;
+      stat.hash_table_entry_count = ctx->hash_table.entry_count;
+    }
+    else {
+      stat.hash_table_size = 0;
+      stat.hash_table_capacity = 0;
+      stat.hash_table_entry_count = 0;
+    }
   }
 
   return stat;
@@ -838,7 +858,6 @@ struct jes_status_block jes_get_status_block(struct jes_context* ctx)
   return status_block;
 }
 
-#ifdef JES_ENABLE_KEY_HASHING
 /* Pre-order depth-first traversal
    visit node → visit children → visit siblings → backtrack to parent's siblings. */
 static inline void jes_rehash(struct jes_context* ctx)
@@ -875,7 +894,6 @@ static inline void jes_rehash(struct jes_context* ctx)
     }
   }
 }
-#endif
 
 struct jes_context* jes_resize_workspace(struct jes_context* ctx, void* new_buffer, size_t new_buffer_size)
 {
@@ -910,7 +928,7 @@ struct jes_context* jes_resize_workspace(struct jes_context* ctx, void* new_buff
     new_ctx->workspace_size = new_buffer_size;
     new_ctx->node_mng.pool = (struct jes_node*)((struct jes_context*)new_buffer + 1);
 
-#ifdef JES_ENABLE_KEY_HASHING
+    if (JES_SEARCH_HASHED == ctx->mode) {
       /* The workspace is partitioned between node_mng and the hash table */
       /* Configuring the node mng */
       if (JES_NO_ERROR != jes_tree_resize(&new_ctx->node_mng,
@@ -924,7 +942,8 @@ struct jes_context* jes_resize_workspace(struct jes_context* ctx, void* new_buff
                                                 (new_buffer_size - sizeof(*new_ctx)) / 4)) {
         return NULL;
       }
-#else
+    }
+    else {
       /* No Hash table is allocated */
       /* Configuring the node pool */
       if (JES_NO_ERROR != jes_tree_resize(&new_ctx->node_mng,
@@ -932,13 +951,13 @@ struct jes_context* jes_resize_workspace(struct jes_context* ctx, void* new_buff
                                           new_buffer_size - sizeof(*new_ctx))) {
         return NULL;
       }
-#endif
+    }
     new_ctx->node_mng.root = new_ctx->node_mng.pool + old_root_index;
     new_ctx->serdes.iter = new_ctx->node_mng.pool + old_iter_index;
 
-#ifdef JES_ENABLE_KEY_HASHING
-    jes_rehash(new_ctx);
-#endif
+    if (JES_SEARCH_HASHED == ctx->mode) {
+      jes_rehash(new_ctx);
+    }
   }
 
   return new_ctx;
