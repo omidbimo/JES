@@ -26,15 +26,17 @@ int main(void)
 
 
   fp = fopen("demo.json", "rb");
-
-  if (fp != NULL) {
-    fread(file_data, sizeof(char), sizeof(file_data), fp);
-    if ( ferror(fp) != 0 ) {
-      fclose(fp);
-      return -1;
-    }
-    fclose(fp);
+  if (fp == NULL) {
+    return -1;
   }
+
+  fread(file_data, sizeof(char), sizeof(file_data), fp);
+  if ( ferror(fp) != 0 ) {
+    fclose(fp);
+    return -1;
+  }
+  fclose(fp);
+
 
   ctx = jes_init(working_buffer, sizeof(working_buffer));
   if (!ctx) {
@@ -45,7 +47,7 @@ int main(void)
   /* Parse JSON */
   if (jes_load(ctx, file_data, strlen(file_data)) != JES_NO_ERROR) {
     fprintf(stderr, "Failed to parse JSON: %d\n", jes_get_status(ctx));
-    return 1;
+    return -1;
   }
 
   printf("\nSize of JSON data: %lld bytes", strnlen(file_data, sizeof(file_data)));
