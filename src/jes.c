@@ -25,31 +25,42 @@ struct jes_context* jes_init(void* buffer, size_t buffer_size)
 
   ctx->workspace = buffer;
   ctx->workspace_size = buffer_size;
+
 #ifdef JES_ENABLE_KEY_HASHING
-  if ((JES_NO_ERROR != jes_tree_init(ctx, (struct jes_context*)ctx->workspace + 1, (ctx->workspace_size - sizeof(*ctx)) * 3 / 4)) ||
-      (JES_NO_ERROR != jes_hash_table_init(ctx, (uint8_t*)ctx->workspace + sizeof(*ctx) + ctx->node_mng.size, (ctx->workspace_size - sizeof(*ctx)) / 4))) {
+  size_t tree_space = (buffer_size - sizeof(*ctx)) * 3 / 4;
+  size_t hash_space = buffer_size - sizeof(*ctx) - tree_space;
+
+  if (JES_NO_ERROR != jes_tree_init(ctx,
+                                    (uint8_t*)ctx->workspace + sizeof(*ctx),
+                                    tree_space)) {
     return NULL;
   }
+
+  if (JES_NO_ERROR != jes_hash_table_init(ctx,
+                                          (uint8_t*)ctx->workspace + sizeof(*ctx) + tree_space,
+                                          hash_space)) {
+    return NULL;
+  }
+
 #else
   if (JES_NO_ERROR != jes_tree_init(ctx, (struct jes_context*)ctx->workspace + 1, ctx->workspace_size - sizeof(*ctx))) {
     return NULL;
   }
 #endif
   ctx->cookie = JES_CONTEXT_COOKIE;
-  ctx->path_separator = '.';
+  ctx->path_separator = JES_DEFAULT_PATH_SEPARATOR;
 
   return ctx;
 }
 
 void jes_reset(struct jes_context* ctx)
 {
-  jes_status status;
   if ((ctx != NULL) && JES_IS_INITIATED(ctx)) {
     ctx->status = JES_NO_ERROR;
     ctx->serdes.tokenizer.json_data = NULL;
     ctx->serdes.tokenizer.json_length = 0;
     ctx->serdes.iter = NULL;
-
+/* TODO: use return values */
 #ifdef JES_ENABLE_KEY_HASHING
   (void)jes_tree_init(ctx, (struct jes_context*)ctx->workspace + 1, (ctx->workspace_size - sizeof(*ctx)) * 3 / 4);
   (void)jes_hash_table_init(ctx, (uint8_t*)ctx->workspace + sizeof(*ctx) + ctx->node_mng.size, (ctx->workspace_size - sizeof(*ctx)) / 4);
@@ -184,7 +195,7 @@ struct jes_element* jes_get_key(struct jes_context* ctx, struct jes_element* par
 
   key_len = strnlen(keys, JES_MAX_PATH_LENGTH);
   if (key_len == JES_MAX_PATH_LENGTH) {
-    ctx->status = JES_INVALID_PARAMETER;
+    ctx->status = JES_PATH_TOO_LONG;
     return NULL;
   }
 
@@ -817,7 +828,9 @@ struct jes_status_block jes_get_status_block(struct jes_context* ctx)
   if ((ctx != NULL) && JES_IS_INITIATED(ctx)) {
     status_block.status = ctx->status;
     status_block.token_type = ctx->serdes.tokenizer.token.type;
-    status_block.element_type = ctx->serdes.iter->json_tlv.type;
+    status_block.element_type = ctx->serdes.iter
+                              ? ctx->serdes.iter->json_tlv.type
+                              : JES_UNKNOWN;
     status_block.cursor_line = ctx->serdes.tokenizer.cursor.line_number;
     status_block.cursor_pos = ctx->serdes.tokenizer.cursor.pos - ctx->serdes.tokenizer.json_data;
   }
@@ -868,8 +881,8 @@ struct jes_context* jes_resize_workspace(struct jes_context* ctx, void* new_buff
 {
   struct jes_context *new_ctx = NULL;
 
-  if ((ctx == NULL) && !JES_IS_INITIATED(ctx)) {
-    return new_ctx;
+  if ((ctx == NULL) || !JES_IS_INITIATED(ctx)) {
+    return NULL;
   }
 
   size_t old_workspace_size = ctx->workspace_size;
@@ -914,7 +927,7 @@ struct jes_context* jes_resize_workspace(struct jes_context* ctx, void* new_buff
 #else
       /* No Hash table is allocated */
       /* Configuring the node pool */
-      if (JES_NO_ERROR != jes_tree_resize(&ctx->node_mng,
+      if (JES_NO_ERROR != jes_tree_resize(&new_ctx->node_mng,
                                           (struct jes_context*)new_buffer + 1,
                                           new_buffer_size - sizeof(*new_ctx))) {
         return NULL;

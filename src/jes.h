@@ -29,6 +29,14 @@
 #define JES_MAX_PATH_LENGTH 512
 
 /**
+ * JES_DEFAULT_PATH_SEPARATOR
+ *
+ * default path separator when searching a key. It can be changed at runtime using the API.
+ *
+ */
+#define JES_DEFAULT_PATH_SEPARATOR '.'
+
+/**
  * JES_ENABLE_KEY_HASHING
  *
  * Enables hash table based key lookup to accelerate access in large JSON objects.
@@ -87,6 +95,7 @@ typedef enum jes_status {
   JES_BROKEN_TREE,            /* API and Tree management error */
   JES_DUPLICATE_KEY,          /* Tree management error */
   JES_INVALID_OPERATION,      /* API error */
+  JES_PATH_TOO_LONG,          /* API error */
 } jes_status;
 
 enum jes_token_type {
@@ -284,7 +293,7 @@ struct jes_element* jes_get_sibling(struct jes_context* ctx, struct jes_element*
  *
  * @param ctx JES context.
  * @param parent Starting object or key.
- * @param keys Dot-separated key path (e.g., "a.b.c").
+ * @param keys Dot-separated, NUL terminated key path (e.g., "a.b.c").
  * @return Found KEY element or NULL if not found.
  *
  * Note: Supports caching — searches start from a parent, reducing repeated traversal.

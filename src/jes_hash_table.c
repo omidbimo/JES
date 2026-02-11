@@ -18,7 +18,7 @@
   #define JES_LOG(...) //printf(__VA_ARGS__)
 #endif
 
- /* Reserve an specific address as Tombstone marker */
+ /* Reserve a specific address as Tombstone marker */
 static struct jes_element TOMBSTONE_SENTINEL;
 #define JES_HASH_TABLE_TOMBSTONE (&TOMBSTONE_SENTINEL)
 
