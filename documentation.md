@@ -66,6 +66,14 @@ The library behavior can be configured by defining the following macros:
 
 ## Core Data Structures
 
+### `jes_search_mode`
+Defines the preferred key search method
+
+| Search Mode                   | Description                                 |
+| ------------------------------| ------------------------------------------- |
+| `JES_SEARCH_LINEAR`           | Linear search with O(n) performance         |
+| `JES_SEARCH_HASHED`           | Hash Table search with O(1) performance but has more memory overhead and run-time overhead |
+
 ### `jes_status`
 
 Defines the possible status codes for JES operations:
@@ -191,13 +199,14 @@ JES Status Block:
 Initializes a new JES context.
 
 ```c
-struct jes_context* jes_init(void* buffer, size_t buffer_size);
+struct jes_context* jes_init(void* buffer, size_t buffer_size, enum jes_search_mode mode);
 ```
 
 **Parameters**
 
 - `buffer` : Pre-allocated buffer to hold the context and JSON tree nodes
 - `buffer_size` : Size of the provided buffer
+- `mode` : Key search mode
 
 **Returns**  Pointer to the initialized context or NULL on failure
 **Note** The buffer must have enough space to hold the context and required JSON tree nodes
