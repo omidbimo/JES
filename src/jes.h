@@ -66,8 +66,8 @@
 //#define JES_ENABLE_SERIALIZER_STATE_LOG
 
 enum jes_search_mode {
-  JES_SEARCH_LINEAR = 0,
-  JES_SEARCH_HASHED,
+  JES_SEARCH_LINEAR = 0, /* Linear key search, O(n) performance */
+  JES_SEARCH_HASHED,     /* Hash table key search, O(1) performance */
 };
 
 typedef enum jes_status {
@@ -168,14 +168,35 @@ struct jes_status_block {
   size_t cursor_pos;
 };
 
-/**
- * Initializes a JES context within the provided buffer.
+ /**
+ * @brief Initializes a JES context within the provided buffer.
  *
- * @param buffer Pointer to workspace memory to hold context and node pool (and optional hash table).
- * @param buffer_size Size of buffer in bytes.
- * @return Pointer to jes_context or NULL on failure.
+ * This function sets up the JSON parsing context using the provided memory buffer.
+ * The buffer will be partitioned to hold the context structure, node pool, and
+ * optionally a hash table (depending on search mode).
  *
- * Note: Buffer must be large enough for context and all nodes (and optional hash table).
+ * @param buffer Pointer to user-provided workspace memory. Must be properly aligned.
+ * @param buffer_size Size of the buffer in bytes. Minimum: jes_get_context_size() +
+ *                    Estimated number of JSON elements * jes_get_node_size()
+ * @param mode Key search mode:
+ *             - JES_SEARCH_LINEAR: All buffer space allocated to node pool. Best for
+ *               objects with <50 keys or memory-constrained environments.
+ *             - JES_SEARCH_HASHED: Buffer split 75% nodes / 25% hash table. Best for
+ *               objects with 50+ keys and sufficient memory.
+ *
+ * @return Pointer to initialized jes_context on success, NULL on failure.
+ *         Returns NULL if: buffer is NULL, buffer_size too small, or initialization fails.
+ *
+ * @note The initial search mode is set at initialization, but may change during operation:
+ *       - If JES_ENABLE_FALL_BACK_TO_LINEAR_SEARCH is defined and the node pool becomes
+ *         full during parsing, the hash table memory is automatically reclaimed and the
+ *         context falls back to linear search mode for all subsequent operations.
+ *       - After fallback occurs, the mode cannot return to hashed search.
+ *
+ * @note Buffer ownership remains with the caller. The buffer must remain valid for the
+ *       entire lifetime of the context. Do not modify or free the buffer while
+ *       the context is in use.
+ *
  */
 struct jes_context* jes_init(void* buffer, size_t buffer_size, enum jes_search_mode mode);
 
