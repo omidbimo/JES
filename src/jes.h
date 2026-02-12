@@ -177,7 +177,7 @@ struct jes_status_block {
  *
  * @param buffer Pointer to user-provided workspace memory. Must be properly aligned.
  * @param buffer_size Size of the buffer in bytes. Minimum: jes_get_context_size() +
- *                    Estimated number of JSON elements * jes_get_node_size()
+ *                    estimated number of JSON Elements * jes_get_node_size()
  * @param mode Key search mode:
  *             - JES_SEARCH_LINEAR: All buffer space allocated to node pool. Best for
  *               objects with <50 keys or memory-constrained environments.
@@ -201,7 +201,7 @@ struct jes_status_block {
 struct jes_context* jes_init(void* buffer, size_t buffer_size, enum jes_search_mode mode);
 
 /**
- * Returns the minimal size required for a JES context (excluding node pool and hash table).
+ * Returns the size required for a JES context (excluding node pool and hash table).
  */
 size_t jes_get_context_size(void);
 

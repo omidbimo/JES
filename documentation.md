@@ -38,13 +38,8 @@ The library behavior can be configured by defining the following macros:
 /* Maximum allowed path length when searching a key (default: 512 bytes) */
 #define JES_MAX_PATH_LENGTH 512
 
-/* Enable hash table based key lookup to accelerate access in large JSON objects
- * Useful for frequent key access in large documents
- * Note:
- *    - Requires more memory for the internal hash table
- *    - In small JSON objects, linear search may be more efficient
- */
-#define JES_ENABLE_KEY_HASHING
+/* Default path separator when searching a key. It can be changed at runtime using the API. */
+#define JES_DEFAULT_PATH_SEPARATOR '.'
 
 /* Allow fallback to linear search when node buffer is exhausted
  * On node buffer exhaustion, hash table memory is reclaimed to continue parsing
