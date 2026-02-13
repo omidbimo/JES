@@ -19,6 +19,32 @@
 // #define JES_USE_32BIT_NODE_DESCRIPTOR
 
 /**
+ * JES_WORKSPACE_NODE_POOL_PERCENT
+ *
+ * When using hash table search mode (JES_SEARCH_HASHED), the workspace is
+ * partitioned between the node pool and hash table. By default, 75% of the
+ * available workspace is allocated to the node pool, with the remaining 25%
+ * reserved for the hash table.
+ *
+ * Increasing the node pool percentage reduces hash table size, which may
+ * degrade lookup performance but allows storing more JSON elements.
+ * Decreasing it enlarges the hash table for faster lookups but reduces
+ * storage capacity.
+ *
+ * Recommended range: 70-80%
+ *
+ * This can be overridden at compile time:
+ * @code
+ * gcc -DJES_WORKSPACE_NODE_POOL_PERCENT=80 ...
+ * @endcode
+ *
+ * Note: When using JES_SEARCH_LINEAR mode, 100% of workspace goes to node pool (and jes_context).
+ */
+#ifndef JES_WORKSPACE_NODE_POOL_PERCENT
+  #define JES_WORKSPACE_NODE_POOL_PERCENT   75
+#endif
+
+/**
  * JES_MAX_PATH_LENGTH
  *
  * Maximum allowed path length (in bytes) when searching a key
@@ -59,8 +85,8 @@
 #define JES_TAB_SIZE 2
 
 /* Logging output control in debug mode */
-#define JES_ENABLE_TOKEN_LOG
-#define JES_ENABLE_PARSER_NODE_LOG
+//#define JES_ENABLE_TOKEN_LOG
+//#define JES_ENABLE_PARSER_NODE_LOG
 //#define JES_ENABLE_PARSER_STATE_LOG
 //#define JES_ENABLE_SERIALIZER_NODE_LOG
 //#define JES_ENABLE_SERIALIZER_STATE_LOG

@@ -14,6 +14,8 @@
 struct jes_context* jes_init(void* buffer, size_t buffer_size, enum jes_search_mode mode)
 {
   struct jes_context* ctx = buffer;
+  size_t node_pool_size;
+  uint8_t* node_pool;
 
   if ((buffer == NULL) || buffer_size < sizeof(struct jes_context)) {
     return NULL;
@@ -26,31 +28,33 @@ struct jes_context* jes_init(void* buffer, size_t buffer_size, enum jes_search_m
   ctx->workspace = buffer;
   ctx->workspace_size = buffer_size;
   ctx->mode = mode;
+  /* The Node pool should be always aligned since an unpacked C structure is always aligned. */
+  assert(JES_IS_ALIGNED((uint8_t*)ctx->workspace + sizeof(*ctx)));
+  node_pool = (uint8_t*)ctx->workspace + sizeof(*ctx);
 
   switch (mode) {
     case JES_SEARCH_LINEAR:
-
-      if (JES_NO_ERROR != jes_tree_init(ctx,
-                                        (uint8_t*)ctx->workspace + sizeof(*ctx),
-                                        ctx->workspace_size - sizeof(*ctx))) {
+      node_pool_size = ctx->workspace_size - sizeof(*ctx);
+      if (JES_NO_ERROR != jes_tree_init(ctx, node_pool, node_pool_size)) {
         return NULL;
       }
       break;
 
     case JES_SEARCH_HASHED:
       {
-        size_t tree_space = (buffer_size - sizeof(*ctx)) * 3 / 4;
-        size_t hash_space = buffer_size - sizeof(*ctx) - tree_space;
+        size_t hash_table_size;
+        uint8_t* hash_table;
 
-        if (JES_NO_ERROR != jes_tree_init(ctx,
-                                          (uint8_t*)ctx->workspace + sizeof(*ctx),
-                                          tree_space)) {
+        node_pool_size = (buffer_size - sizeof(*ctx)) * JES_WORKSPACE_NODE_POOL_PERCENT / 100;
+        hash_table = JES_ALIGN_PTR((uint8_t*)ctx->workspace + sizeof(*ctx) + node_pool_size);
+        assert(hash_table < ((uint8_t*)buffer + buffer_size));
+        hash_table_size = (uint8_t*)buffer + buffer_size - hash_table;
+
+        if (JES_NO_ERROR != jes_tree_init(ctx, node_pool, node_pool_size)) {
           return NULL;
         }
 
-        if (JES_NO_ERROR != jes_hash_table_init(ctx,
-                                                (uint8_t*)ctx->workspace + sizeof(*ctx) + tree_space,
-                                                hash_space)) {
+        if (JES_NO_ERROR != jes_hash_table_init(ctx, hash_table, hash_table_size)) {
           return NULL;
         }
       }
@@ -67,24 +71,30 @@ struct jes_context* jes_init(void* buffer, size_t buffer_size, enum jes_search_m
 
 void jes_reset(struct jes_context* ctx)
 {
+  size_t node_pool_size;
+  uint8_t* node_pool;
+
   if ((ctx != NULL) && JES_IS_INITIATED(ctx)) {
     ctx->status = JES_NO_ERROR;
     ctx->serdes.tokenizer.json_data = NULL;
     ctx->serdes.tokenizer.json_length = 0;
     ctx->serdes.iter = NULL;
+    node_pool = (uint8_t*)ctx->workspace + sizeof(*ctx);
     /* TODO: use return values */
     if (JES_SEARCH_LINEAR == ctx->mode) {
-      (void)jes_tree_init(ctx,
-                          (uint8_t*)ctx->workspace + sizeof(*ctx),
-                          ctx->workspace_size - sizeof(*ctx));
+      node_pool_size = ctx->workspace_size - sizeof(*ctx);
+      (void)jes_tree_init(ctx, node_pool, node_pool_size);
     }
     else {
-      (void)jes_tree_init(ctx,
-                          (uint8_t*)ctx->workspace + sizeof(*ctx),
-                          (ctx->workspace_size - sizeof(*ctx)) * 3 / 4);
-      (void)jes_hash_table_init(ctx,
-                                (uint8_t*)ctx->workspace + sizeof(*ctx) + ctx->node_mng.size,
-                                (ctx->workspace_size - sizeof(*ctx)) / 4);
+      size_t hash_table_size;
+      uint8_t* hash_table;
+      node_pool_size = (ctx->workspace_size - sizeof(*ctx)) * JES_WORKSPACE_NODE_POOL_PERCENT / 100;
+      hash_table = JES_ALIGN_PTR((uint8_t*)ctx->workspace + sizeof(*ctx) + node_pool_size);
+      assert(hash_table < ((uint8_t*)ctx->workspace + ctx->workspace_size));
+      hash_table_size = (uint8_t*)ctx->workspace + ctx->workspace_size - hash_table;
+
+      (void)jes_tree_init(ctx, node_pool, node_pool_size);
+      (void)jes_hash_table_init(ctx, hash_table, hash_table_size);
     }
   }
 }
@@ -911,44 +921,48 @@ struct jes_context* jes_resize_workspace(struct jes_context* ctx, void* new_buff
   ctx->status = JES_NO_ERROR;
 
   if (new_buffer_size < old_workspace_size) {
-    ctx->status = JES_INVALID_OPERATION; /* Can not shrink memory */
+    /* Do not allow memory shrinking. */
+    ctx->status = JES_INVALID_OPERATION;
     return new_ctx;
   }
 
   new_ctx = (struct jes_context*)new_buffer;
 
-  if ((new_buffer_size > old_workspace_size) &&
-      ((new_buffer_size - sizeof(*ctx)) / sizeof(struct jes_node) > (old_workspace_size - sizeof(*ctx)) / sizeof(struct jes_node))) {
+  if (new_buffer_size > old_workspace_size) {
+    size_t node_pool_size;
 
     if (new_buffer != ctx->workspace) {
-      /* Relocate the JES context and node pool. */
+      /* Relocate the JES context and the node pool. */
       memmove(new_buffer, ctx, sizeof(*ctx) + old_node_mng_size);
       new_ctx->workspace = new_buffer;
     }
+
     new_ctx->workspace_size = new_buffer_size;
-    new_ctx->node_mng.pool = (struct jes_node*)((struct jes_context*)new_buffer + 1);
+    new_ctx->node_mng.pool = (struct jes_node *)((uint8_t*)new_buffer + sizeof(*new_ctx));
 
     if (JES_SEARCH_HASHED == ctx->mode) {
+      size_t hash_table_size;
+      uint8_t* hash_table;
+
       /* The workspace is partitioned between node_mng and the hash table */
-      /* Configuring the node mng */
-      if (JES_NO_ERROR != jes_tree_resize(&new_ctx->node_mng,
-                                          (struct jes_context*)new_buffer + 1,
-                                          (new_buffer_size - sizeof(*new_ctx)) * 3 / 4)) {
+      node_pool_size = (new_buffer_size - sizeof(*new_ctx)) * JES_WORKSPACE_NODE_POOL_PERCENT / 100;
+      if (JES_NO_ERROR != jes_tree_resize(&new_ctx->node_mng, new_ctx->node_mng.pool, node_pool_size)) {
         return NULL;
       }
+
+      hash_table = JES_ALIGN_PTR((uint8_t*)new_ctx->workspace + sizeof(*new_ctx) + node_pool_size);
+      assert(hash_table < ((uint8_t*)new_buffer + new_buffer_size));
+      hash_table_size = (uint8_t*)new_buffer + new_buffer_size - hash_table;
+
       /* Configuring the hash table */
-      if (JES_NO_ERROR != jes_hash_table_resize(&new_ctx->hash_table,
-                                                (uint8_t*)new_ctx->node_mng.pool + new_ctx->node_mng.size,
-                                                (new_buffer_size - sizeof(*new_ctx)) / 4)) {
+      if (JES_NO_ERROR != jes_hash_table_resize(&new_ctx->hash_table, hash_table, hash_table_size)) {
         return NULL;
       }
     }
     else {
-      /* No Hash table is allocated */
-      /* Configuring the node pool */
-      if (JES_NO_ERROR != jes_tree_resize(&new_ctx->node_mng,
-                                          (struct jes_context*)new_buffer + 1,
-                                          new_buffer_size - sizeof(*new_ctx))) {
+      /* Linear searching. Use the available workspace as the node pool. */
+      node_pool_size = new_buffer_size - sizeof(*new_ctx);
+      if (JES_NO_ERROR != jes_tree_resize(&new_ctx->node_mng, new_ctx->node_mng.pool, node_pool_size)) {
         return NULL;
       }
     }
