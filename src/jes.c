@@ -48,7 +48,7 @@ struct jes_context* jes_init(void* buffer, size_t buffer_size, enum jes_search_m
         node_pool_size = (buffer_size - sizeof(*ctx)) * JES_WORKSPACE_NODE_POOL_PERCENT / 100;
         hash_table = JES_ALIGN_PTR((uint8_t*)ctx->workspace + sizeof(*ctx) + node_pool_size);
         assert(hash_table < ((uint8_t*)buffer + buffer_size));
-        hash_table_size = (uint8_t*)buffer + buffer_size - hash_table;
+        hash_table_size = (size_t)((uint8_t*)buffer + buffer_size - hash_table);
 
         if (JES_NO_ERROR != jes_tree_init(ctx, node_pool, node_pool_size)) {
           return NULL;
@@ -91,7 +91,7 @@ void jes_reset(struct jes_context* ctx)
       node_pool_size = (ctx->workspace_size - sizeof(*ctx)) * JES_WORKSPACE_NODE_POOL_PERCENT / 100;
       hash_table = JES_ALIGN_PTR((uint8_t*)ctx->workspace + sizeof(*ctx) + node_pool_size);
       assert(hash_table < ((uint8_t*)ctx->workspace + ctx->workspace_size));
-      hash_table_size = (uint8_t*)ctx->workspace + ctx->workspace_size - hash_table;
+      hash_table_size = (size_t)((uint8_t*)ctx->workspace + ctx->workspace_size - hash_table);
 
       (void)jes_tree_init(ctx, node_pool, node_pool_size);
       (void)jes_hash_table_init(ctx, hash_table, hash_table_size);
@@ -205,12 +205,44 @@ jes_status jes_delete_element(struct jes_context* ctx, struct jes_element* eleme
   return ctx->status;
 }
 
+struct jes_element* jes_get_value(struct jes_context* ctx, struct jes_element* parent, const char* keys)
+{
+  struct jes_element* key = jes_get_key(ctx, parent, keys);
+  struct jes_element* value = NULL;
+
+  if (NULL != key) {
+    value = (struct jes_element*)GET_FIRST_CHILD(ctx->node_mng,
+                                                 (struct jes_node*)key);
+  }
+
+  return value;
+}
+
+static inline size_t jes_get_key_len_by_separator(struct jes_context* ctx, const char* keys)
+{
+  char* separator;
+  size_t key_len;
+  assert(ctx != NULL);
+
+  separator = strchr(keys, ctx->path_separator);
+
+  if (separator != NULL) {
+    assert(keys <= separator);
+    key_len = (size_t)(separator - keys);
+  }
+  else {
+    key_len = strlen(keys); /* keys length has already been validated so using strlen is ok. */
+  }
+
+  return key_len;
+}
+
 struct jes_element* jes_get_key(struct jes_context* ctx, struct jes_element* parent, const char* keys)
 {
   struct jes_element* target_key = NULL;
   struct jes_node* iter = (struct jes_node*)parent;
   size_t key_len;
-  const char* key;
+  const char* key_name;
   char* separator;
 
   if (!ctx || !JES_IS_INITIATED(ctx)) {
@@ -238,22 +270,15 @@ struct jes_element* jes_get_key(struct jes_context* ctx, struct jes_element* par
   /* The keys will be break into several keywords separated by a predefined separator char.
      The search is only successful When all keys are found. */
   while (iter != NULL) {
-    key = keys;
-    separator = strchr(keys, ctx->path_separator);
-    if (separator != NULL) {
-      key_len = separator - keys;
-    }
-    else {
-      key_len = strlen(keys); /* keys length has already been validated so using strlen is ok. */
-    }
-
+    key_name = keys;
+    key_len = jes_get_key_len_by_separator(ctx, keys);
     keys += key_len; /* This set the keys to the NUL terminator or the separator. */
 
     if (NODE_TYPE(iter) == JES_KEY) {
       iter = GET_FIRST_CHILD(ctx->node_mng, iter);
     }
 
-    iter = ctx->node_mng.find_key_fn(ctx, iter, key, key_len);
+    iter = ctx->node_mng.find_key_fn(ctx, iter, key_name, key_len);
 
     /* This was the last element to find. */
     if ((iter != NULL) && (*keys == '\0')) {
@@ -265,10 +290,9 @@ struct jes_element* jes_get_key(struct jes_context* ctx, struct jes_element* par
     keys += sizeof(char); /* +1 byte for the size of separator symbol */
   }
 
-  if ((target_key == NULL) && (ctx->status == JES_NO_ERROR)) {
+  if (target_key == NULL) {
     ctx->status = JES_ELEMENT_NOT_FOUND;
   }
-
 
   return target_key;
 }

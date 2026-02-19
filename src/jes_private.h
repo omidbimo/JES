@@ -6,6 +6,21 @@
 
 #include "jes_hash_table.h"
 
+/**
+ * JES_ALIGNMENT
+ *
+ * Memory alignment requirement for JES workspace partitions.
+ */
+#ifndef JES_ALIGNMENT
+  #define JES_ALIGNMENT sizeof(void*)
+#endif
+
+#define JES_ALIGN_PTR(ptr) \
+    ((void*)(((uintptr_t)(ptr) + (JES_ALIGNMENT - 1)) & ~(JES_ALIGNMENT - 1)))
+
+#define JES_IS_ALIGNED(ptr) \
+    (((uintptr_t)(ptr) & (JES_ALIGNMENT - 1)) == 0)
+
 #ifdef JES_USE_32BIT_NODE_DESCRIPTOR
   #define JES_INVALID_INDEX 0xFFFFFFFF
 #else

@@ -16,7 +16,7 @@
  * Memory impact:
  * - 32-bit descriptors double memory usage for node references (parent, first_child, last_child, sibling).
  */
-// #define JES_USE_32BIT_NODE_DESCRIPTOR
+#define JES_USE_32BIT_NODE_DESCRIPTOR
 
 /**
  * JES_WORKSPACE_NODE_POOL_PERCENT
@@ -85,8 +85,8 @@
 #define JES_TAB_SIZE 2
 
 /* Logging output control in debug mode */
-//#define JES_ENABLE_TOKEN_LOG
-//#define JES_ENABLE_PARSER_NODE_LOG
+#define JES_ENABLE_TOKEN_LOG
+#define JES_ENABLE_PARSER_NODE_LOG
 //#define JES_ENABLE_PARSER_STATE_LOG
 //#define JES_ENABLE_SERIALIZER_NODE_LOG
 //#define JES_ENABLE_SERIALIZER_STATE_LOG
@@ -326,8 +326,11 @@ struct jes_element* jes_get_root(struct jes_context* ctx);
 /* Navigation helpers */
 struct jes_element* jes_get_parent(struct jes_context* ctx, struct jes_element* element);
 struct jes_element* jes_get_child(struct jes_context* ctx, struct jes_element* element);
+/* @return right sibling of the element */
 struct jes_element* jes_get_sibling(struct jes_context* ctx, struct jes_element* element);
 
+/*  */
+struct jes_element* jes_get_value(struct jes_context* ctx, struct jes_element* parent, const char* keys);
 /**
  * Searches for a nested key.
  *
@@ -344,6 +347,7 @@ struct jes_element* jes_get_key(struct jes_context* ctx, struct jes_element* par
  * Returns value element of a given key.
  */
 struct jes_element* jes_get_key_value(struct jes_context* ctx, struct jes_element* key);
+
 
 /* Key operations */
 struct jes_element* jes_add_key(struct jes_context* ctx, struct jes_element* parent, const char* keyword, size_t keyword_length);
