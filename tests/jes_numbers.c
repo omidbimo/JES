@@ -150,7 +150,7 @@ int main(void)
   printf("\nRunning parser positive tests...");
   for (idx = 0; idx < (sizeof(json_str_positive_tests)/sizeof(json_str_positive_tests[0])); idx++) {
     printf("\n  Parsing: %s ", json_str_positive_tests[idx]);
-    doc = jes_init(work_buffer, sizeof(work_buffer));
+    doc = jes_init(work_buffer, sizeof(work_buffer), JES_SEARCH_LINEAR);
     if (!doc) {
       printf("\n Context initiation failed!");
       return -1;
@@ -171,7 +171,7 @@ int main(void)
   printf("\nRunning parser negative tests...");
   for (idx = 0; idx < (sizeof(json_str_negative_tests)/sizeof(json_str_negative_tests[0])); idx++) {
     printf("\n  Parsing: %s ", json_str_negative_tests[idx]);
-    doc = jes_init(work_buffer, sizeof(work_buffer));
+    doc = jes_init(work_buffer, sizeof(work_buffer), JES_SEARCH_LINEAR);
     if (!doc) {
       printf("\n Context initiation failed!");
       return -1;

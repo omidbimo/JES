@@ -33,7 +33,7 @@ int main(void)
 
   printf("\nTests for jes_get_key()\n");
 
-  doc = jes_init(work_buffer, sizeof(work_buffer));
+  doc = jes_init(work_buffer, sizeof(work_buffer), JES_SEARCH_LINEAR);
   if (!doc) {
     printf("\n Context initiation failed!");
     return -1;
