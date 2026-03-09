@@ -81,6 +81,7 @@ static void jes_serializer_calculate_compact_key(struct jes_serializer* serializ
 static void jes_serializer_calculate_compact_new_line(struct jes_serializer* serializer)
 {
   /* Compact format requires no new line. Do nothing */
+  (void)serializer;
 }
 
 static void jes_serializer_render_opening_brace(struct jes_serializer* serializer)
@@ -191,6 +192,7 @@ static void jes_serializer_render_compact_new_line(struct jes_serializer* serial
 {
   assert(serializer->evaluated);
   /* Compact format requires no new line. Do nothing */
+  (void)serializer;
 }
 
 static inline void jes_serializer_process_expect_key_state(struct jes_context* ctx, struct jes_serializer* serializer)
@@ -327,7 +329,7 @@ struct jes_node* jes_serializer_get_node(struct jes_context* ctx)
   if (ctx->serdes.iter == NULL) {
     ctx->serdes.state = JES_END;
   }
-  /* Return NULL if traversal is complete */
+  /* Returns NULL if traversal is complete */
   return ctx->serdes.iter;
 }
 
@@ -336,7 +338,7 @@ static void jes_serializer_state_machine(struct jes_context* ctx, struct jes_ser
   assert(ctx != NULL);
 
   if (serializer->out_buffer != NULL) {
-    assert(serializer->evaluated != false);
+    assert(serializer->evaluated);
   }
 
   ctx->serdes.state = JES_EXPECT_VALUE;
@@ -412,10 +414,10 @@ size_t jes_render(struct jes_context *ctx, char* buffer, size_t buffer_length, b
   serializer.renderer.string = jes_serializer_calculate_string;
   serializer.renderer.number = jes_serializer_calculate_number;
   serializer.renderer.comma = jes_serializer_calculate_delimiter;
-  serializer.renderer.key = (compact != false)
+  serializer.renderer.key = compact
                           ? jes_serializer_calculate_compact_key
                           : jes_serializer_calculate_key;
-  serializer.renderer.new_line = (compact != false)
+  serializer.renderer.new_line = compact
                                ? jes_serializer_calculate_compact_new_line
                                : jes_serializer_calculate_new_line;
   serializer.out_buffer = NULL;
@@ -438,10 +440,10 @@ size_t jes_render(struct jes_context *ctx, char* buffer, size_t buffer_length, b
     serializer.renderer.string = jes_serializer_render_string;
     serializer.renderer.number = jes_serializer_render_number;
     serializer.renderer.comma = jes_serializer_render_comma;
-    serializer.renderer.key = (compact != false)
+    serializer.renderer.key = compact
                             ? jes_serializer_render_compact_key
                             : jes_serializer_render_key;
-    serializer.renderer.new_line = (compact != false)
+    serializer.renderer.new_line = compact
                                  ? jes_serializer_render_compact_new_line
                                  : jes_serializer_render_new_line;
     serializer.out_buffer = buffer;
@@ -479,10 +481,10 @@ size_t jes_evaluate(struct jes_context *ctx, bool compact)
   serializer.renderer.string = jes_serializer_calculate_string;
   serializer.renderer.number = jes_serializer_calculate_number;
   serializer.renderer.comma = jes_serializer_calculate_delimiter;
-  serializer.renderer.key = (compact != false)
+  serializer.renderer.key = compact
                           ? jes_serializer_calculate_compact_key
                           : jes_serializer_calculate_key;
-  serializer.renderer.new_line = (compact != false)
+  serializer.renderer.new_line = compact
                                ? jes_serializer_calculate_compact_new_line
                                : jes_serializer_calculate_new_line;
 
@@ -501,7 +503,7 @@ static inline bool jes_streaming_serializer_stack_is_empty(struct jes_streaming_
 
 static inline bool jes_streaming_serializer_stack_is_full(struct jes_streaming_serializer_context* ctx)
 {
-  return ctx->stack_top == ctx->stack_size;
+  return ctx->stack_top == (int)(ctx->stack_size - 1);
 }
 
 static inline jes_status jes_streaming_serializer_stack_push(struct jes_streaming_serializer_context* ctx, uint16_t type)
@@ -664,14 +666,14 @@ static inline jes_status jes_streaming_serializer_validate_state_value(struct je
 
 static inline jes_status jes_streaming_serializer_render_object_start(struct jes_streaming_serializer_context* ctx)
 {
-  int written_size;
+  int render_size;
 
   assert(ctx);
 
-  written_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, "{");
-  if (written_size == 1) {
-    ctx->out_buffer += written_size;
-    ctx->out_buffer_size -= written_size;
+  render_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, "{");
+  if ((render_size == 1) && (render_size < ctx->out_buffer_size)) {
+    ctx->out_buffer += render_size;
+    ctx->out_buffer_size -= render_size;
     return JES_NO_ERROR;
   }
 
@@ -680,14 +682,14 @@ static inline jes_status jes_streaming_serializer_render_object_start(struct jes
 
 static inline jes_status jes_streaming_serializer_render_object_end(struct jes_streaming_serializer_context* ctx)
 {
-  int written_size;
+  int render_size;
 
   assert(ctx);
 
-  written_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, "}");
-  if (written_size == 1) {
-    ctx->out_buffer += written_size;
-    ctx->out_buffer_size -= written_size;
+  render_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, "}");
+  if ((render_size == 1) && (render_size < ctx->out_buffer_size)) {
+    ctx->out_buffer += render_size;
+    ctx->out_buffer_size -= render_size;
     return JES_NO_ERROR;
   }
 
@@ -696,14 +698,14 @@ static inline jes_status jes_streaming_serializer_render_object_end(struct jes_s
 
 static inline jes_status jes_streaming_serializer_render_array_start(struct jes_streaming_serializer_context* ctx)
 {
-  int written_size;
+  int render_size;
 
   assert(ctx);
 
-  written_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, "[");
-  if (written_size == 1) {
-    ctx->out_buffer += written_size;
-    ctx->out_buffer_size -= written_size;
+  render_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, "[");
+  if ((render_size == 1) && (render_size < ctx->out_buffer_size)){
+    ctx->out_buffer += render_size;
+    ctx->out_buffer_size -= render_size;
     return JES_NO_ERROR;
   }
 
@@ -712,14 +714,14 @@ static inline jes_status jes_streaming_serializer_render_array_start(struct jes_
 
 static inline jes_status jes_streaming_serializer_render_array_end(struct jes_streaming_serializer_context* ctx)
 {
-  int written_size;
+  int render_size;
 
   assert(ctx);
 
-  written_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, "]");
-  if (written_size == 1) {
-    ctx->out_buffer += written_size;
-    ctx->out_buffer_size -= written_size;
+  render_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, "]");
+  if ((render_size == 1) && (render_size < ctx->out_buffer_size)) {
+    ctx->out_buffer += render_size;
+    ctx->out_buffer_size -= render_size;
     return JES_NO_ERROR;
   }
 
@@ -728,15 +730,15 @@ static inline jes_status jes_streaming_serializer_render_array_end(struct jes_st
 
 static inline jes_status jes_streaming_serializer_render_key(struct jes_streaming_serializer_context* ctx, const char* key, size_t key_length)
 {
-  int written_size;
+  int render_size;
 
   assert(ctx);
   assert(key);
 
-  written_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, "\"%.*s\":", key_length, key);
-  if (written_size == (key_length + 3)) {
-    ctx->out_buffer += written_size;
-    ctx->out_buffer_size -= written_size;
+  render_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, "\"%.*s\":", key_length, key);
+  if ((render_size == (key_length + 3)) && (render_size < ctx->out_buffer_size)) {
+    ctx->out_buffer += render_size;
+    ctx->out_buffer_size -= render_size;
     return JES_NO_ERROR;
   }
 
@@ -745,14 +747,14 @@ static inline jes_status jes_streaming_serializer_render_key(struct jes_streamin
 
 static inline jes_status jes_streaming_serializer_render_comma(struct jes_streaming_serializer_context* ctx)
 {
-  int written_size;
+  int render_size;
 
   assert(ctx);
 
-  written_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, ",");
-  if (written_size == 1) {
-    ctx->out_buffer += written_size;
-    ctx->out_buffer_size -= written_size;
+  render_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, ",");
+  if ((render_size == 1) && (render_size < ctx->out_buffer_size)) {
+    ctx->out_buffer += render_size;
+    ctx->out_buffer_size -= render_size;
     return JES_NO_ERROR;
   }
 
@@ -761,15 +763,15 @@ static inline jes_status jes_streaming_serializer_render_comma(struct jes_stream
 
 static inline jes_status jes_streaming_serializer_render_literal(struct jes_streaming_serializer_context* ctx, const char* literal)
 {
-  int written_size;
+  int render_size;
 
   assert(ctx);
-  assert(key);
+  assert(literal);
 
-  written_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, "%s", literal);
-  if (written_size > 0) {
-    ctx->out_buffer += written_size;
-    ctx->out_buffer_size -= written_size;
+  render_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, "%s", literal);
+  if (render_size > 0) {
+    ctx->out_buffer += render_size;
+    ctx->out_buffer_size -= render_size;
     return JES_NO_ERROR;
   }
 
@@ -778,15 +780,15 @@ static inline jes_status jes_streaming_serializer_render_literal(struct jes_stre
 
 static inline jes_status jes_streaming_serializer_render_string(struct jes_streaming_serializer_context* ctx, const char* string, size_t length)
 {
-  int written_size;
+  int render_size;
 
   assert(ctx);
   assert(string);
 
-  written_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, "\"%.*s\"", length, string);
-  if (written_size == (length + 2)) {
-    ctx->out_buffer += written_size;
-    ctx->out_buffer_size -= written_size;
+  render_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, "\"%.*s\"", length, string);
+  if ((render_size == (length + 2)) && (render_size < ctx->out_buffer_size)) {
+    ctx->out_buffer += render_size;
+    ctx->out_buffer_size -= render_size;
     return JES_NO_ERROR;
   }
 
@@ -795,14 +797,14 @@ static inline jes_status jes_streaming_serializer_render_string(struct jes_strea
 
 static inline jes_status jes_streaming_serializer_render_int32(struct jes_streaming_serializer_context* ctx, int32_t value)
 {
-  int written_size;
+  int render_size;
 
   assert(ctx);
 
-  written_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, "%ld", value);
-  if (written_size != 0) {
-    ctx->out_buffer += written_size;
-    ctx->out_buffer_size -= written_size;
+  render_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, "%d", value);
+  if ((render_size != 0) && (render_size < ctx->out_buffer_size)) {
+    ctx->out_buffer += render_size;
+    ctx->out_buffer_size -= render_size;
     return JES_NO_ERROR;
   }
 
@@ -811,14 +813,14 @@ static inline jes_status jes_streaming_serializer_render_int32(struct jes_stream
 
 static inline jes_status jes_streaming_serializer_render_int64(struct jes_streaming_serializer_context* ctx, int64_t value)
 {
-  int written_size;
+  int render_size;
 
   assert(ctx);
 
-  written_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, "%lld", value);
-  if (written_size != 0) {
-    ctx->out_buffer += written_size;
-    ctx->out_buffer_size -= written_size;
+  render_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, "%lld", value);
+  if ((render_size != 0) && (render_size < ctx->out_buffer_size)) {
+    ctx->out_buffer += render_size;
+    ctx->out_buffer_size -= render_size;
     return JES_NO_ERROR;
   }
 
@@ -827,14 +829,14 @@ static inline jes_status jes_streaming_serializer_render_int64(struct jes_stream
 
 static inline jes_status jes_streaming_serializer_render_uint32(struct jes_streaming_serializer_context* ctx, uint32_t value)
 {
-  int written_size;
+  int render_size;
 
   assert(ctx);
 
-  written_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, "%lu", value);
-  if (written_size != 0) {
-    ctx->out_buffer += written_size;
-    ctx->out_buffer_size -= written_size;
+  render_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, "%u", value);
+  if ((render_size != 0) && (render_size < ctx->out_buffer_size)) {
+    ctx->out_buffer += render_size;
+    ctx->out_buffer_size -= render_size;
     return JES_NO_ERROR;
   }
 
@@ -843,14 +845,14 @@ static inline jes_status jes_streaming_serializer_render_uint32(struct jes_strea
 
 static inline jes_status jes_streaming_serializer_render_uint64(struct jes_streaming_serializer_context* ctx, uint64_t value)
 {
-  int written_size;
+  int render_size;
 
   assert(ctx);
 
-  written_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, "%llu", value);
-  if (written_size != 0) {
-    ctx->out_buffer += written_size;
-    ctx->out_buffer_size -= written_size;
+  render_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, "%llu", value);
+  if ((render_size != 0) && (render_size < ctx->out_buffer_size)) {
+    ctx->out_buffer += render_size;
+    ctx->out_buffer_size -= render_size;
     return JES_NO_ERROR;
   }
 
@@ -859,14 +861,14 @@ static inline jes_status jes_streaming_serializer_render_uint64(struct jes_strea
 
 static inline jes_status jes_streaming_serializer_render_double(struct jes_streaming_serializer_context* ctx, double value)
 {
-  int written_size;
+  int render_size;
 
   assert(ctx);
 
-  written_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, "%f", value);
-  if (written_size != 0) {
-    ctx->out_buffer += written_size;
-    ctx->out_buffer_size -= written_size;
+  render_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, "%f", value);
+  if ((render_size != 0) && (render_size < ctx->out_buffer_size)) {
+    ctx->out_buffer += render_size;
+    ctx->out_buffer_size -= render_size;
     return JES_NO_ERROR;
   }
 
@@ -877,7 +879,8 @@ jes_status jes_init_streaming(struct jes_streaming_serializer_context* ctx,
                               char* output, size_t output_size,
                               uint8_t* stack, size_t stack_size)
 {
-  if ((ctx == NULL) || (output == NULL) || (stack == NULL)) {
+  if ((ctx == NULL) || (output == NULL) || (stack == NULL) ||
+      (stack_size < sizeof(struct jes_container))) {
     return JES_INVALID_PARAMETER;
   }
 
@@ -936,10 +939,10 @@ jes_status jes_render_object_end(struct jes_streaming_serializer_context* ctx)
         ctx->state = JES_EXPECT_KEY;
         break;
       case JES_ARRAY:
-      ctx->state = JES_EXPECT_ARRAY_VALUE;
+        ctx->state = JES_EXPECT_ARRAY_VALUE;
         break;
       default:
-        assert(container.type == JES_UNKNOWN);
+        assert(container_type == JES_UNKNOWN);
         ctx->state = JES_END;
         break;
     }
@@ -993,10 +996,10 @@ jes_status jes_render_array_end(struct jes_streaming_serializer_context* ctx)
         ctx->state = JES_EXPECT_KEY;
         break;
       case JES_ARRAY:
-      ctx->state = JES_EXPECT_ARRAY_VALUE;
+        ctx->state = JES_EXPECT_ARRAY_VALUE;
         break;
       default:
-        assert(container.type == JES_UNKNOWN);
+        assert(container_type == JES_UNKNOWN);
         ctx->state = JES_END;
         break;
     }
