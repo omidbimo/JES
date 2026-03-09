@@ -510,7 +510,6 @@ static inline jes_status jes_streaming_serializer_stack_push(struct jes_streamin
 
   if (!jes_streaming_serializer_stack_is_full(ctx)) {
     ctx->stack_top++;
-    printf("\n offset: %d, size: %d", ctx->stack_top, ctx->stack_size);
     ctx->stack[ctx->stack_top].member_count = 0;
     ctx->stack[ctx->stack_top].type = type;
     return JES_NO_ERROR;
@@ -568,17 +567,14 @@ static inline jes_status jes_streaming_serializer_stack_add_member(struct jes_st
 static inline jes_status jes_streaming_serializer_validate_state_object_start(struct jes_streaming_serializer_context* ctx)
 {
   jes_status result = JES_NO_ERROR;
-  printf("\n2.0");
+
   switch (ctx->state) {
     case JES_START:             /* Fall through is intended */
     case JES_EXPECT_KEY:
     case JES_EXPECT_ARRAY_VALUE:
-    case JES_HAVE_ARRAY_VALUE:
-      printf("\n2.1");
       break;
     default:
       result = JES_UNEXPECTED_STATE;
-        printf("\n2.3");
       break;
   }
 
@@ -588,15 +584,12 @@ static inline jes_status jes_streaming_serializer_validate_state_object_start(st
 static inline jes_status jes_streaming_serializer_validate_state_object_end(struct jes_streaming_serializer_context* ctx)
 {
   jes_status result = JES_NO_ERROR;
-      printf("\n5.0");
+
   switch (ctx->state) {
-    case JES_HAVE_VALUE:  /* Fall through is intended */
     case JES_EXPECT_KEY:
-      printf("\n5.1");
       break;
     default:
       result = JES_UNEXPECTED_STATE;
-            printf("\n5.2");
       break;
   }
 
@@ -993,7 +986,7 @@ jes_status jes_render_array_end(struct jes_streaming_serializer_context* ctx)
     result = jes_streaming_serializer_render_array_end(ctx);
   }
 
-  if (result != JES_NO_ERROR) {
+  if (result == JES_NO_ERROR) {
     container_type = jes_streaming_serializer_stack_get_container_type(ctx);
     switch (container_type) {
       case JES_OBJECT:
@@ -1026,7 +1019,14 @@ jes_status jes_render_key(struct jes_streaming_serializer_context* ctx, const ch
 
   result = jes_streaming_serializer_validate_state_key(ctx);
   if (result == JES_NO_ERROR) {
-    result = jes_streaming_serializer_stack_add_member(ctx);
+    if (jes_streaming_serializer_stack_get_member_count(ctx) > 0) {
+      result = jes_streaming_serializer_render_comma(ctx);
+    }
+
+    if (result == JES_NO_ERROR) {
+      result = jes_streaming_serializer_stack_add_member(ctx);
+    }
+
     if (result == JES_NO_ERROR) {
       result = jes_streaming_serializer_render_key(ctx, key, length);
     }
@@ -1042,26 +1042,42 @@ jes_status jes_render_key(struct jes_streaming_serializer_context* ctx, const ch
 jes_status jes_render_int32(struct jes_streaming_serializer_context* ctx, int32_t value)
 {
   jes_status result = JES_NO_ERROR;
+  enum jes_type container_type;
 
   if (ctx == NULL) {
     return JES_INVALID_CONTEXT;
   }
 
   result = jes_streaming_serializer_validate_state_value(ctx);
+
   if (result == JES_NO_ERROR) {
-    if (jes_streaming_serializer_stack_get_container_type(ctx) == JES_ARRAY) {
+    container_type = jes_streaming_serializer_stack_get_container_type(ctx);
+    if (container_type == JES_ARRAY) {
       if (jes_streaming_serializer_stack_get_member_count(ctx) > 0) {
         result = jes_streaming_serializer_render_comma(ctx);
       }
-      result = jes_streaming_serializer_stack_add_member(ctx);
+      if (result == JES_NO_ERROR) {
+        result = jes_streaming_serializer_stack_add_member(ctx);
+      }
     }
+
     if (result == JES_NO_ERROR) {
       result = jes_streaming_serializer_render_int32(ctx, value);
     }
-  }
 
-  if (result == JES_NO_ERROR) {
-    ctx->state = JES_HAVE_VALUE;
+    if (result == JES_NO_ERROR) {
+      switch (container_type) {
+        case JES_OBJECT:
+          ctx->state = JES_EXPECT_KEY;
+          break;
+        case JES_ARRAY:
+          ctx->state = JES_EXPECT_ARRAY_VALUE;
+          break;
+        default:
+          assert(0);
+          break;
+      }
+    }
   }
 
   return result;
@@ -1070,26 +1086,42 @@ jes_status jes_render_int32(struct jes_streaming_serializer_context* ctx, int32_
 jes_status jes_render_int64(struct jes_streaming_serializer_context* ctx, int64_t value)
 {
   jes_status result = JES_NO_ERROR;
+  enum jes_type container_type;
 
   if (ctx == NULL) {
     return JES_INVALID_CONTEXT;
   }
 
   result = jes_streaming_serializer_validate_state_value(ctx);
+
   if (result == JES_NO_ERROR) {
-    if (jes_streaming_serializer_stack_get_container_type(ctx) == JES_ARRAY) {
+    container_type = jes_streaming_serializer_stack_get_container_type(ctx);
+    if (container_type == JES_ARRAY) {
       if (jes_streaming_serializer_stack_get_member_count(ctx) > 0) {
         result = jes_streaming_serializer_render_comma(ctx);
       }
-      result = jes_streaming_serializer_stack_add_member(ctx);
+      if (result == JES_NO_ERROR) {
+        result = jes_streaming_serializer_stack_add_member(ctx);
+      }
     }
+
     if (result == JES_NO_ERROR) {
       result = jes_streaming_serializer_render_int64(ctx, value);
     }
-  }
 
-  if (result == JES_NO_ERROR) {
-    ctx->state = JES_HAVE_VALUE;
+    if (result == JES_NO_ERROR) {
+      switch (container_type) {
+        case JES_OBJECT:
+          ctx->state = JES_EXPECT_KEY;
+          break;
+        case JES_ARRAY:
+          ctx->state = JES_EXPECT_ARRAY_VALUE;
+          break;
+        default:
+          assert(0);
+          break;
+      }
+    }
   }
 
   return result;
@@ -1098,26 +1130,42 @@ jes_status jes_render_int64(struct jes_streaming_serializer_context* ctx, int64_
 jes_status jes_render_uint32(struct jes_streaming_serializer_context* ctx, uint32_t value)
 {
   jes_status result = JES_NO_ERROR;
+  enum jes_type container_type;
 
   if (ctx == NULL) {
     return JES_INVALID_CONTEXT;
   }
 
   result = jes_streaming_serializer_validate_state_value(ctx);
+
   if (result == JES_NO_ERROR) {
-    if (jes_streaming_serializer_stack_get_container_type(ctx) == JES_ARRAY) {
+    container_type = jes_streaming_serializer_stack_get_container_type(ctx);
+    if (container_type == JES_ARRAY) {
       if (jes_streaming_serializer_stack_get_member_count(ctx) > 0) {
         result = jes_streaming_serializer_render_comma(ctx);
       }
-      result = jes_streaming_serializer_stack_add_member(ctx);
+      if (result == JES_NO_ERROR) {
+        result = jes_streaming_serializer_stack_add_member(ctx);
+      }
     }
+
     if (result == JES_NO_ERROR) {
       result = jes_streaming_serializer_render_uint32(ctx, value);
     }
-  }
 
-  if (result == JES_NO_ERROR) {
-    ctx->state = JES_HAVE_VALUE;
+    if (result == JES_NO_ERROR) {
+      switch (container_type) {
+        case JES_OBJECT:
+          ctx->state = JES_EXPECT_KEY;
+          break;
+        case JES_ARRAY:
+          ctx->state = JES_EXPECT_ARRAY_VALUE;
+          break;
+        default:
+          assert(0);
+          break;
+      }
+    }
   }
 
   return result;
@@ -1126,26 +1174,42 @@ jes_status jes_render_uint32(struct jes_streaming_serializer_context* ctx, uint3
 jes_status jes_render_uint64(struct jes_streaming_serializer_context* ctx, uint64_t value)
 {
   jes_status result = JES_NO_ERROR;
+  enum jes_type container_type;
 
   if (ctx == NULL) {
     return JES_INVALID_CONTEXT;
   }
 
   result = jes_streaming_serializer_validate_state_value(ctx);
+
   if (result == JES_NO_ERROR) {
-    if (jes_streaming_serializer_stack_get_container_type(ctx) == JES_ARRAY) {
+    container_type = jes_streaming_serializer_stack_get_container_type(ctx);
+    if (container_type == JES_ARRAY) {
       if (jes_streaming_serializer_stack_get_member_count(ctx) > 0) {
         result = jes_streaming_serializer_render_comma(ctx);
       }
-      result = jes_streaming_serializer_stack_add_member(ctx);
+      if (result == JES_NO_ERROR) {
+        result = jes_streaming_serializer_stack_add_member(ctx);
+      }
     }
+
     if (result == JES_NO_ERROR) {
       result = jes_streaming_serializer_render_uint64(ctx, value);
     }
-  }
 
-  if (result == JES_NO_ERROR) {
-    ctx->state = JES_HAVE_VALUE;
+    if (result == JES_NO_ERROR) {
+      switch (container_type) {
+        case JES_OBJECT:
+          ctx->state = JES_EXPECT_KEY;
+          break;
+        case JES_ARRAY:
+          ctx->state = JES_EXPECT_ARRAY_VALUE;
+          break;
+        default:
+          assert(0);
+          break;
+      }
+    }
   }
 
   return result;
@@ -1154,26 +1218,42 @@ jes_status jes_render_uint64(struct jes_streaming_serializer_context* ctx, uint6
 jes_status jes_render_double(struct jes_streaming_serializer_context* ctx, double value)
 {
   jes_status result = JES_NO_ERROR;
+  enum jes_type container_type;
 
   if (ctx == NULL) {
     return JES_INVALID_CONTEXT;
   }
 
   result = jes_streaming_serializer_validate_state_value(ctx);
+
   if (result == JES_NO_ERROR) {
-    if (jes_streaming_serializer_stack_get_container_type(ctx) == JES_ARRAY) {
+    container_type = jes_streaming_serializer_stack_get_container_type(ctx);
+    if (container_type == JES_ARRAY) {
       if (jes_streaming_serializer_stack_get_member_count(ctx) > 0) {
         result = jes_streaming_serializer_render_comma(ctx);
       }
-      result = jes_streaming_serializer_stack_add_member(ctx);
+      if (result == JES_NO_ERROR) {
+        result = jes_streaming_serializer_stack_add_member(ctx);
+      }
     }
+
     if (result == JES_NO_ERROR) {
       result = jes_streaming_serializer_render_double(ctx, value);
     }
-  }
 
-  if (result == JES_NO_ERROR) {
-    ctx->state = JES_HAVE_VALUE;
+    if (result == JES_NO_ERROR) {
+      switch (container_type) {
+        case JES_OBJECT:
+          ctx->state = JES_EXPECT_KEY;
+          break;
+        case JES_ARRAY:
+          ctx->state = JES_EXPECT_ARRAY_VALUE;
+          break;
+        default:
+          assert(0);
+          break;
+      }
+    }
   }
 
   return result;
@@ -1182,26 +1262,42 @@ jes_status jes_render_double(struct jes_streaming_serializer_context* ctx, doubl
 jes_status jes_render_string(struct jes_streaming_serializer_context* ctx, const char* string, size_t length)
 {
   jes_status result = JES_NO_ERROR;
+  enum jes_type container_type;
 
   if (ctx == NULL) {
     return JES_INVALID_CONTEXT;
   }
 
   result = jes_streaming_serializer_validate_state_value(ctx);
+
   if (result == JES_NO_ERROR) {
-    if (jes_streaming_serializer_stack_get_container_type(ctx) == JES_ARRAY) {
+    container_type = jes_streaming_serializer_stack_get_container_type(ctx);
+    if (container_type == JES_ARRAY) {
       if (jes_streaming_serializer_stack_get_member_count(ctx) > 0) {
         result = jes_streaming_serializer_render_comma(ctx);
       }
-      result = jes_streaming_serializer_stack_add_member(ctx);
+      if (result == JES_NO_ERROR) {
+        result = jes_streaming_serializer_stack_add_member(ctx);
+      }
     }
+
     if (result == JES_NO_ERROR) {
       result = jes_streaming_serializer_render_string(ctx, string, length);
     }
-  }
 
-  if (result == JES_NO_ERROR) {
-    ctx->state = JES_HAVE_VALUE;
+    if (result == JES_NO_ERROR) {
+      switch (container_type) {
+        case JES_OBJECT:
+          ctx->state = JES_EXPECT_KEY;
+          break;
+        case JES_ARRAY:
+          ctx->state = JES_EXPECT_ARRAY_VALUE;
+          break;
+        default:
+          assert(0);
+          break;
+      }
+    }
   }
 
   return result;
@@ -1210,26 +1306,42 @@ jes_status jes_render_string(struct jes_streaming_serializer_context* ctx, const
 jes_status jes_render_null(struct jes_streaming_serializer_context* ctx)
 {
   jes_status result = JES_NO_ERROR;
+  enum jes_type container_type;
 
   if (ctx == NULL) {
     return JES_INVALID_CONTEXT;
   }
 
   result = jes_streaming_serializer_validate_state_value(ctx);
+
   if (result == JES_NO_ERROR) {
-    if (jes_streaming_serializer_stack_get_container_type(ctx) == JES_ARRAY) {
+    container_type = jes_streaming_serializer_stack_get_container_type(ctx);
+    if (container_type == JES_ARRAY) {
       if (jes_streaming_serializer_stack_get_member_count(ctx) > 0) {
         result = jes_streaming_serializer_render_comma(ctx);
       }
-      result = jes_streaming_serializer_stack_add_member(ctx);
+      if (result == JES_NO_ERROR) {
+        result = jes_streaming_serializer_stack_add_member(ctx);
+      }
     }
+
     if (result == JES_NO_ERROR) {
       result = jes_streaming_serializer_render_literal(ctx, "null");
     }
-  }
 
-  if (result == JES_NO_ERROR) {
-    ctx->state = JES_HAVE_VALUE;
+    if (result == JES_NO_ERROR) {
+      switch (container_type) {
+        case JES_OBJECT:
+          ctx->state = JES_EXPECT_KEY;
+          break;
+        case JES_ARRAY:
+          ctx->state = JES_EXPECT_ARRAY_VALUE;
+          break;
+        default:
+          assert(0);
+          break;
+      }
+    }
   }
 
   return result;
@@ -1238,26 +1350,42 @@ jes_status jes_render_null(struct jes_streaming_serializer_context* ctx)
 jes_status jes_render_true(struct jes_streaming_serializer_context* ctx)
 {
   jes_status result = JES_NO_ERROR;
+  enum jes_type container_type;
 
   if (ctx == NULL) {
     return JES_INVALID_CONTEXT;
   }
 
   result = jes_streaming_serializer_validate_state_value(ctx);
+
   if (result == JES_NO_ERROR) {
-    if (jes_streaming_serializer_stack_get_container_type(ctx) == JES_ARRAY) {
+    container_type = jes_streaming_serializer_stack_get_container_type(ctx);
+    if (container_type == JES_ARRAY) {
       if (jes_streaming_serializer_stack_get_member_count(ctx) > 0) {
         result = jes_streaming_serializer_render_comma(ctx);
       }
-      result = jes_streaming_serializer_stack_add_member(ctx);
+      if (result == JES_NO_ERROR) {
+        result = jes_streaming_serializer_stack_add_member(ctx);
+      }
     }
+
     if (result == JES_NO_ERROR) {
       result = jes_streaming_serializer_render_literal(ctx, "true");
     }
-  }
 
-  if (result == JES_NO_ERROR) {
-    ctx->state = JES_HAVE_VALUE;
+    if (result == JES_NO_ERROR) {
+      switch (container_type) {
+        case JES_OBJECT:
+          ctx->state = JES_EXPECT_KEY;
+          break;
+        case JES_ARRAY:
+          ctx->state = JES_EXPECT_ARRAY_VALUE;
+          break;
+        default:
+          assert(0);
+          break;
+      }
+    }
   }
 
   return result;
@@ -1266,26 +1394,42 @@ jes_status jes_render_true(struct jes_streaming_serializer_context* ctx)
 jes_status jes_render_false(struct jes_streaming_serializer_context* ctx)
 {
   jes_status result = JES_NO_ERROR;
+  enum jes_type container_type;
 
   if (ctx == NULL) {
     return JES_INVALID_CONTEXT;
   }
 
   result = jes_streaming_serializer_validate_state_value(ctx);
+
   if (result == JES_NO_ERROR) {
-    if (jes_streaming_serializer_stack_get_container_type(ctx) == JES_ARRAY) {
+    container_type = jes_streaming_serializer_stack_get_container_type(ctx);
+    if (container_type == JES_ARRAY) {
       if (jes_streaming_serializer_stack_get_member_count(ctx) > 0) {
         result = jes_streaming_serializer_render_comma(ctx);
       }
-      result = jes_streaming_serializer_stack_add_member(ctx);
+      if (result == JES_NO_ERROR) {
+        result = jes_streaming_serializer_stack_add_member(ctx);
+      }
     }
+
     if (result == JES_NO_ERROR) {
       result = jes_streaming_serializer_render_literal(ctx, "false");
     }
-  }
 
-  if (result == JES_NO_ERROR) {
-    ctx->state = JES_HAVE_VALUE;
+    if (result == JES_NO_ERROR) {
+      switch (container_type) {
+        case JES_OBJECT:
+          ctx->state = JES_EXPECT_KEY;
+          break;
+        case JES_ARRAY:
+          ctx->state = JES_EXPECT_ARRAY_VALUE;
+          break;
+        default:
+          assert(0);
+          break;
+      }
+    }
   }
 
   return result;
