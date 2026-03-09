@@ -57,12 +57,15 @@ typedef uint16_t jes_node_descriptor;
 struct jes_element;
 
 enum jes_state {
-  JES_EXPECT_KEY,
-  JES_EXPECT_COLON,
-  JES_EXPECT_VALUE,
-  JES_HAVE_VALUE,
-  JES_EXPECT_EOF,
-  JES_END,
+  JES_START,                    /* Used by: streaming serializer */
+  JES_EXPECT_KEY,               /* Used by: standard serializer, streaming serializer */
+  JES_EXPECT_COLON,             /* Used by: standard serializer, streaming serializer */
+  JES_EXPECT_VALUE,             /* Used by: standard serializer, streaming serializer */
+  JES_HAVE_VALUE,               /* Used by: standard serializer, streaming serializer */
+  JES_EXPECT_ARRAY_VALUE,       /* Used by: streaming serializer */
+  JES_HAVE_ARRAY_VALUE,         /* Used by: streaming serializer */
+  JES_EXPECT_EOF,               /* Used by: standard serializer  */
+  JES_END,                      /* Used by: streaming serializer, streaming serializer  */
 };
 
 struct jes_token {

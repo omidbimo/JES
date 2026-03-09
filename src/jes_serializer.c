@@ -491,3 +491,722 @@ size_t jes_evaluate(struct jes_context *ctx, bool compact)
 
   return (ctx->status == JES_NO_ERROR) ? serializer.evaluated_length : 0;
 }
+
+
+/* Streaming serialization */
+static inline bool jes_stack_is_empty(struct jes_streaming_output_context* ctx)
+{
+  return ctx->stack_top == -1;
+}
+
+static inline bool jes_stack_is_full(struct jes_streaming_output_context* ctx)
+{
+  return ctx->stack_top == ctx->stack_size;
+}
+
+static inline jes_status jes_streaming_render_stack_push(struct jes_streaming_output_context* ctx, uint16_t type)
+{
+  assert((type == JES_OBJECT) || (type == JES_ARRAY));
+
+  if (!jes_stack_is_full(ctx)) {
+    ctx->stack_top++;
+    printf("\n offset: %d, size: %d", ctx->stack_top, ctx->stack_size);
+    ctx->stack[ctx->stack_top].member_count = 0;
+    ctx->stack[ctx->stack_top].type = type;
+    return JES_NO_ERROR;
+  }
+
+  return JES_INVALID_OPERATION;
+}
+
+static inline struct jes_container jes_streaming_render_stack_pop(struct jes_streaming_output_context* ctx)
+{
+  if (!jes_stack_is_empty(ctx)) {
+    return ctx->stack[ctx->stack_top--];
+  }
+  return (struct jes_container){0, 0};
+}
+
+static inline struct jes_container jes_streaming_render_stack_get(struct jes_streaming_output_context* ctx)
+{
+  if (!jes_stack_is_empty(ctx)) {
+    return ctx->stack[ctx->stack_top];
+  }
+  return (struct jes_container){0, 0};
+}
+
+static inline enum jes_type jes_streaming_render_stack_get_container_type(struct jes_streaming_output_context* ctx)
+{
+  if (!jes_stack_is_empty(ctx)) {
+    return ctx->stack[ctx->stack_top].type;
+  }
+  return JES_UNKNOWN;
+}
+
+static inline uint16_t jes_streaming_render_stack_get_member_count(struct jes_streaming_output_context* ctx)
+{
+  if (!jes_stack_is_empty(ctx)) {
+    return ctx->stack[ctx->stack_top].member_count;
+  }
+  return 0;
+}
+
+static inline void jes_streaming_render_stack_add_member(struct jes_streaming_output_context* ctx)
+{
+  if (!jes_stack_is_empty(ctx)) {
+    ctx->stack[ctx->stack_top].member_count++;
+  }
+}
+
+static inline jes_status jes_streaming_render_object_start_validate_request(struct jes_streaming_output_context* ctx)
+{
+  jes_status result = JES_NO_ERROR;
+  printf("\n2.0");
+  switch (ctx->state) {
+    case JES_START:             /* Fall through is intended */
+    case JES_EXPECT_KEY:
+    case JES_EXPECT_ARRAY_VALUE:
+    case JES_HAVE_ARRAY_VALUE:
+      printf("\n2.1");
+      break;
+    default:
+      result = JES_UNEXPECTED_STATE;
+        printf("\n2.3");
+      break;
+  }
+
+  return result;
+}
+
+static inline jes_status jes_streaming_render_object_start_write(struct jes_streaming_output_context* ctx)
+{
+  int written_size;
+
+  assert(ctx);
+  printf("\n....1");
+  written_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, "{");
+  if (written_size == 1) {
+    ctx->out_buffer += written_size;
+    ctx->out_buffer_size -= written_size;
+    return JES_NO_ERROR;
+  }
+  printf("\nbytes writte: %d", written_size);
+  return JES_RENDER_FAILED;
+}
+
+static inline jes_status jes_streaming_render_object_end_validate_request(struct jes_streaming_output_context* ctx)
+{
+  jes_status result = JES_NO_ERROR;
+      printf("\n5.0");
+  switch (ctx->state) {
+    case JES_HAVE_VALUE:  /* Fall through is intended */
+    case JES_EXPECT_KEY:
+      printf("\n5.1");
+      break;
+    default:
+      result = JES_UNEXPECTED_STATE;
+            printf("\n5.2");
+      break;
+  }
+
+  return result;
+}
+
+static inline jes_status jes_streaming_render_object_end_write(struct jes_streaming_output_context* ctx)
+{
+  int written_size;
+
+  assert(ctx);
+
+  written_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, "}");
+  if (written_size == 1) {
+    ctx->out_buffer += written_size;
+    ctx->out_buffer_size -= written_size;
+    return JES_NO_ERROR;
+  }
+
+  return JES_RENDER_FAILED;
+}
+
+static inline jes_status jes_streaming_render_array_start_validate_request(struct jes_streaming_output_context* ctx)
+{
+  jes_status result = JES_NO_ERROR;
+
+  switch (ctx->state) {
+    case JES_START:  /* Fall through is intended */
+    case JES_EXPECT_VALUE:
+    case JES_EXPECT_ARRAY_VALUE:
+      break;
+
+    default:
+      result = JES_UNEXPECTED_STATE;
+      break;
+  }
+
+  return result;
+}
+
+static inline jes_status jes_streaming_render_array_start_write(struct jes_streaming_output_context* ctx)
+{
+  int written_size;
+
+  assert(ctx);
+
+  written_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, "[");
+  if (written_size == 1) {
+    ctx->out_buffer += written_size;
+    ctx->out_buffer_size -= written_size;
+    return JES_NO_ERROR;
+  }
+
+  return JES_RENDER_FAILED;
+}
+
+static inline jes_status jes_streaming_render_array_end_validate_request(struct jes_streaming_output_context* ctx)
+{
+  jes_status result = JES_NO_ERROR;
+
+  switch (ctx->state) {
+    case JES_EXPECT_ARRAY_VALUE:
+      break;
+    default:
+      result = JES_UNEXPECTED_STATE;
+      break;
+  }
+
+  return result;
+}
+
+static inline jes_status jes_streaming_render_array_end_write(struct jes_streaming_output_context* ctx)
+{
+  int written_size;
+
+  assert(ctx);
+
+  written_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, "]");
+  if (written_size == 1) {
+    ctx->out_buffer += written_size;
+    ctx->out_buffer_size -= written_size;
+    return JES_NO_ERROR;
+  }
+
+  return JES_RENDER_FAILED;
+}
+
+static inline jes_status jes_streaming_render_key_validate_request(struct jes_streaming_output_context* ctx)
+{
+  jes_status result = JES_NO_ERROR;
+
+  switch (ctx->state) {
+    case JES_EXPECT_KEY:
+      break;
+    default:
+      result = JES_UNEXPECTED_STATE;
+      break;
+  }
+
+  return result;
+}
+
+static inline jes_status jes_streaming_render_key_write(struct jes_streaming_output_context* ctx, const char* key, size_t key_length)
+{
+  int written_size;
+
+  assert(ctx);
+  assert(key);
+
+  written_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, "\"%.*s\":", key_length, key);
+  if (written_size == (key_length + 3)) {
+    ctx->out_buffer += written_size;
+    ctx->out_buffer_size -= written_size;
+    return JES_NO_ERROR;
+  }
+
+  return JES_RENDER_FAILED;
+}
+
+static inline jes_status jes_streaming_render_comma_write(struct jes_streaming_output_context* ctx)
+{
+  int written_size;
+
+  assert(ctx);
+
+  written_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, ",");
+  if (written_size == 1) {
+    ctx->out_buffer += written_size;
+    ctx->out_buffer_size -= written_size;
+    return JES_NO_ERROR;
+  }
+
+  return JES_RENDER_FAILED;
+}
+
+static inline jes_status jes_streaming_render_value_validate_request(struct jes_streaming_output_context* ctx)
+{
+  jes_status result = JES_NO_ERROR;
+
+  assert(ctx);
+
+  switch (ctx->state) {
+    case JES_EXPECT_VALUE:
+    case JES_EXPECT_ARRAY_VALUE:
+      break;
+    default:
+      result = JES_UNEXPECTED_STATE;
+      break;
+  }
+
+  return result;
+}
+
+static inline jes_status jes_streaming_render_literal_write(struct jes_streaming_output_context* ctx, const char* literal)
+{
+  int written_size;
+
+  assert(ctx);
+  assert(key);
+
+  written_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, "%s", literal);
+  if (written_size > 0) {
+    ctx->out_buffer += written_size;
+    ctx->out_buffer_size -= written_size;
+    return JES_NO_ERROR;
+  }
+
+  return JES_RENDER_FAILED;
+}
+
+jes_status jes_streaming_render_request(struct jes_streaming_output_context* ctx, int type, void* value, size_t length)
+{
+  jes_status result = JES_NO_ERROR;
+  struct jes_container container;
+  enum jes_type container_type;
+
+  if (ctx == NULL) {
+    return JES_INVALID_CONTEXT;
+  }
+
+  switch (type) {
+    case JES_RENDER_OBJECT_START:
+      result = jes_streaming_render_object_start_validate_request(ctx);
+      if (result != JES_NO_ERROR) { break; }
+      result = jes_streaming_render_stack_push(ctx, JES_OBJECT);
+      if (result != JES_NO_ERROR) { break; }
+      result = jes_streaming_render_object_start_write(ctx);
+      if (result != JES_NO_ERROR) { break; }
+      ctx->state = JES_EXPECT_VALUE;
+      break;
+
+    case JES_RENDER_OBJECT_END:
+      result = jes_streaming_render_object_end_validate_request(ctx);
+      if (result != JES_NO_ERROR) { break; }
+      (void)jes_streaming_render_stack_pop(ctx);
+      result = jes_streaming_render_object_end_write(ctx);
+      if (result != JES_NO_ERROR) { break; }
+      container_type = jes_streaming_render_stack_get_container_type(ctx);
+      switch (container_type) {
+        case JES_OBJECT:
+          ctx->state = JES_EXPECT_KEY;
+          break;
+        case JES_ARRAY:
+        ctx->state = JES_EXPECT_ARRAY_VALUE;
+          break;
+        default:
+          assert(container.type == JES_UNKNOWN);
+          ctx->state = JES_END;
+          break;
+      }
+      break;
+
+    case JES_RENDER_ARRAY_START:
+      result = jes_streaming_render_array_start_validate_request(ctx);
+      if (result != JES_NO_ERROR) { break; }
+      result = jes_streaming_render_stack_push(ctx, JES_ARRAY);
+      if (result != JES_NO_ERROR) { break; }
+      result = jes_streaming_render_array_start_write(ctx);
+      if (result != JES_NO_ERROR) { break; }
+      ctx->state = JES_EXPECT_ARRAY_VALUE;
+      break;
+
+    case JES_RENDER_ARRAY_END:
+      result = jes_streaming_render_array_end_validate_request(ctx);
+      if (result != JES_NO_ERROR) { break; }
+      (void)jes_streaming_render_stack_pop(ctx);
+      result = jes_streaming_render_array_end_write(ctx);
+      if (result != JES_NO_ERROR) { break; }
+      container_type = jes_streaming_render_stack_get_container_type(ctx);
+      switch (container_type) {
+        case JES_OBJECT:
+          ctx->state = JES_EXPECT_KEY;
+          break;
+        case JES_ARRAY:
+        ctx->state = JES_EXPECT_ARRAY_VALUE;
+          break;
+        default:
+          assert(container.type == JES_UNKNOWN);
+          ctx->state = JES_END;
+          break;
+      }
+      break;
+
+    case JES_RENDER_KEY:
+      result = jes_streaming_render_key_validate_request(ctx);
+      if (result != JES_NO_ERROR) { break; }
+      jes_streaming_render_stack_add_member(ctx);
+      result = jes_streaming_render_key_write(ctx, value, length);
+      if (result != JES_NO_ERROR) { break; }
+      ctx->state = JES_EXPECT_VALUE;
+      break;
+
+    case JES_RENDER_TRUE:
+      result = jes_streaming_render_value_validate_request(ctx);
+      if (result != JES_NO_ERROR) { break; }
+      if (jes_streaming_render_stack_get_container_type(ctx) == JES_ARRAY) {
+        if (jes_streaming_render_stack_get_member_count(ctx) > 0) {
+          result = jes_streaming_render_comma_write(ctx);
+          if (result != JES_NO_ERROR) { break; }
+        }
+        jes_streaming_render_stack_add_member(ctx);
+        jes_streaming_render_literal_write(ctx, "true");
+      }
+      else {
+        ctx->state = JES_HAVE_VALUE;
+      }
+      break;
+    case JES_RENDER_FALSE:
+      result = jes_streaming_render_value_validate_request(ctx);
+      if (result != JES_NO_ERROR) { break; }
+      if (jes_streaming_render_stack_get_container_type(ctx) == JES_ARRAY) {
+        if (jes_streaming_render_stack_get_member_count(ctx) > 0) {
+          result = jes_streaming_render_comma_write(ctx);
+          if (result != JES_NO_ERROR) { break; }
+        }
+        jes_streaming_render_stack_add_member(ctx);
+        jes_streaming_render_literal_write(ctx, "false");
+      }
+      else {
+        ctx->state = JES_HAVE_VALUE;
+      }
+      break;
+    case JES_RENDER_NULL:
+      result = jes_streaming_render_value_validate_request(ctx);
+      if (result != JES_NO_ERROR) { break; }
+      if (jes_streaming_render_stack_get_container_type(ctx) == JES_ARRAY) {
+        if (jes_streaming_render_stack_get_member_count(ctx) > 0) {
+          result = jes_streaming_render_comma_write(ctx);
+          if (result != JES_NO_ERROR) { break; }
+        }
+        jes_streaming_render_stack_add_member(ctx);
+        jes_streaming_render_literal_write(ctx, "null");
+      }
+      else {
+        ctx->state = JES_HAVE_VALUE;
+      }
+      break;
+
+    default:
+      assert(0);
+      return JES_INVALID_OPERATION;
+  }
+}
+
+/* Streaming serialization */
+jes_status jes_init_streaming(struct jes_streaming_output_context* ctx,
+                              char* output, size_t output_size,
+                              uint8_t* stack, size_t stack_size)
+{
+  if ((ctx == NULL) || (output == NULL) || (stack == NULL)) {
+    return JES_INVALID_PARAMETER;
+  }
+
+  ctx->out_buffer = output;
+  ctx->out_buffer_size = output_size;
+  ctx->stack_size = stack_size;
+  ctx->stack = (struct jes_container*)stack;
+  ctx->stack_top = -1;
+  ctx->state = JES_START;
+  return JES_NO_ERROR;
+}
+
+
+jes_status jes_render_object_start(struct jes_streaming_output_context* ctx)
+{
+  jes_status result = JES_NO_ERROR;
+
+  if (ctx == NULL) {
+    return JES_INVALID_CONTEXT;
+  }
+
+  result = jes_streaming_render_object_start_validate_request(ctx);
+  if (result == JES_NO_ERROR) {
+    result = jes_streaming_render_stack_push(ctx, JES_OBJECT);
+    if (result == JES_NO_ERROR) {
+      result = jes_streaming_render_object_start_write(ctx);
+    }
+  }
+
+  if (result == JES_NO_ERROR) {
+    ctx->state = JES_EXPECT_KEY;
+  }
+
+  return result;
+}
+
+jes_status jes_render_object_end(struct jes_streaming_output_context* ctx)
+{
+  jes_status result = JES_NO_ERROR;
+  enum jes_type container_type;
+
+  if (ctx == NULL) {
+    return JES_INVALID_CONTEXT;
+  }
+
+  result = jes_streaming_render_object_end_validate_request(ctx);
+  if (result == JES_NO_ERROR) {
+    (void)jes_streaming_render_stack_pop(ctx);
+    result = jes_streaming_render_object_end_write(ctx);
+  }
+
+  if (result == JES_NO_ERROR) {
+    container_type = jes_streaming_render_stack_get_container_type(ctx);
+    switch (container_type) {
+      case JES_OBJECT:
+        ctx->state = JES_EXPECT_KEY;
+        break;
+      case JES_ARRAY:
+      ctx->state = JES_EXPECT_ARRAY_VALUE;
+        break;
+      default:
+        assert(container.type == JES_UNKNOWN);
+        ctx->state = JES_END;
+        break;
+    }
+  }
+
+  return result;
+}
+
+jes_status jes_render_array_start(struct jes_streaming_output_context* ctx)
+{
+  jes_status result = JES_NO_ERROR;
+
+  if (ctx == NULL) {
+    return JES_INVALID_CONTEXT;
+  }
+
+  result = jes_streaming_render_array_start_validate_request(ctx);
+  if (result == JES_NO_ERROR) {
+    result = jes_streaming_render_stack_push(ctx, JES_ARRAY);
+    if (result == JES_NO_ERROR) {
+      result = jes_streaming_render_array_start_write(ctx);
+    }
+  }
+
+  if (result == JES_NO_ERROR) {
+    ctx->state = JES_EXPECT_ARRAY_VALUE;
+  }
+
+  return result;
+}
+
+jes_status jes_render_array_end(struct jes_streaming_output_context* ctx)
+{
+  jes_status result = JES_NO_ERROR;
+  enum jes_type container_type;
+
+  if (ctx == NULL) {
+    return JES_INVALID_CONTEXT;
+  }
+
+  result = jes_streaming_render_array_end_validate_request(ctx);
+  if (result == JES_NO_ERROR) {
+    (void)jes_streaming_render_stack_pop(ctx);
+    result = jes_streaming_render_array_end_write(ctx);
+  }
+
+  if (result != JES_NO_ERROR) {
+    container_type = jes_streaming_render_stack_get_container_type(ctx);
+    switch (container_type) {
+      case JES_OBJECT:
+        ctx->state = JES_EXPECT_KEY;
+        break;
+      case JES_ARRAY:
+      ctx->state = JES_EXPECT_ARRAY_VALUE;
+        break;
+      default:
+        assert(container.type == JES_UNKNOWN);
+        ctx->state = JES_END;
+        break;
+    }
+  }
+
+  return result;
+}
+
+jes_status jes_render_key(struct jes_streaming_output_context* ctx, const char* key, size_t length)
+{
+  jes_status result = JES_NO_ERROR;
+
+  if (ctx == NULL) {
+    return JES_INVALID_CONTEXT;
+  }
+
+  if (key == NULL) {
+    return JES_INVALID_PARAMETER;
+  }
+
+  result = jes_streaming_render_key_validate_request(ctx);
+  if (result == JES_NO_ERROR) {
+    jes_streaming_render_stack_add_member(ctx);
+    result = jes_streaming_render_key_write(ctx, key, length);
+  }
+
+  if (result == JES_NO_ERROR) {
+    ctx->state = JES_EXPECT_VALUE;
+  }
+
+  return result;
+}
+
+jes_status jes_render_int32(struct jes_streaming_output_context* ctx, int32_t value)
+{
+  jes_status result = JES_NO_ERROR;
+  int write_size;
+
+  if (ctx == NULL) {
+    return JES_INVALID_CONTEXT;
+  }
+
+
+}
+jes_status jes_render_int64(struct jes_streaming_output_context* ctx, int64_t value)
+{
+  jes_status result = JES_NO_ERROR;
+  int write_size;
+
+  if (ctx == NULL) {
+    return JES_INVALID_CONTEXT;
+  }
+
+
+}
+jes_status jes_render_uint32(struct jes_streaming_output_context* ctx, uint32_t value)
+{
+  jes_status result = JES_NO_ERROR;
+  int write_size;
+
+  if (ctx == NULL) {
+    return JES_INVALID_CONTEXT;
+  }
+
+
+}
+jes_status jes_render_uint64(struct jes_streaming_output_context* ctx, uint64_t value)
+{
+  jes_status result = JES_NO_ERROR;
+  int write_size;
+
+  if (ctx == NULL) {
+    return JES_INVALID_CONTEXT;
+  }
+
+
+}
+jes_status jes_render_double(struct jes_streaming_output_context* ctx, double value)
+{
+  jes_status result = JES_NO_ERROR;
+  int write_size;
+
+  if (ctx == NULL) {
+    return JES_INVALID_CONTEXT;
+  }
+
+}
+jes_status jes_render_string(struct jes_streaming_output_context* ctx, const char* string, size_t length)
+{
+  jes_status result = JES_NO_ERROR;
+  int write_size;
+
+  if (ctx == NULL) {
+    return JES_INVALID_CONTEXT;
+  }
+
+
+}
+jes_status jes_render_null(struct jes_streaming_output_context* ctx)
+{
+  jes_status result = JES_NO_ERROR;
+
+  if (ctx == NULL) {
+    return JES_INVALID_CONTEXT;
+  }
+
+  result = jes_streaming_render_value_validate_request(ctx);
+  if (result == JES_NO_ERROR) {
+    if (jes_streaming_render_stack_get_container_type(ctx) == JES_ARRAY) {
+      if (jes_streaming_render_stack_get_member_count(ctx) > 0) {
+        result = jes_streaming_render_comma_write(ctx);
+      }
+      jes_streaming_render_stack_add_member(ctx);
+    }
+    jes_streaming_render_literal_write(ctx, "null");
+  }
+
+  if (result == JES_NO_ERROR) {
+    ctx->state = JES_HAVE_VALUE;
+  }
+
+  return result;
+}
+
+jes_status jes_render_true(struct jes_streaming_output_context* ctx)
+{
+  jes_status result = JES_NO_ERROR;
+
+  if (ctx == NULL) {
+    return JES_INVALID_CONTEXT;
+  }
+
+  result = jes_streaming_render_value_validate_request(ctx);
+  if (result == JES_NO_ERROR) {
+    if (jes_streaming_render_stack_get_container_type(ctx) == JES_ARRAY) {
+      if (jes_streaming_render_stack_get_member_count(ctx) > 0) {
+        result = jes_streaming_render_comma_write(ctx);
+      }
+      jes_streaming_render_stack_add_member(ctx);
+    }
+    jes_streaming_render_literal_write(ctx, "true");
+  }
+
+  if (result == JES_NO_ERROR) {
+    ctx->state = JES_HAVE_VALUE;
+  }
+
+  return result;
+}
+
+jes_status jes_render_false(struct jes_streaming_output_context* ctx)
+{
+  jes_status result = JES_NO_ERROR;
+
+  if (ctx == NULL) {
+    return JES_INVALID_CONTEXT;
+  }
+
+  result = jes_streaming_render_value_validate_request(ctx);
+  if (result == JES_NO_ERROR) {
+    if (jes_streaming_render_stack_get_container_type(ctx) == JES_ARRAY) {
+      if (jes_streaming_render_stack_get_member_count(ctx) > 0) {
+        result = jes_streaming_render_comma_write(ctx);
+      }
+      jes_streaming_render_stack_add_member(ctx);
+    }
+    jes_streaming_render_literal_write(ctx, "false");
+  }
+
+  if (result == JES_NO_ERROR) {
+    ctx->state = JES_HAVE_VALUE;
+  }
+
+  return result;
+}

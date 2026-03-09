@@ -115,6 +115,7 @@ typedef enum jes_status {
   JES_DUPLICATE_KEY,          /* Tree management error */
   JES_INVALID_OPERATION,      /* API error */
   JES_PATH_TOO_LONG,          /* API error */
+  JES_RENDER_FAILED,
 } jes_status;
 
 enum jes_token_type {
@@ -192,6 +193,17 @@ struct jes_status_block {
   size_t cursor_line;
   /* The last processed position of the JSON document */
   size_t cursor_pos;
+};
+
+struct jes_streaming_output_context {
+  size_t out_buffer_size;
+  char* out_buffer;
+  /* The user provided stack size in bytes. */
+  size_t stack_size;
+  /* User provided memory to implement a stack for tracking streamed elements. */
+  struct jes_container* stack;
+  int stack_top;
+  unsigned int  state;
 };
 
  /**
@@ -415,30 +427,23 @@ size_t jes_get_workspace_size(struct jes_context *ctx);
 struct jes_context* jes_resize_workspace(struct jes_context *ctx, void *new_buffer, size_t new_size);
 
 /* API for streaming serialization */
-size_t jes_render_object_start(struct jes_context* ctx);
-size_t jes_render_object_end(struct jes_context* ctx);
-size_t jes_render_key_int32(struct jes_context* ctx, const char* keyword, int32_t value);
-size_t jes_render_key_int64(struct jes_context* ctx, const char* keyword, int64_t value);
-size_t jes_render_key_uint32(struct jes_context* ctx, const char* keyword, uint32_t value);
-size_t jes_render_key_uint64(struct jes_context* ctx, const char* keyword, uint64_t value);
-size_t jes_render_key_double(struct jes_context* ctx, const char* keyword, double value);
-size_t jes_render_key_string(struct jes_context* ctx, const char* keyword, const char* value, size_t value);
-size_t jes_render_key_null(struct jes_context* ctx, const char* keyword);
-size_t jes_render_key_true(struct jes_context* ctx, const char* keyword);
-size_t jes_render_key_false(struct jes_context* ctx, const char* keyword);
-
-size_t jes_render_array_start(struct jes_context* ctx);
-size_t jes_render_array_end(struct jes_context* ctx);
-size_t jes_render_array_int32(struct jes_context* ctx, struct jes_element* array, int32_t value);
-size_t jes_render_array_int64(struct jes_context* ctx, struct jes_element* array, int64_t value);
-size_t jes_render_array_uint32(struct jes_context* ctx, struct jes_element* array, uint32_t value);
-size_t jes_render_array_uint64(struct jes_context* ctx, struct jes_element* array, uint64_t value);
-size_t jes_render_array_double(struct jes_context* ctx, struct jes_element* array, double value);
-size_t jes_render_array_string(struct jes_context* ctx, struct jes_element* array, const char* value, size_t value);
-size_t jes_render_array_null(struct jes_context* ctx, struct jes_element* array);
-size_t jes_render_array_true(struct jes_context* ctx, struct jes_element* array);
-size_t jes_render_array_false(struct jes_context* ctx, struct jes_element* array);
-
+jes_status jes_init_streaming(struct jes_streaming_output_context* ctx,
+                              char* output, size_t output_size,
+                              uint8_t* stack, size_t stack_size);
+jes_status jes_render_object_start(struct jes_streaming_output_context* ctx);
+jes_status jes_render_object_end(struct jes_streaming_output_context* ctx);
+jes_status jes_render_array_start(struct jes_streaming_output_context* ctx);
+jes_status jes_render_array_end(struct jes_streaming_output_context* ctx);
+jes_status jes_render_key(struct jes_streaming_output_context* ctx, const char* key, size_t length);
+jes_status jes_render_int32(struct jes_streaming_output_context* ctx, int32_t value);
+jes_status jes_render_int64(struct jes_streaming_output_context* ctx, int64_t value);
+jes_status jes_render_uint32(struct jes_streaming_output_context* ctx, uint32_t value);
+jes_status jes_render_uint64(struct jes_streaming_output_context* ctx, uint64_t value);
+jes_status jes_render_double(struct jes_streaming_output_context* ctx, double value);
+jes_status jes_render_string(struct jes_streaming_output_context* ctx, const char* string, size_t length);
+jes_status jes_render_null(struct jes_streaming_output_context* ctx);
+jes_status jes_render_true(struct jes_streaming_output_context* ctx);
+jes_status jes_render_false(struct jes_streaming_output_context* ctx);
 
 /* Iteration macros */
 
