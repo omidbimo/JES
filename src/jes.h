@@ -195,7 +195,7 @@ struct jes_status_block {
   size_t cursor_pos;
 };
 
-struct jes_streaming_output_context {
+struct jes_streaming_serializer_context {
   size_t out_buffer_size;
   char* out_buffer;
   /* The user provided stack size in bytes. */
@@ -427,23 +427,23 @@ size_t jes_get_workspace_size(struct jes_context *ctx);
 struct jes_context* jes_resize_workspace(struct jes_context *ctx, void *new_buffer, size_t new_size);
 
 /* API for streaming serialization */
-jes_status jes_init_streaming(struct jes_streaming_output_context* ctx,
+jes_status jes_init_streaming(struct jes_streaming_serializer_context* ctx,
                               char* output, size_t output_size,
                               uint8_t* stack, size_t stack_size);
-jes_status jes_render_object_start(struct jes_streaming_output_context* ctx);
-jes_status jes_render_object_end(struct jes_streaming_output_context* ctx);
-jes_status jes_render_array_start(struct jes_streaming_output_context* ctx);
-jes_status jes_render_array_end(struct jes_streaming_output_context* ctx);
-jes_status jes_render_key(struct jes_streaming_output_context* ctx, const char* key, size_t length);
-jes_status jes_render_int32(struct jes_streaming_output_context* ctx, int32_t value);
-jes_status jes_render_int64(struct jes_streaming_output_context* ctx, int64_t value);
-jes_status jes_render_uint32(struct jes_streaming_output_context* ctx, uint32_t value);
-jes_status jes_render_uint64(struct jes_streaming_output_context* ctx, uint64_t value);
-jes_status jes_render_double(struct jes_streaming_output_context* ctx, double value);
-jes_status jes_render_string(struct jes_streaming_output_context* ctx, const char* string, size_t length);
-jes_status jes_render_null(struct jes_streaming_output_context* ctx);
-jes_status jes_render_true(struct jes_streaming_output_context* ctx);
-jes_status jes_render_false(struct jes_streaming_output_context* ctx);
+jes_status jes_render_object_start(struct jes_streaming_serializer_context* ctx);
+jes_status jes_render_object_end(struct jes_streaming_serializer_context* ctx);
+jes_status jes_render_array_start(struct jes_streaming_serializer_context* ctx);
+jes_status jes_render_array_end(struct jes_streaming_serializer_context* ctx);
+jes_status jes_render_key(struct jes_streaming_serializer_context* ctx, const char* key, size_t length);
+jes_status jes_render_int32(struct jes_streaming_serializer_context* ctx, int32_t value);
+jes_status jes_render_int64(struct jes_streaming_serializer_context* ctx, int64_t value);
+jes_status jes_render_uint32(struct jes_streaming_serializer_context* ctx, uint32_t value);
+jes_status jes_render_uint64(struct jes_streaming_serializer_context* ctx, uint64_t value);
+jes_status jes_render_double(struct jes_streaming_serializer_context* ctx, double value);
+jes_status jes_render_string(struct jes_streaming_serializer_context* ctx, const char* string, size_t length);
+jes_status jes_render_null(struct jes_streaming_serializer_context* ctx);
+jes_status jes_render_true(struct jes_streaming_serializer_context* ctx);
+jes_status jes_render_false(struct jes_streaming_serializer_context* ctx);
 
 /* Iteration macros */
 
