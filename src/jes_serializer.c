@@ -761,7 +761,7 @@ static inline jes_status jes_streaming_serializer_render_comma(struct jes_stream
   return JES_RENDER_FAILED;
 }
 
-static inline jes_status jes_streaming_serializer_render_literal(struct jes_streaming_serializer_context* ctx, const char* literal)
+static inline jes_status jes_streaming_serializer_render_literal(struct jes_streaming_serializer_context* ctx, const char* literal, size_t length)
 {
   int render_size;
 
@@ -769,7 +769,7 @@ static inline jes_status jes_streaming_serializer_render_literal(struct jes_stre
   assert(literal);
 
   render_size = snprintf(ctx->out_buffer, ctx->out_buffer_size, "%s", literal);
-  if (render_size > 0) {
+  if ((render_size == length) && (render_size < ctx->out_buffer_size)) {
     ctx->out_buffer += render_size;
     ctx->out_buffer_size -= render_size;
     return JES_NO_ERROR;
@@ -1218,7 +1218,7 @@ jes_status jes_render_null(struct jes_streaming_serializer_context* ctx)
   result = jes_streaming_serializer_render_value_prepare(ctx);
 
   if (result == JES_NO_ERROR) {
-    result = jes_streaming_serializer_render_literal(ctx, "null");
+    result = jes_streaming_serializer_render_literal(ctx, "null", sizeof("null") - 1);
     if (result == JES_NO_ERROR) {
       jes_streaming_serializer_render_value_post(ctx);
     }
@@ -1239,7 +1239,7 @@ jes_status jes_render_true(struct jes_streaming_serializer_context* ctx)
   result = jes_streaming_serializer_render_value_prepare(ctx);
 
   if (result == JES_NO_ERROR) {
-    result = jes_streaming_serializer_render_literal(ctx, "true");
+    result = jes_streaming_serializer_render_literal(ctx, "true", sizeof("true") - 1);
     if (result == JES_NO_ERROR) {
       jes_streaming_serializer_render_value_post(ctx);
     }
@@ -1261,12 +1261,11 @@ jes_status jes_render_false(struct jes_streaming_serializer_context* ctx)
   result = jes_streaming_serializer_render_value_prepare(ctx);
 
   if (result == JES_NO_ERROR) {
-    result = jes_streaming_serializer_render_literal(ctx, "false");
+    result = jes_streaming_serializer_render_literal(ctx, "false", sizeof("false") - 1);
     if (result == JES_NO_ERROR) {
       jes_streaming_serializer_render_value_post(ctx);
     }
   }
-
 
   return result;
 }

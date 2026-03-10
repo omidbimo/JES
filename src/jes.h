@@ -196,14 +196,17 @@ struct jes_status_block {
 };
 
 struct jes_streaming_serializer_context {
-  size_t out_buffer_size;
+  /* The output buffer to render the streamed JSON elements */
   char* out_buffer;
-  /* The user provided stack size in bytes. */
-  size_t stack_size;
+  /* Size of out buffer in bytes */
+  size_t out_buffer_size;
   /* User provided memory to implement a stack for tracking streamed elements. */
   struct jes_container* stack;
+  /* Stack size in bytes. */
+  size_t stack_size;
+  /* Index to track the top of the stack */
   int stack_top;
-  unsigned int  state;
+  unsigned int state;
 };
 
  /**
