@@ -393,7 +393,7 @@ static void jes_serializer_state_machine(struct jes_context* ctx, struct jes_ser
  * Pass 2 (Render): Re-traverses the tree using render functions to generate the actual
  *         JSON string, guaranteed to fit within the pre-calculated buffer bounds.
  */
-size_t jes_render(struct jes_context *ctx, char* buffer, size_t buffer_length, bool compact)
+jes_status jes_render(struct jes_context *ctx, char* buffer, size_t buffer_length, bool compact)
 {
   struct jes_serializer serializer = { 0 };
 
@@ -517,7 +517,7 @@ static inline jes_status jes_streaming_serializer_stack_push(struct jes_streamin
     return JES_NO_ERROR;
   }
 
-  return JES_INVALID_OPERATION;
+  return JES_MAX_DEPTH;
 }
 
 static inline struct jes_container jes_streaming_serializer_stack_pop(struct jes_streaming_serializer_context* ctx)

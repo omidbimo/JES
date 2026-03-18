@@ -69,34 +69,37 @@ struct jes_context* jes_init(void* buffer, size_t buffer_size, enum jes_search_m
   return ctx;
 }
 
-void jes_reset(struct jes_context* ctx)
+jes_status jes_reset(struct jes_context* ctx)
 {
   size_t node_pool_size;
   uint8_t* node_pool;
+  jes_status status = JES_NO_ERROR;
 
-  if ((ctx != NULL) && JES_IS_INITIATED(ctx)) {
-    ctx->status = JES_NO_ERROR;
-    ctx->serdes.tokenizer.json_data = NULL;
-    ctx->serdes.tokenizer.json_length = 0;
-    ctx->serdes.iter = NULL;
-    node_pool = (uint8_t*)ctx->workspace + sizeof(*ctx);
-    /* TODO: use return values */
-    if (JES_SEARCH_LINEAR == ctx->mode) {
-      node_pool_size = ctx->workspace_size - sizeof(*ctx);
-      (void)jes_tree_init(ctx, node_pool, node_pool_size);
-    }
-    else {
-      size_t hash_table_size;
-      uint8_t* hash_table;
-      node_pool_size = (ctx->workspace_size - sizeof(*ctx)) * JES_WORKSPACE_NODE_POOL_PERCENT / 100;
-      hash_table = JES_ALIGN_PTR((uint8_t*)ctx->workspace + sizeof(*ctx) + node_pool_size);
-      assert(hash_table < ((uint8_t*)ctx->workspace + ctx->workspace_size));
-      hash_table_size = (size_t)((uint8_t*)ctx->workspace + ctx->workspace_size - hash_table);
-
-      (void)jes_tree_init(ctx, node_pool, node_pool_size);
-      (void)jes_hash_table_init(ctx, hash_table, hash_table_size);
-    }
+  if ((ctx == NULL) || !JES_IS_INITIATED(ctx)) {
+    return JES_INVALID_CONTEXT;
   }
+
+  ctx->serdes.tokenizer.json_data = NULL;
+  ctx->serdes.tokenizer.json_length = 0;
+  ctx->serdes.iter = NULL;
+  node_pool = (uint8_t*)ctx->workspace + sizeof(*ctx);
+  /* TODO: use return values */
+  if (ctx->mode == JES_SEARCH_LINEAR) {
+    node_pool_size = ctx->workspace_size;
+    (void)jes_tree_init(ctx, node_pool, node_pool_size);
+  }
+  else {
+    size_t hash_table_size;
+    uint8_t* hash_table;
+    node_pool_size = ctx->workspace_size * JES_WORKSPACE_NODE_POOL_PERCENT / 100;
+    hash_table = JES_ALIGN_PTR((uint8_t*)ctx->workspace + node_pool_size);
+    assert(hash_table < ((uint8_t*)ctx->workspace + ctx->workspace_size));
+    hash_table_size = (size_t)((uint8_t*)ctx->workspace + ctx->workspace_size - hash_table);
+
+    (void)jes_tree_init(ctx, node_pool, node_pool_size);
+    (void)jes_hash_table_init(ctx, hash_table, hash_table_size);
+  }
+  return status;
 }
 
 struct jes_element* jes_get_root(struct jes_context* ctx)
@@ -928,7 +931,7 @@ static inline void jes_rehash(struct jes_context* ctx)
     }
   }
 }
-
+#if 0
 struct jes_context* jes_resize_workspace(struct jes_context* ctx, void* new_buffer, size_t new_buffer_size)
 {
   struct jes_context *new_ctx = NULL;
@@ -1000,4 +1003,4 @@ struct jes_context* jes_resize_workspace(struct jes_context* ctx, void* new_buff
 
   return new_ctx;
 }
-
+#endif

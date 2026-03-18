@@ -84,6 +84,9 @@
  */
 #define JES_TAB_SIZE 2
 
+#define MAX_STREAMING_DEPTH 20
+
+
 /* Logging output control in debug mode */
 #define JES_ENABLE_TOKEN_LOG
 #define JES_ENABLE_PARSER_NODE_LOG
@@ -116,6 +119,7 @@ typedef enum jes_status {
   JES_INVALID_OPERATION,      /* API error */
   JES_PATH_TOO_LONG,          /* API error */
   JES_RENDER_FAILED,
+  JES_MAX_DEPTH,
 } jes_status;
 
 enum jes_token_type {
@@ -239,12 +243,11 @@ struct jes_streaming_serializer_context {
  *       the context is in use.
  *
  */
-struct jes_context* jes_init(void* buffer, size_t buffer_size, enum jes_search_mode mode);
-
-/**
- * Returns the size required for a JES context (excluding node pool and hash table).
- */
-size_t jes_get_context_size(void);
+struct jes_context* jes_init( void* buffer, size_t buffer_size, enum jes_search_mode mode);
+/* API for streaming serialization */
+jes_status jes_init_streaming(struct jes_streaming_serializer_context* ctx,
+                              char* output, size_t output_size,
+                              uint8_t* stack, size_t stack_size);
 
 /**
  * Returns the size of jes node containing JSON element data and tree management overhead.
@@ -254,7 +257,7 @@ size_t jes_get_node_size(void);
 /**
  * Resets a JES context, clearing its internal state and JSON tree.
  */
-void jes_reset(struct jes_context* ctx);
+jes_status jes_reset(struct jes_context* ctx);
 
 /**
  * Parses JSON text into an internal tree.
@@ -266,16 +269,6 @@ void jes_reset(struct jes_context* ctx);
  */
 jes_status jes_load(struct jes_context* ctx, const char* json_data, size_t json_length);
 
-/**
- * Serializes JSON tree to a buffer.
- *
- * @param ctx JES context.
- * @param dst Output buffer.
- * @param length Output buffer size in bytes.
- * @param compact If true, generates compact JSON without spaces; if false, pretty-formatted with indentation.
- * @return Number of bytes written (including null terminator space), or 0 on failure.
- */
-size_t jes_render(struct jes_context* ctx, char* dst, size_t length, bool compact);
 
 /**
  * Calculates required buffer size to serialize JSON.
@@ -284,7 +277,8 @@ size_t jes_render(struct jes_context* ctx, char* dst, size_t length, bool compac
  * @param compact Compact or formatted mode.
  * @return Required size including null terminator, or 0 on error.
  */
-size_t jes_evaluate(struct jes_context* ctx, bool compact);
+size_t jes_evaluate(struct jes_context *ctx, bool compact);
+
 
 /**
  * Returns last operation status.
@@ -368,8 +362,6 @@ struct jes_element* jes_get_key_value(struct jes_context* ctx, struct jes_elemen
 struct jes_element* jes_add_key(struct jes_context* ctx, struct jes_element* parent, const char* keyword, size_t keyword_length);
 struct jes_element* jes_add_key_before(struct jes_context* ctx, struct jes_element* key, const char* keyword, size_t keyword_length);
 struct jes_element* jes_add_key_after(struct jes_context* ctx, struct jes_element* key, const char* keyword, size_t keyword_length);
-jes_status jes_update_key(struct jes_context* ctx, struct jes_element* key, const char* keyword, size_t keyword_length);
-struct jes_element* jes_update_key_value(struct jes_context* ctx, struct jes_element* key, enum jes_type type, const char* value, size_t value_length);
 
 /* Convert key value type helpers */
 struct jes_element* jes_update_key_value_to_object(struct jes_context* ctx, struct jes_element* key);
@@ -427,12 +419,21 @@ size_t jes_get_workspace_size(struct jes_context *ctx);
  *      remains with the caller.
  *    - Resizing doesn't invalidate the current context.
  */
-struct jes_context* jes_resize_workspace(struct jes_context *ctx, void *new_buffer, size_t new_size);
+ #if 0
+jes_status jes_resize_workspace(struct jes_context *ctx, void *new_buffer, size_t new_size);
+#endif
+/**
+ * Serializes JSON tree to a buffer.
+ *
+ * @param ctx JES context.
+ * @param dst Output buffer.
+ * @param length Output buffer size in bytes.
+ * @param compact If true, generates compact JSON without spaces; if false, pretty-formatted with indentation.
+ * @return Number of bytes written (including null terminator space), or 0 on failure.
+ */
+jes_status jes_render(struct jes_context* ctx, char* buffer, size_t buffer_length, bool compact);
 
-/* API for streaming serialization */
-jes_status jes_init_streaming(struct jes_streaming_serializer_context* ctx,
-                              char* output, size_t output_size,
-                              uint8_t* stack, size_t stack_size);
+/* Streaming serialization */
 jes_status jes_render_object_start(struct jes_streaming_serializer_context* ctx);
 jes_status jes_render_object_end(struct jes_streaming_serializer_context* ctx);
 jes_status jes_render_array_start(struct jes_streaming_serializer_context* ctx);
