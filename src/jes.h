@@ -63,21 +63,6 @@
 #define JES_DEFAULT_PATH_SEPARATOR '.'
 
 /**
- * JES_ENABLE_FALL_BACK_TO_LINEAR_SEARCH
- *
- * Allows fallback to linear search when node buffer is exhausted, reclaiming hash table memory.
- *
- * Behavior when defined:
- * - On node buffer exhaustion, hash table memory is reclaimed to continue parsing.
- * - After fallback, key lookups become O(n) linear searches.
- * - Hash table entries are discarded and cannot be re-enabled.
- *
- * Behavior when not defined:
- * - Parsing fails when the node buffer is exhausted.
- */
-// #define JES_ENABLE_FALL_BACK_TO_LINEAR_SEARCH
-
-/**
  * JES_TAB_SIZE
  *
  * Determines the size of the indention when pretty printing the JSON.
@@ -86,7 +71,10 @@
 
 #define MAX_STREAMING_DEPTH 20
 
-
+#define JES_REQUIRED_BUFFER_SIZE(nodes_count) \
+            (JES_CONTEXT_SIZE + \
+                 (max_nodes) * JES_NODE_SIZE + \
+                 JES_HASH_SIZE(max_nodes))
 /* Logging output control in debug mode */
 #define JES_ENABLE_TOKEN_LOG
 #define JES_ENABLE_PARSER_NODE_LOG
@@ -159,7 +147,7 @@ struct jes_element {
   const char *value;    /* Value pointer (not copied) */
 };
 
-/* Forward declaration for internal parser state */
+/* Forward declaration for jes context */
 struct jes_context;
 
 struct jes_stat {

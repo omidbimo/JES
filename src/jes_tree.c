@@ -25,21 +25,6 @@ static struct jes_node* jes_allocate(struct jes_context* ctx)
   assert(ctx != NULL);
   mng_ctx = &ctx->node_mng;
 
-#ifdef JES_ENABLE_FALL_BACK_TO_LINEAR_SEARCH
-  if ((mng_ctx->node_count >= mng_ctx->capacity) && (JES_SEARCH_HASHED == ctx->mode)) {
-    assert(mng_ctx->find_key_fn != jes_tree_find_key);
-    ctx->mode = JES_SEARCH_LINEAR;
-    /* Reclaim the original buffer size provided to jes */
-    mng_ctx->size = ctx->workspace_size - sizeof(*ctx);
-    mng_ctx->capacity = (mng_ctx->size / sizeof(struct jes_node)) < JES_INVALID_INDEX
-                       ? mng_ctx->size / sizeof(struct jes_node)
-                       : JES_INVALID_INDEX -1;
-    jes_hash_table_turn_off(ctx);
-    mng_ctx->find_key_fn = jes_tree_find_key;
-    JES_LOG("\n !!! Insufficient memory in node pool! Falling back to Linear search (performance degraded).");
-  }
-#endif
-
   if (mng_ctx->node_count < mng_ctx->capacity) {
     if (mng_ctx->freed) {
       /* Pop the first node from free list */
