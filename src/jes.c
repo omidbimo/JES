@@ -17,6 +17,9 @@ struct jes_context* jes_init(void* buffer, size_t buffer_size, enum jes_search_m
   size_t node_pool_size;
   uint8_t* node_pool;
 
+  static_assert(sizeof(struct jes_context) == JES_CONTEXT_SIZE);
+  static_assert(sizeof(struct jes_node) == JES_NODE_SIZE);
+
   if ((buffer == NULL) || buffer_size < sizeof(struct jes_context)) {
     return NULL;
   }
@@ -796,12 +799,12 @@ void jes_set_path_separator(struct jes_context* ctx, char delimiter)
   }
 }
 
-size_t jes_get_context_size(void)
+size_t jes_context_size(void)
 {
   return sizeof(struct jes_context);
 }
 
-size_t jes_get_node_size(void)
+size_t jes_node_size(void)
 {
   return sizeof(struct jes_node);
 }
@@ -859,7 +862,7 @@ struct jes_workspace_stat jes_get_workspace_stat(struct jes_context* ctx)
 
   if ((ctx != NULL) && JES_IS_INITIATED(ctx)) {
     stat.workspace_size = ctx->workspace_size;
-    stat.context_size = jes_get_context_size();
+    stat.context_size = jes_context_size();
     stat.node_mng_size = ctx->node_mng.size;
     stat.node_mng_capacity = ctx->node_mng.capacity;
     stat.node_mng_node_count = ctx->node_mng.node_count;

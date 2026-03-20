@@ -71,16 +71,24 @@
 
 #define MAX_STREAMING_DEPTH 20
 
-#define JES_REQUIRED_BUFFER_SIZE(nodes_count) \
-            (JES_CONTEXT_SIZE + \
-                 (max_nodes) * JES_NODE_SIZE + \
-                 JES_HASH_SIZE(max_nodes))
 /* Logging output control in debug mode */
 #define JES_ENABLE_TOKEN_LOG
 #define JES_ENABLE_PARSER_NODE_LOG
 //#define JES_ENABLE_PARSER_STATE_LOG
 //#define JES_ENABLE_SERIALIZER_NODE_LOG
 //#define JES_ENABLE_SERIALIZER_STATE_LOG
+
+
+#if __SIZEOF_POINTER__ == 4
+  #define JES_CONTEXT_SIZE  128
+  #define JES_NODE_SIZE     24
+#else
+  #define JES_CONTEXT_SIZE  248
+  #define JES_NODE_SIZE     32
+#endif
+
+#define JES_REQUIRED_SIZE(node_count) \
+    (JES_CONTEXT_SIZE + (node_count * JES_NODE_SIZE))
 
 enum jes_search_mode {
   JES_SEARCH_LINEAR = 0, /* Linear key search, O(n) performance */
@@ -210,7 +218,7 @@ struct jes_streaming_serializer_context {
  *
  * @param buffer Pointer to user-provided workspace memory. Must be properly aligned.
  * @param buffer_size Size of the buffer in bytes. Minimum: jes_get_context_size() +
- *                    estimated number of JSON Elements * jes_get_node_size()
+ *                    estimated number of JSON Elements * jes_node_size()
  * @param mode Key search mode:
  *             - JES_SEARCH_LINEAR: All buffer space allocated to node pool. Best for
  *               objects with <50 keys or memory-constrained environments.
@@ -237,10 +245,16 @@ jes_status jes_init_streaming(struct jes_streaming_serializer_context* ctx,
                               char* output, size_t output_size,
                               uint8_t* stack, size_t stack_size);
 
+
+/**
+ * Returns the size of jes context
+ */
+size_t jes_context_size(void);
+
 /**
  * Returns the size of jes node containing JSON element data and tree management overhead.
  */
-size_t jes_get_node_size(void);
+size_t jes_node_size(void);
 
 /**
  * Resets a JES context, clearing its internal state and JSON tree.
@@ -411,6 +425,10 @@ jes_status jes_render_string(struct jes_streaming_serializer_context* ctx, const
 jes_status jes_render_null(struct jes_streaming_serializer_context* ctx);
 jes_status jes_render_true(struct jes_streaming_serializer_context* ctx);
 jes_status jes_render_false(struct jes_streaming_serializer_context* ctx);
+
+#define JES_REQUIRED_BUFFER_SIZE(nodes_count) \
+    (jes_context_size() + \
+    (nodes_count) * jes_node_size() )
 
 /* Iteration macros */
 
