@@ -72,8 +72,8 @@
 #define MAX_STREAMING_DEPTH 20
 
 /* Logging output control in debug mode */
-#define JES_ENABLE_TOKEN_LOG
-#define JES_ENABLE_PARSER_NODE_LOG
+//#define JES_ENABLE_TOKEN_LOG
+//#define JES_ENABLE_PARSER_NODE_LOG
 //#define JES_ENABLE_PARSER_STATE_LOG
 //#define JES_ENABLE_SERIALIZER_NODE_LOG
 //#define JES_ENABLE_SERIALIZER_STATE_LOG
@@ -239,7 +239,8 @@ struct jes_streaming_serializer_context {
  *       the context is in use.
  *
  */
-struct jes_context* jes_init( void* buffer, size_t buffer_size, enum jes_search_mode mode);
+struct jes_context* jes_init(void* buffer, size_t buffer_size, enum jes_search_mode mode);
+
 /* API for streaming serialization */
 jes_status jes_init_streaming(struct jes_streaming_serializer_context* ctx,
                               char* output, size_t output_size,
@@ -341,18 +342,19 @@ struct jes_element* jes_get_child(struct jes_context* ctx, struct jes_element* e
 struct jes_element* jes_get_sibling(struct jes_context* ctx, struct jes_element* element);
 
 /*  */
-struct jes_element* jes_get_value(struct jes_context* ctx, struct jes_element* parent, const char* keys);
+struct jes_element* jes_get_value(struct jes_context* ctx, struct jes_element* parent, const char* path);
 /**
  * Searches for a nested key.
  *
  * @param ctx JES context.
  * @param parent Starting object or key.
- * @param keys Dot-separated, NUL terminated key path (e.g., "a.b.c").
+ * @param path Dot-separated, NUL terminated key path (e.g., "a.b.c").
  * @return Found KEY element or NULL if not found.
  *
  * Note: Supports caching — searches start from a parent, reducing repeated traversal.
+ * Note: See also jes_set_path_separator to change the separator symbol.
  */
-struct jes_element* jes_get_key(struct jes_context* ctx, struct jes_element* parent, const char* keys);
+struct jes_element* jes_get_key(struct jes_context* ctx, struct jes_element* parent, const char* path);
 
 /**
  * Returns value element of a given key.
@@ -364,6 +366,9 @@ struct jes_element* jes_get_key_value(struct jes_context* ctx, struct jes_elemen
 struct jes_element* jes_add_key(struct jes_context* ctx, struct jes_element* parent, const char* keyword, size_t keyword_length);
 struct jes_element* jes_add_key_before(struct jes_context* ctx, struct jes_element* key, const char* keyword, size_t keyword_length);
 struct jes_element* jes_add_key_after(struct jes_context* ctx, struct jes_element* key, const char* keyword, size_t keyword_length);
+
+jes_status jes_update_key(struct jes_context* ctx, struct jes_element* key, const char* keyword, size_t keyword_length);
+struct jes_element* jes_update_key_value(struct jes_context* ctx, struct jes_element* key, enum jes_type type, const char* value, size_t value_length);
 
 /* Convert key value type helpers */
 struct jes_element* jes_update_key_value_to_object(struct jes_context* ctx, struct jes_element* key);

@@ -211,9 +211,9 @@ jes_status jes_delete_element(struct jes_context* ctx, struct jes_element* eleme
   return ctx->status;
 }
 
-struct jes_element* jes_get_value(struct jes_context* ctx, struct jes_element* parent, const char* keys)
+struct jes_element* jes_get_value(struct jes_context* ctx, struct jes_element* parent, const char* path)
 {
-  struct jes_element* key = jes_get_key(ctx, parent, keys);
+  struct jes_element* key = jes_get_key(ctx, parent, path);
   struct jes_element* value = NULL;
 
   if (NULL != key) {
@@ -224,26 +224,25 @@ struct jes_element* jes_get_value(struct jes_context* ctx, struct jes_element* p
   return value;
 }
 
-static inline size_t jes_get_key_len_by_separator(struct jes_context* ctx, const char* keys)
+static inline size_t jes_get_key_len_before_char(const char* path, char symbol)
 {
   char* separator;
   size_t key_len;
-  assert(ctx != NULL);
 
-  separator = strchr(keys, ctx->path_separator);
+  separator = strchr(path, symbol);
 
   if (separator != NULL) {
-    assert(keys <= separator);
-    key_len = (size_t)(separator - keys);
+    assert(path <= separator);
+    key_len = (size_t)(separator - path);
   }
   else {
-    key_len = strlen(keys); /* keys length has already been validated so using strlen is ok. */
+    key_len = strlen(path); /* path length has already been validated so using strlen is ok. */
   }
 
   return key_len;
 }
 
-struct jes_element* jes_get_key(struct jes_context* ctx, struct jes_element* parent, const char* keys)
+struct jes_element* jes_get_key(struct jes_context* ctx, struct jes_element* parent, const char* path)
 {
   struct jes_element* target_key = NULL;
   struct jes_node* iter = (struct jes_node*)parent;
@@ -255,12 +254,12 @@ struct jes_element* jes_get_key(struct jes_context* ctx, struct jes_element* par
     return NULL;
   }
 
-  if ((parent == NULL) || (!jes_validate_node(ctx, (struct jes_node*)parent)) || (keys == NULL)) {
+  if ((parent == NULL) || (!jes_validate_node(ctx, (struct jes_node*)parent)) || (path == NULL)) {
     ctx->status = JES_INVALID_PARAMETER;
     return NULL;
   }
 
-  key_len = strnlen(keys, JES_MAX_PATH_LENGTH);
+  key_len = strnlen(path, JES_MAX_PATH_LENGTH);
   if (key_len == JES_MAX_PATH_LENGTH) {
     ctx->status = JES_PATH_TOO_LONG;
     return NULL;
@@ -273,12 +272,12 @@ struct jes_element* jes_get_key(struct jes_context* ctx, struct jes_element* par
 
   ctx->status = JES_NO_ERROR;
 
-  /* The keys will be break into several keywords separated by a predefined separator char.
-     The search is only successful When all keys are found. */
+  /* The path will be break into several keywords separated by a predefined separator symbol.
+     The search is only successful When all keys in the path are found. */
   while (iter != NULL) {
-    key_name = keys;
-    key_len = jes_get_key_len_by_separator(ctx, keys);
-    keys += key_len; /* This set the keys to the NUL terminator or the separator. */
+    key_name = path;
+    key_len = jes_get_key_len_before_char(path, ctx->path_separator);
+    path += key_len; /* This set the path to the NUL terminator or the separator. */
 
     if (NODE_TYPE(iter) == JES_KEY) {
       iter = GET_FIRST_CHILD(ctx->node_mng, iter);
@@ -287,13 +286,13 @@ struct jes_element* jes_get_key(struct jes_context* ctx, struct jes_element* par
     iter = ctx->node_mng.find_key_fn(ctx, iter, key_name, key_len);
 
     /* This was the last element to find. */
-    if ((iter != NULL) && (*keys == '\0')) {
+    if ((iter != NULL) && (*path == '\0')) {
       target_key = (struct jes_element*)iter;
       break;
     }
 
-    /* The keys points to a separator move it on char forward to get the next key. */
-    keys += sizeof(char); /* +1 byte for the size of separator symbol */
+    /* The path points to a separator move it on char forward to get the next key. */
+    path += sizeof(char); /* +1 byte for the size of separator symbol */
   }
 
   if (target_key == NULL) {
