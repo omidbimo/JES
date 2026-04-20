@@ -5,19 +5,19 @@
 #include <stdlib.h>
 #include <string.h>
 
-static uint8_t buffer[64 * 1024]; /* 64KB buffer */
+static uint8_t buffer[JES_REQUIRED_SIZE(50)];
 
 int main() {
     /* Initialize JES context */
-    struct jes_context *ctx = jes_init(buffer, sizeof(buffer));
+    struct jes_context *ctx = jes_init(buffer, sizeof(buffer), JES_SEARCH_LINEAR);
     if (!ctx) {
         fprintf(stderr, "Failed to initialize JES context\n");
         return 1;
     }
 
     /* Get sizing information */
-    printf("Context size: %zu bytes\n", jes_get_context_size());
-    printf("Node size: %zu bytes\n", jes_get_node_size());
+    printf("Context size: %zu bytes\n", jes_context_size());
+    printf("Node size: %zu bytes\n", jes_node_size());
     printf("Element capacity: %zu\n", jes_get_element_capacity(ctx));
 
     /* Parse some JSON */

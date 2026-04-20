@@ -8,7 +8,7 @@
 
 
 char file_data[7*1024];
-uint8_t working_buffer[20*1024];
+uint8_t working_buffer[JES_REQUIRED_SIZE(1000)];
 char output[7*1024];
 
 int main(void)
@@ -24,6 +24,7 @@ int main(void)
   struct jes_element *root;
   struct jes_context *ctx;
 
+  printf("\n Context size: %d bytes, pointer size: %zu, node_size: %zu bytes, required size@1000nodes: %zu bytes", jes_context_size(), sizeof(void*), jes_node_size(), JES_REQUIRED_SIZE(1000));
 
   fp = fopen("demo.json", "rb");
   if (fp == NULL) {
@@ -37,8 +38,7 @@ int main(void)
   }
   fclose(fp);
 
-
-  ctx = jes_init(working_buffer, sizeof(working_buffer));
+  ctx = jes_init(working_buffer, sizeof(working_buffer), JES_SEARCH_LINEAR);
   if (!ctx) {
     printf("\n Context initiation failed!");
     return -1;
@@ -50,7 +50,6 @@ int main(void)
     return -1;
   }
 
-  printf("\nSize of JSON data: %lld bytes", strnlen(file_data, sizeof(file_data)));
   printf("\nElement count: %d", jes_get_element_count(ctx));
 
   out_size = jes_render(ctx, output, sizeof(output), true);

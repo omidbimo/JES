@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static uint8_t buffer[32 * 1024]; /* 32KB buffer */
+static uint8_t buffer[JES_REQUIRED_SIZE(50)];
 
 /* Print key-value pairs in an object */
 void print_object(struct jes_context *ctx, struct jes_element *obj, int indent) {
@@ -73,7 +73,7 @@ void print_object(struct jes_context *ctx, struct jes_element *obj, int indent) 
 
 int main() {
     /* Initialize JES context */
-    struct jes_context *ctx = jes_init(buffer, sizeof(buffer));
+    struct jes_context *ctx = jes_init(buffer, sizeof(buffer), JES_SEARCH_HASHED);
 
     /* JSON data to parse */
     const char *json = "{"

@@ -3,11 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-static uint8_t buffer[32 * 1024]; /* 32KB buffer */
+static uint8_t buffer[JES_REQUIRED_SIZE(50)];
 
 int main() {
   /* Initialize JES context */
-  struct jes_context *ctx = jes_init(buffer, sizeof(buffer));
+  struct jes_context *ctx = jes_init(buffer, sizeof(buffer), JES_SEARCH_LINEAR);
   if (!ctx) {
     fprintf(stderr, "Failed to initialize JES context\n");
     return 1;
