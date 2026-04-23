@@ -69,8 +69,6 @@
  */
 #define JES_TAB_SIZE 2
 
-#define MAX_STREAMING_DEPTH 20
-
 /* Logging output control in debug mode */
 #define JES_ENABLE_TOKEN_LOG
 #define JES_ENABLE_PARSER_NODE_LOG

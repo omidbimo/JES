@@ -48,10 +48,10 @@ struct jes_context* jes_init(void* buffer, size_t buffer_size, enum jes_search_m
         size_t hash_table_size;
         uint8_t* hash_table;
 
-        node_pool_size = (buffer_size - sizeof(*ctx)) * JES_WORKSPACE_NODE_POOL_PERCENT / 100;
+        node_pool_size = (ctx->workspace_size - sizeof(*ctx)) * JES_WORKSPACE_NODE_POOL_PERCENT / 100;
         hash_table = JES_ALIGN_PTR((uint8_t*)ctx->workspace + sizeof(*ctx) + node_pool_size);
-        assert(hash_table < ((uint8_t*)buffer + buffer_size));
-        hash_table_size = (size_t)((uint8_t*)buffer + buffer_size - hash_table);
+        assert(hash_table < ((uint8_t*)buffer + ctx->workspace_size));
+        hash_table_size = (size_t)((uint8_t*)buffer + ctx->workspace_size - hash_table);
 
         if (JES_NO_ERROR != jes_tree_init(ctx, node_pool, node_pool_size)) {
           return NULL;
@@ -88,13 +88,13 @@ jes_status jes_reset(struct jes_context* ctx)
   node_pool = (uint8_t*)ctx->workspace + sizeof(*ctx);
   /* TODO: use return values */
   if (ctx->mode == JES_SEARCH_LINEAR) {
-    node_pool_size = ctx->workspace_size;
+    node_pool_size = ctx->workspace_size - sizeof(*ctx);
     (void)jes_tree_init(ctx, node_pool, node_pool_size);
   }
   else {
     size_t hash_table_size;
     uint8_t* hash_table;
-    node_pool_size = ctx->workspace_size * JES_WORKSPACE_NODE_POOL_PERCENT / 100;
+    node_pool_size = (ctx->workspace_size - sizeof(*ctx)) * JES_WORKSPACE_NODE_POOL_PERCENT / 100;
     hash_table = JES_ALIGN_PTR((uint8_t*)ctx->workspace + node_pool_size);
     assert(hash_table < ((uint8_t*)ctx->workspace + ctx->workspace_size));
     hash_table_size = (size_t)((uint8_t*)ctx->workspace + ctx->workspace_size - hash_table);
@@ -115,8 +115,6 @@ struct jes_element* jes_get_root(struct jes_context* ctx)
 
 enum jes_type jes_get_parent_type(struct jes_context* ctx, struct jes_element* element)
 {
-  enum jes_type parent_type = JES_UNKNOWN;
-
   if ((ctx == NULL) || !JES_IS_INITIATED(ctx)) {
     return JES_UNKNOWN;
   }
@@ -131,7 +129,7 @@ enum jes_type jes_get_parent_type(struct jes_context* ctx, struct jes_element* e
     return parent->type;
   }
 
-  return parent_type;
+  return JES_UNKNOWN;
 }
 
 struct jes_element* jes_get_parent(struct jes_context* ctx, struct jes_element* element)
@@ -361,7 +359,7 @@ struct jes_element* jes_get_array_value(struct jes_context* ctx, struct jes_elem
     }
   }
 
-  if ((index < 0) || (index > array_size)) {
+  if ((index < 0) || (index >= array_size)) {
     ctx->status = JES_ELEMENT_NOT_FOUND;
     return NULL;
   }
@@ -379,29 +377,6 @@ struct jes_element* jes_get_array_value(struct jes_context* ctx, struct jes_elem
   ctx->status = JES_BROKEN_TREE;
   assert(0);
   return NULL;
-}
-
-static bool jes_validate_tlv(struct jes_context* ctx, enum jes_type type, size_t length, const char* value)
-{
-  bool is_valid = false;
-  switch (type) {
-    case JES_KEY:
-    case JES_STRING:
-      break;
-    case JES_NUMBER:
-      break;
-    case JES_OBJECT:
-    case JES_ARRAY:
-    case JES_TRUE:
-    case JES_FALSE:
-    case JES_NULL:
-      is_valid = true;
-      break;
-    default:
-      break;
-  }
-
-  return is_valid;
 }
 
 struct jes_element* jes_add_element(struct jes_context* ctx, struct jes_element* parent, enum jes_type type, const char* value, size_t value_length)
@@ -573,6 +548,10 @@ struct jes_element* jes_add_key_after(struct jes_context* ctx, struct jes_elemen
 struct jes_element* jes_update_key_value(struct jes_context* ctx, struct jes_element* key, enum jes_type type, const char* value, size_t value_length)
 {
   struct jes_element* key_value = NULL;
+
+  if ((ctx == NULL) || !JES_IS_INITIATED(ctx)) {
+    return NULL;
+  }
 
   /* First delete the old value of the key if exists. */
   jes_tree_delete_node(ctx, GET_FIRST_CHILD(ctx->node_mng, (struct jes_node*)key));
@@ -871,41 +850,4 @@ struct jes_status_block jes_get_status_block(struct jes_context* ctx)
   }
 
   return status_block;
-}
-
-/* Pre-order depth-first traversal
-   visit node → visit children → visit siblings → backtrack to parent's siblings. */
-static inline void jes_rehash(struct jes_context* ctx)
-{
-  assert(ctx != NULL);
-
-  struct jes_node* iter = ctx->node_mng.root;
-
-  while (iter != NULL) {
-
-    if (iter->json_tlv.type == JES_KEY) {
-      assert(GET_PARENT(ctx->node_mng, iter) != NULL);
-      ctx->hash_table.add_fn(ctx, GET_PARENT(ctx->node_mng, iter), iter);
-    }
-
-    /* If current node has children, get the first child */
-    if (HAS_CHILD(iter)) {
-      iter = GET_FIRST_CHILD(ctx->node_mng, iter);
-    }
-    /* No children available: try to move to next sibling (breadth at current level) */
-    else if (HAS_SIBLING(iter)) {
-      iter = GET_SIBLING(ctx->node_mng, iter);
-    }
-    else {
-      /* No children or siblings: backtrack up the tree to find next un-visited branch
-         Walk up parent chain until we find a parent with an un-visited sibling */
-      while ((iter = GET_PARENT(ctx->node_mng, iter))) {
-        /* Found a parent with a sibling - this is our next branch to explore */
-        if (HAS_SIBLING(iter)) {
-          iter = GET_SIBLING(ctx->node_mng, iter);
-          break;
-        }
-      }
-    }
-  }
 }
