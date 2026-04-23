@@ -570,30 +570,6 @@ struct jes_element* jes_add_key_after(struct jes_context* ctx, struct jes_elemen
   return (struct jes_element*)new_node;
 }
 
-enum jes_status jes_update_key(struct jes_context* ctx, struct jes_element* key, const char* keyword, size_t keyword_length)
-{
-  if ((ctx == NULL) || !JES_IS_INITIATED(ctx)) {
-    return JES_INVALID_CONTEXT;
-  }
-
-  ctx->status = JES_NO_ERROR;
-
-  if (!jes_validate_node(ctx, (struct jes_node*)key) || (key->type != JES_KEY) || (keyword == NULL)) {
-    ctx->status = JES_INVALID_PARAMETER;
-    return ctx->status;
-  }
-
-  if (jes_tokenizer_validate_string(ctx, keyword, keyword_length) != JES_NO_ERROR) {
-    ctx->status = JES_INVALID_PARAMETER;
-    return ctx->status;
-  }
-
-  key->length = keyword_length;
-  key->value = keyword;
-
-  return JES_NO_ERROR;
-}
-
 struct jes_element* jes_update_key_value(struct jes_context* ctx, struct jes_element* key, enum jes_type type, const char* value, size_t value_length)
 {
   struct jes_element* key_value = NULL;

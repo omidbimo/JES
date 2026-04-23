@@ -72,8 +72,8 @@
 #define MAX_STREAMING_DEPTH 20
 
 /* Logging output control in debug mode */
-//#define JES_ENABLE_TOKEN_LOG
-//#define JES_ENABLE_PARSER_NODE_LOG
+#define JES_ENABLE_TOKEN_LOG
+#define JES_ENABLE_PARSER_NODE_LOG
 //#define JES_ENABLE_PARSER_STATE_LOG
 //#define JES_ENABLE_SERIALIZER_NODE_LOG
 //#define JES_ENABLE_SERIALIZER_STATE_LOG
@@ -361,13 +361,11 @@ struct jes_element* jes_get_key(struct jes_context* ctx, struct jes_element* par
  */
 struct jes_element* jes_get_key_value(struct jes_context* ctx, struct jes_element* key);
 
-
 /* Key operations */
 struct jes_element* jes_add_key(struct jes_context* ctx, struct jes_element* parent, const char* keyword, size_t keyword_length);
 struct jes_element* jes_add_key_before(struct jes_context* ctx, struct jes_element* key, const char* keyword, size_t keyword_length);
 struct jes_element* jes_add_key_after(struct jes_context* ctx, struct jes_element* key, const char* keyword, size_t keyword_length);
 
-jes_status jes_update_key(struct jes_context* ctx, struct jes_element* key, const char* keyword, size_t keyword_length);
 struct jes_element* jes_update_key_value(struct jes_context* ctx, struct jes_element* key, enum jes_type type, const char* value, size_t value_length);
 
 /* Convert key value type helpers */
