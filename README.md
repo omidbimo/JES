@@ -14,12 +14,12 @@ JES provides a simple and efficient API to:
 
 - ✅ **No dynamic memory allocation** – All objects are stored in a single working buffer, ensuring predictable memory usage.
 - ✅ **Non-recursive parser** – Designed to handle deep JSON structures without relying on recursion, making it suitable for environments with limited stack size.
-- ✅ **Concurrent document handling** – Supports parsing multiple JSON documents simultaneously by using a separate parser context and working buffer for each document.
 - ✅ **High performance** – Operates directly on the input buffer without copying data, ensuring minimal processing overhead.
 - ✅ **No external dependencies** – Fully self-contained, making it easy to integrate into embedded projects.
 - ✅ **Fast Key search**  – Can be configured at compile time to utilise a hash table key lookup for faster key searching in large JSON data.
 - ✅ **Flexible output formatting** – The output can be generated as a compact string or formatted with indentation for readability.
-
+- ✅ **Incremental JSON serialization (AKA: Streaming Serialization)** - Write your JSON elemnts directly into the output buffer.
+- 
 ## [API Documentation](https://github.com/omidbimo/JES/blob/main/documentation.md)
 
 ## Limitations
