@@ -16,7 +16,7 @@
  * Memory impact:
  * - 32-bit descriptors double memory usage for node references (parent, first_child, last_child, sibling).
  */
-#define JES_USE_32BIT_NODE_DESCRIPTOR
+//#define JES_USE_32BIT_NODE_DESCRIPTOR
 
 /**
  * JES_WORKSPACE_NODE_POOL_PERCENT
@@ -79,10 +79,18 @@
 
 #if __SIZEOF_POINTER__ == 4
   #define JES_CONTEXT_SIZE  128
-  #define JES_NODE_SIZE     24
+  #ifdef JES_USE_32BIT_NODE_DESCRIPTOR
+    #define JES_NODE_SIZE     24
+  #else
+    #define JES_NODE_SIZE     16
+  #endif
 #else
   #define JES_CONTEXT_SIZE  248
-  #define JES_NODE_SIZE     32
+  #ifdef JES_USE_32BIT_NODE_DESCRIPTOR
+    #define JES_NODE_SIZE     28
+  #else
+    #define JES_NODE_SIZE     16
+  #endif
 #endif
 
 #define JES_REQUIRED_SIZE(node_count) \
@@ -150,7 +158,7 @@ enum jes_type {
 struct jes_element {
   uint16_t type;        /* Type of element (see jes_type) */
   uint16_t length;      /* Length of value */
-  const char *value;    /* Value pointer (not copied) */
+  const char* value;    /* Value pointer (not copied) */
 };
 
 /* Forward declaration for jes context */

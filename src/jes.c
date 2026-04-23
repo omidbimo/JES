@@ -11,11 +11,46 @@
 #include "jes_parser.h"
 #include "jes_serializer.h"
 
+static jes_status jes_partition_workspace(struct jes_context* ctx)
+{
+  jes_status status = JES_NO_ERROR;
+  uint8_t* node_pool = (uint8_t*)ctx->workspace + sizeof(*ctx);
+  size_t node_pool_size;
+
+  switch (ctx->mode) {
+    case JES_SEARCH_LINEAR:
+      node_pool_size = ctx->workspace_size - sizeof(*ctx);
+      status = jes_tree_init(ctx, node_pool, node_pool_size);
+      break;
+
+    case JES_SEARCH_HASHED:
+      {
+        size_t hash_table_size;
+        uint8_t* hash_table;
+
+        node_pool_size = (ctx->workspace_size - sizeof(*ctx)) * JES_WORKSPACE_NODE_POOL_PERCENT / 100;
+        hash_table = JES_ALIGN_PTR((uint8_t*)ctx->workspace + sizeof(*ctx) + node_pool_size);
+        assert(hash_table < ((uint8_t*)ctx->workspace + ctx->workspace_size));
+        hash_table_size = (size_t)((uint8_t*)ctx->workspace + ctx->workspace_size - hash_table);
+
+        status = jes_tree_init(ctx, node_pool, node_pool_size);
+        if (status == JES_NO_ERROR) {
+          status = jes_hash_table_init(ctx, hash_table, hash_table_size);
+        }
+      }
+      break;
+
+    default:
+      status = JES_INVALID_PARAMETER;
+      break;
+  }
+
+  return status;
+}
+
 struct jes_context* jes_init(void* buffer, size_t buffer_size, enum jes_search_mode mode)
 {
   struct jes_context* ctx = buffer;
-  size_t node_pool_size;
-  uint8_t* node_pool;
 
   static_assert(sizeof(struct jes_context) == JES_CONTEXT_SIZE);
   static_assert(sizeof(struct jes_node) == JES_NODE_SIZE);
@@ -33,38 +68,9 @@ struct jes_context* jes_init(void* buffer, size_t buffer_size, enum jes_search_m
   ctx->mode = mode;
   /* The Node pool should be always aligned since an unpacked C structure is always aligned. */
   assert(JES_IS_ALIGNED((uint8_t*)ctx->workspace + sizeof(*ctx)));
-  node_pool = (uint8_t*)ctx->workspace + sizeof(*ctx);
 
-  switch (mode) {
-    case JES_SEARCH_LINEAR:
-      node_pool_size = ctx->workspace_size - sizeof(*ctx);
-      if (JES_NO_ERROR != jes_tree_init(ctx, node_pool, node_pool_size)) {
-        return NULL;
-      }
-      break;
-
-    case JES_SEARCH_HASHED:
-      {
-        size_t hash_table_size;
-        uint8_t* hash_table;
-
-        node_pool_size = (ctx->workspace_size - sizeof(*ctx)) * JES_WORKSPACE_NODE_POOL_PERCENT / 100;
-        hash_table = JES_ALIGN_PTR((uint8_t*)ctx->workspace + sizeof(*ctx) + node_pool_size);
-        assert(hash_table < ((uint8_t*)buffer + ctx->workspace_size));
-        hash_table_size = (size_t)((uint8_t*)buffer + ctx->workspace_size - hash_table);
-
-        if (JES_NO_ERROR != jes_tree_init(ctx, node_pool, node_pool_size)) {
-          return NULL;
-        }
-
-        if (JES_NO_ERROR != jes_hash_table_init(ctx, hash_table, hash_table_size)) {
-          return NULL;
-        }
-      }
-      break;
-
-    default:
-      return NULL;
+  if (JES_NO_ERROR != jes_partition_workspace(ctx)) {
+    return NULL;
   }
 
   ctx->cookie = JES_CONTEXT_COOKIE;
@@ -74,10 +80,6 @@ struct jes_context* jes_init(void* buffer, size_t buffer_size, enum jes_search_m
 
 jes_status jes_reset(struct jes_context* ctx)
 {
-  size_t node_pool_size;
-  uint8_t* node_pool;
-  jes_status status = JES_NO_ERROR;
-
   if ((ctx == NULL) || !JES_IS_INITIATED(ctx)) {
     return JES_INVALID_CONTEXT;
   }
@@ -85,24 +87,10 @@ jes_status jes_reset(struct jes_context* ctx)
   ctx->serdes.tokenizer.json_data = NULL;
   ctx->serdes.tokenizer.json_length = 0;
   ctx->serdes.iter = NULL;
-  node_pool = (uint8_t*)ctx->workspace + sizeof(*ctx);
-  /* TODO: use return values */
-  if (ctx->mode == JES_SEARCH_LINEAR) {
-    node_pool_size = ctx->workspace_size - sizeof(*ctx);
-    (void)jes_tree_init(ctx, node_pool, node_pool_size);
-  }
-  else {
-    size_t hash_table_size;
-    uint8_t* hash_table;
-    node_pool_size = (ctx->workspace_size - sizeof(*ctx)) * JES_WORKSPACE_NODE_POOL_PERCENT / 100;
-    hash_table = JES_ALIGN_PTR((uint8_t*)ctx->workspace + node_pool_size);
-    assert(hash_table < ((uint8_t*)ctx->workspace + ctx->workspace_size));
-    hash_table_size = (size_t)((uint8_t*)ctx->workspace + ctx->workspace_size - hash_table);
 
-    (void)jes_tree_init(ctx, node_pool, node_pool_size);
-    (void)jes_hash_table_init(ctx, hash_table, hash_table_size);
-  }
-  return status;
+  ctx->status = jes_partition_workspace(ctx);
+
+  return ctx->status;
 }
 
 struct jes_element* jes_get_root(struct jes_context* ctx)
@@ -346,8 +334,13 @@ size_t jes_get_array_size(struct jes_context* ctx, struct jes_element* array)
 struct jes_element* jes_get_array_value(struct jes_context* ctx, struct jes_element* array, int32_t index)
 {
   struct jes_node* iter = NULL;
-  /* Skip checking ctx and array only when calling jes_get_array_size */
-  size_t array_size = jes_get_array_size(ctx, array);
+  size_t array_size;
+
+  if ((ctx == NULL) || !JES_IS_INITIATED(ctx)) {
+    return NULL;
+  }
+
+  array_size = jes_get_array_size(ctx, array);
 
   if (ctx->status != JES_NO_ERROR) {
     return NULL;
@@ -553,6 +546,11 @@ struct jes_element* jes_update_key_value(struct jes_context* ctx, struct jes_ele
     return NULL;
   }
 
+  if ((key == NULL) || !jes_validate_node(ctx, (struct jes_node*)key) || (value == NULL) || (value_length == 0)) {
+    ctx->status = JES_INVALID_PARAMETER;
+    return NULL;
+  }
+
   /* First delete the old value of the key if exists. */
   jes_tree_delete_node(ctx, GET_FIRST_CHILD(ctx->node_mng, (struct jes_node*)key));
   key_value = jes_add_element(ctx, key, type, value, value_length);
@@ -635,7 +633,6 @@ struct jes_element* jes_update_array_value(struct jes_context* ctx, struct jes_e
 
 struct jes_element* jes_append_array_value(struct jes_context* ctx, struct jes_element* array, enum jes_type type, const char* value, size_t value_length)
 {
-  struct jes_node* anchor_node = NULL;
   struct jes_node* new_node = NULL;
 
   if (!ctx || !JES_IS_INITIATED(ctx)) {
