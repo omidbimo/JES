@@ -47,6 +47,11 @@ The library behavior can be configured by defining the following macros:
 #define JES_ENABLE_PARSER_STATE_LOG
 #define JES_ENABLE_SERIALIZER_NODE_LOG
 #define JES_ENABLE_SERIALIZER_STATE_LOG
+
+/* Maximum nesting depth when streaming JSON */
+#define JES_STREAMING_SERIALIZER_MAX_DEPTH  10
+
+
 ```
 
 ## Core Data Structures
@@ -216,25 +221,25 @@ struct jes_context* jes_init(void* buffer, size_t buffer_size, enum jes_search_m
 
 ### `jes_init_streaming`
 
-Initializes a streaming serializer context. The streaming serializer writes JSON directly to an output buffer without building an internal tree.
+Initializes a streaming serializer context. The streaming serializer writes JSON directly to an output buffer without building an internal tree. It's a fast and memory efficient way to render a JSON string.
 
 ```c
-jes_status jes_init_streaming(struct jes_streaming_serializer_context* ctx,
-                              char* output, size_t output_size,
-                              uint8_t* stack, size_t stack_size);
+struct jes_streaming_serializer_context* jes_init_streaming(void* workspace, size_t workspace_size
+                                                            char* output, size_t output_size);
 ```
 
 **Parameters**
 
-- `ctx` : Streaming context to initialize
+- `workspace` : User-provided memory used as an internal workspace. Use JES_STREAMING_SERIALIZER_REQUIRED_SIZE to allocate the buffer.
+- `workspace_size` : Size of the workspace buffer in bytes
 - `output` : Output buffer to write the JSON string
 - `output_size` : Size of the output buffer in bytes
-- `stack` : User-provided memory used as an element-tracking stack
-- `stack_size` : Size of the stack buffer in bytes
+  
+  
 
-**Returns** `JES_NO_ERROR` on success, or an error code on failure.
+**Returns** Initialized Streaming context pointer or NULL on failure.
 
-**Note** Size the stack buffer as `N * sizeof(struct jes_container)` where N is the maximum nesting depth you expect.
+**Note** Use JES_STREAMING_SERIALIZER_REQUIRED_SIZE to allocate the buffer.
 
 ### `jes_context_size`
 
