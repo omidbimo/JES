@@ -78,7 +78,8 @@
 //#define JES_ENABLE_SERIALIZER_NODE_LOG
 //#define JES_ENABLE_SERIALIZER_STATE_LOG
 
-#define JES_STREAMING_SERIALIZER_MAX_DEPTH  8
+/* Maximum nesting depth when streaming JSON elements */
+#define JES_STREAMING_SERIALIZER_MAX_DEPTH  10
 
 /* =========================================================================
  * Internal size constants (platform-dependent)
