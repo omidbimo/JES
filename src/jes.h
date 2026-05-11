@@ -78,6 +78,7 @@
 //#define JES_ENABLE_SERIALIZER_NODE_LOG
 //#define JES_ENABLE_SERIALIZER_STATE_LOG
 
+#define JES_STREAMING_SERIALIZER_MAX_DEPTH  8
 
 /* =========================================================================
  * Internal size constants (platform-dependent)
@@ -115,6 +116,23 @@
  */
 #define JES_REQUIRED_SIZE(node_count) \
     (JES_CONTEXT_SIZE + (node_count * JES_NODE_SIZE))
+
+/**
+ * JES_STREAMING_SERIALIZER_REQUIRED_STACK_SIZE
+ *
+ * Calculates the size required by the streaming serializer stack to support the
+ * JES_STREAMING_SERIALIZER_MAX_DEPTH
+ *
+ * Example:
+ * @code
+ * uint8_t out[1024];
+ * static uint8_t stack[JES_STREAMING_SERIALIZER_REQUIRED_STACK_SIZE];
+ * struct jes_streaming_serializer_context *ss_ctx = jes_init_streaming(
+ *                            ss_ctx, out, sizeof(out), stack, sizeof(stack) );
+ * @endcode
+ */
+#define JES_STREAMING_SERIALIZER_REQUIRED_STACK_SIZE \
+    (JES_STREAMING_SERIALIZER_MAX_DEPTH * 4)
 
 /* =========================================================================
  * Enumerations
@@ -252,11 +270,11 @@ struct jes_status_block {
  * Must be initialized with jes_init_streaming() before use.
  */
 struct jes_streaming_serializer_context {
-  char*               out_buffer;      /* Output buffer for rendered JSON */
-  size_t              out_buffer_size; /* Size of out_buffer in bytes */
-  struct jes_container* stack;         /* User-provided stack memory */
-  size_t              stack_size;      /* Stack size in bytes */
-  int                 stack_top;       /* Current stack depth */
+  char*               out_buffer;         /* Output buffer for rendered JSON */
+  size_t              out_buffer_size;    /* Size of out_buffer in bytes */
+  struct jes_streaming_container* stack;  /* User-provided stack memory */
+  size_t              stack_size;         /* Stack size in bytes */
+  int                 stack_top;          /* Current stack depth */
   unsigned int        state;
 };
 

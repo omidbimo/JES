@@ -5,7 +5,7 @@
 #include "jes_private.h"
 #include "jes_logger.h"
 
-struct jes_container {
+struct jes_streaming_container {
   /* Container type: Object | Array */
   uint16_t type;
   /* Number of elements within a container */

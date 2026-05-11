@@ -520,25 +520,28 @@ static inline jes_status jes_streaming_serializer_stack_push(struct jes_streamin
   return JES_MAX_DEPTH;
 }
 
-static inline struct jes_container jes_streaming_serializer_stack_pop(struct jes_streaming_serializer_context* ctx)
+static inline struct jes_streaming_container jes_streaming_serializer_stack_pop(
+                                  struct jes_streaming_serializer_context* ctx)
 {
   if (!jes_streaming_serializer_stack_is_empty(ctx)) {
     return ctx->stack[ctx->stack_top--];
   }
 
-  return (struct jes_container){0, 0};
+  return (struct jes_streaming_container){0, 0};
 }
 
-static inline struct jes_container jes_streaming_serializer_stack_get(struct jes_streaming_serializer_context* ctx)
+static inline struct jes_streaming_container jes_streaming_serializer_stack_get(
+                                  struct jes_streaming_serializer_context* ctx)
 {
   if (!jes_streaming_serializer_stack_is_empty(ctx)) {
     return ctx->stack[ctx->stack_top];
   }
 
-  return (struct jes_container){0, 0};
+  return (struct jes_streaming_container){0, 0};
 }
 
-static inline enum jes_type jes_streaming_serializer_stack_get_container_type(struct jes_streaming_serializer_context* ctx)
+static inline enum jes_type jes_streaming_serializer_stack_get_container_type(
+                                  struct jes_streaming_serializer_context* ctx)
 {
   if (!jes_streaming_serializer_stack_is_empty(ctx)) {
     return ctx->stack[ctx->stack_top].type;
@@ -547,7 +550,8 @@ static inline enum jes_type jes_streaming_serializer_stack_get_container_type(st
   return JES_UNKNOWN;
 }
 
-static inline uint16_t jes_streaming_serializer_stack_get_member_count(struct jes_streaming_serializer_context* ctx)
+static inline uint16_t jes_streaming_serializer_stack_get_member_count(
+                                  struct jes_streaming_serializer_context* ctx)
 {
   if (!jes_streaming_serializer_stack_is_empty(ctx)) {
     return ctx->stack[ctx->stack_top].member_count;
@@ -556,7 +560,8 @@ static inline uint16_t jes_streaming_serializer_stack_get_member_count(struct je
   return 0;
 }
 
-static inline jes_status jes_streaming_serializer_stack_add_member(struct jes_streaming_serializer_context* ctx)
+static inline jes_status jes_streaming_serializer_stack_add_member(
+                                  struct jes_streaming_serializer_context* ctx)
 {
   if (!jes_streaming_serializer_stack_is_empty(ctx)) {
     ctx->stack[ctx->stack_top].member_count++;
@@ -566,7 +571,8 @@ static inline jes_status jes_streaming_serializer_stack_add_member(struct jes_st
   return JES_INVALID_OPERATION;
 }
 
-static inline jes_status jes_streaming_serializer_validate_state_object_start(struct jes_streaming_serializer_context* ctx)
+static inline jes_status jes_streaming_serializer_validate_state_object_start(
+                                  struct jes_streaming_serializer_context* ctx)
 {
   jes_status result = JES_NO_ERROR;
 
@@ -583,7 +589,8 @@ static inline jes_status jes_streaming_serializer_validate_state_object_start(st
   return result;
 }
 
-static inline jes_status jes_streaming_serializer_validate_state_object_end(struct jes_streaming_serializer_context* ctx)
+static inline jes_status jes_streaming_serializer_validate_state_object_end(
+                                  struct jes_streaming_serializer_context* ctx)
 {
   jes_status result = JES_NO_ERROR;
 
@@ -598,7 +605,8 @@ static inline jes_status jes_streaming_serializer_validate_state_object_end(stru
   return result;
 }
 
-static inline jes_status jes_streaming_serializer_validate_state_array_start(struct jes_streaming_serializer_context* ctx)
+static inline jes_status jes_streaming_serializer_validate_state_array_start(
+                                  struct jes_streaming_serializer_context* ctx)
 {
   jes_status result = JES_NO_ERROR;
 
@@ -616,7 +624,8 @@ static inline jes_status jes_streaming_serializer_validate_state_array_start(str
   return result;
 }
 
-static inline jes_status jes_streaming_serializer_validate_state_array_end(struct jes_streaming_serializer_context* ctx)
+static inline jes_status jes_streaming_serializer_validate_state_array_end(
+                                  struct jes_streaming_serializer_context* ctx)
 {
   jes_status result = JES_NO_ERROR;
 
@@ -631,7 +640,8 @@ static inline jes_status jes_streaming_serializer_validate_state_array_end(struc
   return result;
 }
 
-static inline jes_status jes_streaming_serializer_validate_state_key(struct jes_streaming_serializer_context* ctx)
+static inline jes_status jes_streaming_serializer_validate_state_key(
+                                  struct jes_streaming_serializer_context* ctx)
 {
   jes_status result = JES_NO_ERROR;
 
@@ -646,7 +656,8 @@ static inline jes_status jes_streaming_serializer_validate_state_key(struct jes_
   return result;
 }
 
-static inline jes_status jes_streaming_serializer_validate_state_value(struct jes_streaming_serializer_context* ctx)
+static inline jes_status jes_streaming_serializer_validate_state_value(
+                                  struct jes_streaming_serializer_context* ctx)
 {
   jes_status result = JES_NO_ERROR;
 
@@ -664,7 +675,8 @@ static inline jes_status jes_streaming_serializer_validate_state_value(struct je
   return result;
 }
 
-static inline jes_status jes_streaming_serializer_render_object_start(struct jes_streaming_serializer_context* ctx)
+static inline jes_status jes_streaming_serializer_render_object_start(
+                                  struct jes_streaming_serializer_context* ctx)
 {
   int render_size;
 
@@ -680,7 +692,8 @@ static inline jes_status jes_streaming_serializer_render_object_start(struct jes
   return JES_RENDER_FAILED;
 }
 
-static inline jes_status jes_streaming_serializer_render_object_end(struct jes_streaming_serializer_context* ctx)
+static inline jes_status jes_streaming_serializer_render_object_end(
+                                  struct jes_streaming_serializer_context* ctx)
 {
   int render_size;
 
@@ -696,7 +709,8 @@ static inline jes_status jes_streaming_serializer_render_object_end(struct jes_s
   return JES_RENDER_FAILED;
 }
 
-static inline jes_status jes_streaming_serializer_render_array_start(struct jes_streaming_serializer_context* ctx)
+static inline jes_status jes_streaming_serializer_render_array_start(
+                                  struct jes_streaming_serializer_context* ctx)
 {
   int render_size;
 
@@ -712,7 +726,8 @@ static inline jes_status jes_streaming_serializer_render_array_start(struct jes_
   return JES_RENDER_FAILED;
 }
 
-static inline jes_status jes_streaming_serializer_render_array_end(struct jes_streaming_serializer_context* ctx)
+static inline jes_status jes_streaming_serializer_render_array_end(
+                                  struct jes_streaming_serializer_context* ctx)
 {
   int render_size;
 
@@ -728,7 +743,9 @@ static inline jes_status jes_streaming_serializer_render_array_end(struct jes_st
   return JES_RENDER_FAILED;
 }
 
-static inline jes_status jes_streaming_serializer_render_key(struct jes_streaming_serializer_context* ctx, const char* key, size_t key_length)
+static inline jes_status jes_streaming_serializer_render_key(
+                                  struct jes_streaming_serializer_context* ctx,
+                                  const char* key, size_t key_length)
 {
   int render_size;
 
@@ -745,7 +762,8 @@ static inline jes_status jes_streaming_serializer_render_key(struct jes_streamin
   return JES_RENDER_FAILED;
 }
 
-static inline jes_status jes_streaming_serializer_render_comma(struct jes_streaming_serializer_context* ctx)
+static inline jes_status jes_streaming_serializer_render_comma(
+                                  struct jes_streaming_serializer_context* ctx)
 {
   int render_size;
 
@@ -761,7 +779,9 @@ static inline jes_status jes_streaming_serializer_render_comma(struct jes_stream
   return JES_RENDER_FAILED;
 }
 
-static inline jes_status jes_streaming_serializer_render_literal(struct jes_streaming_serializer_context* ctx, const char* literal, size_t length)
+static inline jes_status jes_streaming_serializer_render_literal(
+                                  struct jes_streaming_serializer_context* ctx,
+                                  const char* literal, size_t length)
 {
   int render_size;
 
@@ -778,7 +798,9 @@ static inline jes_status jes_streaming_serializer_render_literal(struct jes_stre
   return JES_RENDER_FAILED;
 }
 
-static inline jes_status jes_streaming_serializer_render_string(struct jes_streaming_serializer_context* ctx, const char* string, size_t length)
+static inline jes_status jes_streaming_serializer_render_string(
+                                  struct jes_streaming_serializer_context* ctx,
+                                  const char* string, size_t length)
 {
   int render_size;
 
@@ -795,7 +817,9 @@ static inline jes_status jes_streaming_serializer_render_string(struct jes_strea
   return JES_RENDER_FAILED;
 }
 
-static inline jes_status jes_streaming_serializer_render_int32(struct jes_streaming_serializer_context* ctx, int32_t value)
+static inline jes_status jes_streaming_serializer_render_int32(
+                                  struct jes_streaming_serializer_context* ctx,
+                                  int32_t value)
 {
   int render_size;
 
@@ -811,7 +835,9 @@ static inline jes_status jes_streaming_serializer_render_int32(struct jes_stream
   return JES_RENDER_FAILED;
 }
 
-static inline jes_status jes_streaming_serializer_render_int64(struct jes_streaming_serializer_context* ctx, int64_t value)
+static inline jes_status jes_streaming_serializer_render_int64(
+                                  struct jes_streaming_serializer_context* ctx,
+                                  int64_t value)
 {
   int render_size;
 
@@ -827,7 +853,9 @@ static inline jes_status jes_streaming_serializer_render_int64(struct jes_stream
   return JES_RENDER_FAILED;
 }
 
-static inline jes_status jes_streaming_serializer_render_uint32(struct jes_streaming_serializer_context* ctx, uint32_t value)
+static inline jes_status jes_streaming_serializer_render_uint32(
+                                  struct jes_streaming_serializer_context* ctx,
+                                  uint32_t value)
 {
   int render_size;
 
@@ -843,7 +871,9 @@ static inline jes_status jes_streaming_serializer_render_uint32(struct jes_strea
   return JES_RENDER_FAILED;
 }
 
-static inline jes_status jes_streaming_serializer_render_uint64(struct jes_streaming_serializer_context* ctx, uint64_t value)
+static inline jes_status jes_streaming_serializer_render_uint64(
+                                  struct jes_streaming_serializer_context* ctx,
+                                  uint64_t value)
 {
   int render_size;
 
@@ -859,7 +889,9 @@ static inline jes_status jes_streaming_serializer_render_uint64(struct jes_strea
   return JES_RENDER_FAILED;
 }
 
-static inline jes_status jes_streaming_serializer_render_double(struct jes_streaming_serializer_context* ctx, double value)
+static inline jes_status jes_streaming_serializer_render_double(
+                                  struct jes_streaming_serializer_context* ctx,
+                                  double value)
 {
   int render_size;
 
@@ -917,15 +949,19 @@ jes_status jes_init_streaming(struct jes_streaming_serializer_context* ctx,
                               char* output, size_t output_size,
                               uint8_t* stack, size_t stack_size)
 {
+
+  static_assert(JES_STREAMING_SERIALIZER_REQUIRED_STACK_SIZE == \
+   sizeof(struct jes_streaming_container) * JES_STREAMING_SERIALIZER_MAX_DEPTH);
+
   if ((ctx == NULL) || (output == NULL) || (stack == NULL) ||
-      (stack_size < sizeof(struct jes_container))) {
+      (stack_size < sizeof(struct jes_streaming_container))) {
     return JES_INVALID_PARAMETER;
   }
 
   ctx->out_buffer = output;
   ctx->out_buffer_size = output_size;
   ctx->stack_size = stack_size;
-  ctx->stack = (struct jes_container*)stack;
+  ctx->stack = (struct jes_streaming_container*)stack;
   ctx->stack_top = -1;
   ctx->state = JES_START;
   return JES_NO_ERROR;
