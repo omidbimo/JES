@@ -14,11 +14,6 @@
   - [Statistics and Diagnostics](#statistics-and-diagnostics)
   - [Error Handling](#error-handling)
   - [Iteration Macros](#iteration-macros)
-- [Usage Examples](#usage-examples)
-  - [Basic Parse and Render](#basic-parse-and-render)
-  - [Modifying JSON](#modifying-json)
-  - [Iterating Through Elements](#iterating-through-elements)
-  - [Streaming Serialization](#streaming-serialization-1)
 - [Logging](#logging)
 
 ## Overview
