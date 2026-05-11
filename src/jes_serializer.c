@@ -572,7 +572,7 @@ static inline jes_status jes_streaming_serializer_validate_state_object_start(st
 
   switch (ctx->state) {
     case JES_START:             /* Fall through is intended */
-    case JES_EXPECT_KEY:
+    case JES_EXPECT_VALUE:
     case JES_EXPECT_ARRAY_VALUE:
       break;
     default:
