@@ -169,7 +169,7 @@ typedef enum jes_status {
   JES_INVALID_OPERATION,      /* API error: operation not valid in current state */
   JES_PATH_TOO_LONG,          /* API error: path exceeds JES_MAX_PATH_LENGTH */
   JES_RENDER_FAILED,
-  JES_MAX_DEPTH,
+  JES_MAX_DEPTH_EXCEEDED,
 } jes_status;
 
 /**
@@ -396,9 +396,10 @@ size_t jes_evaluate(struct jes_context *ctx, bool compact);
  * @param buffer_length Size of the output buffer in bytes.
  * @param compact       If true, writes compact JSON; false writes pretty-printed JSON
  *                      indented by JES_TAB_SIZE spaces.
- * @return JES_NO_ERROR on success. JES_BUFFER_TOO_SMALL if the buffer is insufficient.
+ * @return Number of bytes written (including null terminator), or 0 on failure.
+ *         Call jes_get_status() to retrieve the error code on failure..
  */
-jes_status jes_render(struct jes_context* ctx, char* buffer, size_t buffer_length, bool compact);
+size_t jes_render(struct jes_context* ctx, char* buffer, size_t buffer_length, bool compact);
 
 /* =========================================================================
  * Error handling
