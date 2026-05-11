@@ -131,8 +131,8 @@
  *                            ss_ctx, out, sizeof(out), stack, sizeof(stack) );
  * @endcode
  */
-#define JES_STREAMING_SERIALIZER_REQUIRED_STACK_SIZE \
-    (JES_STREAMING_SERIALIZER_MAX_DEPTH * 4)
+#define JES_STREAMING_SERIALIZER_REQUIRED_SIZE \
+    ((JES_STREAMING_SERIALIZER_MAX_DEPTH * 4) + 24)
 
 /* =========================================================================
  * Enumerations
@@ -213,6 +213,11 @@ enum jes_type {
 /* Forward declaration — jes_context is an opaque type */
 struct jes_context;
 
+/* Forward declaration — jes_streaming_serializer_context is an opaque type
+ * Context for streaming (tree-less) JSON serialization.
+ */
+struct jes_streaming_serializer_context;
+
 /**
  * Represents a single JSON element.
  *
@@ -265,19 +270,6 @@ struct jes_status_block {
   size_t             cursor_pos;   /* Column position in the JSON document */
 };
 
-/**
- * Context for streaming (tree-less) JSON serialization.
- * Must be initialized with jes_init_streaming() before use.
- */
-struct jes_streaming_serializer_context {
-  char*               out_buffer;         /* Output buffer for rendered JSON */
-  size_t              out_buffer_size;    /* Size of out_buffer in bytes */
-  struct jes_streaming_container* stack;  /* User-provided stack memory */
-  size_t              stack_size;         /* Stack size in bytes */
-  int                 stack_top;          /* Current stack depth */
-  unsigned int        state;
-};
-
 /* =========================================================================
  * Context setup
  * ========================================================================= */
@@ -310,16 +302,17 @@ struct jes_context* jes_init(void* buffer, size_t buffer_size, enum jes_search_m
  * building an internal tree. Use the jes_render_*() family of functions after
  * initialization to emit JSON elements.
  *
- * @param ctx         Streaming context to initialize.
+ * @param workspace User-provided memory used as an internal workspace. Use
+ *        JES_STREAMING_SERIALIZER_REQUIRED_SIZE to allocate the buffer.
+ * @param workspace_size  Size of the workspace buffer in bytes.
  * @param output      Output buffer to write the JSON string.
  * @param output_size Size of the output buffer in bytes.
- * @param stack       User-provided memory used as an element-tracking stack.
- * @param stack_size  Size of the stack buffer in bytes.
- * @return JES_NO_ERROR on success, or an error code on failure.
+ *
+ * @return Initialized Streaming context pointer or NULL on failure.
  */
-jes_status jes_init_streaming(struct jes_streaming_serializer_context* ctx,
-                              char* output, size_t output_size,
-                              uint8_t* stack, size_t stack_size);
+struct jes_streaming_serializer_context* jes_init_streaming(
+                                      void* workspace, size_t workspace_size,
+                                      char* output, size_t output_size);
 
 /**
  * Resets the context, clearing the JSON tree and internal state.

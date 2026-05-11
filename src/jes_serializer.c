@@ -945,26 +945,29 @@ static void jes_streaming_serializer_render_value_post(struct jes_streaming_seri
   }
 }
 
-jes_status jes_init_streaming(struct jes_streaming_serializer_context* ctx,
-                              char* output, size_t output_size,
-                              uint8_t* stack, size_t stack_size)
+struct jes_streaming_serializer_context* jes_init_streaming(
+                                      void* workspace, size_t workspace_size,
+                                      char* output, size_t output_size)
 {
+  struct jes_streaming_serializer_context* ctx = NULL;
 
-  static_assert(JES_STREAMING_SERIALIZER_REQUIRED_STACK_SIZE == \
-   sizeof(struct jes_streaming_container) * JES_STREAMING_SERIALIZER_MAX_DEPTH);
+  static_assert(JES_STREAMING_SERIALIZER_REQUIRED_SIZE == \
+   (sizeof(struct jes_streaming_container) * JES_STREAMING_SERIALIZER_MAX_DEPTH) + \
+   sizeof(struct jes_streaming_serializer_context));
 
-  if ((ctx == NULL) || (output == NULL) || (stack == NULL) ||
-      (stack_size < sizeof(struct jes_streaming_container))) {
-    return JES_INVALID_PARAMETER;
+  if ((output == NULL) || (workspace == NULL) ||
+      (workspace_size < JES_STREAMING_SERIALIZER_REQUIRED_SIZE)) {
+    return NULL;
   }
 
+  ctx = (struct jes_streaming_serializer_context*)workspace;
   ctx->out_buffer = output;
   ctx->out_buffer_size = output_size;
-  ctx->stack_size = stack_size;
-  ctx->stack = (struct jes_streaming_container*)stack;
+  ctx->stack_size = JES_STREAMING_SERIALIZER_MAX_DEPTH * sizeof(struct jes_streaming_container);
+  ctx->stack = (struct jes_streaming_container*)(workspace + sizeof(*ctx));
   ctx->stack_top = -1;
   ctx->state = JES_START;
-  return JES_NO_ERROR;
+  return ctx;
 }
 
 

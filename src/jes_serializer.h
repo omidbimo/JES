@@ -12,6 +12,18 @@ struct jes_streaming_container {
   uint16_t member_count;
 };
 
+/**
+ * Context for streaming (tree-less) JSON serialization.
+ */
+struct jes_streaming_serializer_context {
+  char*               out_buffer;         /* Output buffer for rendered JSON */
+  size_t              out_buffer_size;    /* Size of out_buffer in bytes */
+  struct jes_streaming_container* stack;  /* User-provided stack memory */
+  size_t              stack_size;         /* Stack size in bytes */
+  int                 stack_top;          /* Current stack depth */
+  unsigned int        state;
+};
+
 struct jes_node* jes_serializer_get_node(struct jes_context* ctx);
 
 #endif /* JES_SERIALIZER_H */
