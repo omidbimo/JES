@@ -28,13 +28,9 @@ static int g_failed = 0;
 #define FAIL(name, reason)  do { printf("[FAIL] %s. — %s\n", (name), (#reason)); g_failed++; } while(0)
 #define CHECK(name, cond)   do { if (cond) PASS(name); else FAIL(name, cond); } while(0)
 
-/* Stack depth: supports up to 16 nested objects/arrays */
-#define STACK_DEPTH  16
-#define STACK_SIZE   (STACK_DEPTH * 256)
-
 /* Output buffer shared across tests — cleared before each test */
 static char     out[1024];
-static uint8_t  stack_buf[STACK_SIZE];
+static uint8_t  stack_buf[JES_STREAMING_SERIALIZER_REQUIRED_STACK_SIZE];
 
 static void init_ss(struct jes_streaming_serializer_context *ss_ctx)
 {
@@ -321,7 +317,7 @@ static void test_buffer_too_small(void)
     const char *name = "TC-SS-12 buffer too small";
     struct jes_streaming_serializer_context ss_ctx;
     char tiny[4];
-    uint8_t tiny_stack[STACK_SIZE];
+    uint8_t tiny_stack[JES_STREAMING_SERIALIZER_REQUIRED_STACK_SIZE];
 
     jes_status init_st = jes_init_streaming(&ss_ctx, tiny, sizeof(tiny),
                                             tiny_stack, sizeof(tiny_stack));
