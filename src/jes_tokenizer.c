@@ -489,7 +489,7 @@ static inline bool jes_tokenizer_process_literal_token(struct jes_cursor* cursor
   }
 
   if (is_literal_token) {
-    if (((cursor->pos + literal_len) < cursor->end) &&
+    if (((cursor->pos + literal_len) <= cursor->end) &&
          (memcmp(cursor->pos, literal, literal_len) == 0)) {
       cursor->pos += literal_len - 1;
       token->length += literal_len;
