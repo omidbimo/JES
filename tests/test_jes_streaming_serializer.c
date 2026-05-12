@@ -30,13 +30,13 @@ static int g_failed = 0;
 
 /* Output buffer shared across tests — cleared before each test */
 static char     out[1024];
-static uint8_t  stack_buf[JES_STREAMING_SERIALIZER_REQUIRED_STACK_SIZE];
+static uint8_t  workspace[JES_STREAMING_SERIALIZER_REQUIRED_SIZE];
 
-static void init_ss(struct jes_streaming_serializer_context *ss_ctx)
+static struct jes_streaming_serializer_context * init_ss()
 {
     memset(out, 0, sizeof(out));
-    memset(stack_buf, 0, sizeof(stack_buf));
-    jes_init_streaming(ss_ctx, out, sizeof(out), stack_buf, sizeof(stack_buf));
+    memset(workspace, 0, sizeof(workspace));
+    return jes_init_streaming(workspace, sizeof(workspace), out, sizeof(out));
 }
 
 /* ── tests ──────────────────────────────────────────────────────────────── */
@@ -47,10 +47,9 @@ static void init_ss(struct jes_streaming_serializer_context *ss_ctx)
 static void test_init_ok(void)
 {
     const char *name = "TC-SS-01 init ok";
-    struct jes_streaming_serializer_context ss_ctx;
-    jes_status st = jes_init_streaming(&ss_ctx, out, sizeof(out),
-                                       stack_buf, sizeof(stack_buf));
-    CHECK(name, st == JES_NO_ERROR);
+    struct jes_streaming_serializer_context* ss_ctx;
+    ss_ctx = jes_init_streaming(workspace, sizeof(workspace), out, sizeof(out));
+    CHECK(name, ss_ctx != NULL);
 }
 
 /**
@@ -59,10 +58,9 @@ static void test_init_ok(void)
 static void test_init_null_output(void)
 {
     const char *name = "TC-SS-02 init null output";
-    struct jes_streaming_serializer_context ss_ctx;
-    jes_status st = jes_init_streaming(&ss_ctx, NULL, sizeof(out),
-                                       stack_buf, sizeof(stack_buf));
-    CHECK(name, st != JES_NO_ERROR);
+    struct jes_streaming_serializer_context* ss_ctx;
+    ss_ctx = jes_init_streaming(workspace, sizeof(workspace), out, sizeof(out));
+    CHECK(name, ss_ctx != NULL);
 }
 
 /**
@@ -71,9 +69,9 @@ static void test_init_null_output(void)
 static void test_init_null_stack(void)
 {
     const char *name = "TC-SS-03 init null stack";
-    struct jes_streaming_serializer_context ss_ctx;
-    jes_status st = jes_init_streaming(&ss_ctx, out, sizeof(out), NULL, 0);
-    CHECK(name, st != JES_NO_ERROR);
+    struct jes_streaming_serializer_context* ss_ctx;
+    ss_ctx = jes_init_streaming(workspace, sizeof(workspace), out, sizeof(out));
+    CHECK(name, ss_ctx != NULL);
 }
 
 /**
@@ -82,16 +80,16 @@ static void test_init_null_stack(void)
 static void test_flat_object(void)
 {
     const char *name = "TC-SS-04 flat object";
-    struct jes_streaming_serializer_context ss_ctx;
-    init_ss(&ss_ctx);
+    struct jes_streaming_serializer_context* ss_ctx;
+    ss_ctx = init_ss();
 
     jes_status st = JES_NO_ERROR;
-    st |= jes_render_object_start(&ss_ctx);
-        st |= jes_render_key(&ss_ctx, "name", 4);
-        st |= jes_render_string(&ss_ctx, "Alice", 5);
-        st |= jes_render_key(&ss_ctx, "score", 5);
-        st |= jes_render_int32(&ss_ctx, 42);
-    st |= jes_render_object_end(&ss_ctx);
+    st |= jes_render_object_start(ss_ctx);
+        st |= jes_render_key(ss_ctx, "name", 4);
+        st |= jes_render_string(ss_ctx, "Alice", 5);
+        st |= jes_render_key(ss_ctx, "score", 5);
+        st |= jes_render_int32(ss_ctx, 42);
+    st |= jes_render_object_end(ss_ctx);
 
     CHECK(name,                         st == JES_NO_ERROR);
     CHECK("TC-SS-04 opening brace",     out[0] == '{');
@@ -108,21 +106,21 @@ static void test_flat_object(void)
 static void test_all_scalar_types(void)
 {
     const char *name = "TC-SS-05 all scalar types";
-    struct jes_streaming_serializer_context ss_ctx;
-    init_ss(&ss_ctx);
+    struct jes_streaming_serializer_context* ss_ctx;
+    ss_ctx = init_ss();
 
     jes_status st = JES_NO_ERROR;
-    st |= jes_render_object_start(&ss_ctx);
-        st |= jes_render_key(&ss_ctx, "i32",  3); st |= jes_render_int32(&ss_ctx,  -100);
-        st |= jes_render_key(&ss_ctx, "u32",  3); st |= jes_render_uint32(&ss_ctx,  200u);
-        st |= jes_render_key(&ss_ctx, "i64",  3); st |= jes_render_int64(&ss_ctx,  -9000000000LL);
-        st |= jes_render_key(&ss_ctx, "u64",  3); st |= jes_render_uint64(&ss_ctx,  9000000000ULL);
-        st |= jes_render_key(&ss_ctx, "dbl",  3); st |= jes_render_double(&ss_ctx,  3.14);
-        st |= jes_render_key(&ss_ctx, "str",  3); st |= jes_render_string(&ss_ctx,  "hi", 2);
-        st |= jes_render_key(&ss_ctx, "yes",  3); st |= jes_render_true(&ss_ctx);
-        st |= jes_render_key(&ss_ctx, "no",   2); st |= jes_render_false(&ss_ctx);
-        st |= jes_render_key(&ss_ctx, "nil",  3); st |= jes_render_null(&ss_ctx);
-    st |= jes_render_object_end(&ss_ctx);
+    st |= jes_render_object_start(ss_ctx);
+        st |= jes_render_key(ss_ctx, "i32",  3); st |= jes_render_int32(ss_ctx,  -100);
+        st |= jes_render_key(ss_ctx, "u32",  3); st |= jes_render_uint32(ss_ctx,  200u);
+        st |= jes_render_key(ss_ctx, "i64",  3); st |= jes_render_int64(ss_ctx,  -9000000000LL);
+        st |= jes_render_key(ss_ctx, "u64",  3); st |= jes_render_uint64(ss_ctx,  9000000000ULL);
+        st |= jes_render_key(ss_ctx, "dbl",  3); st |= jes_render_double(ss_ctx,  3.14);
+        st |= jes_render_key(ss_ctx, "str",  3); st |= jes_render_string(ss_ctx,  "hi", 2);
+        st |= jes_render_key(ss_ctx, "yes",  3); st |= jes_render_true(ss_ctx);
+        st |= jes_render_key(ss_ctx, "no",   2); st |= jes_render_false(ss_ctx);
+        st |= jes_render_key(ss_ctx, "nil",  3); st |= jes_render_null(ss_ctx);
+    st |= jes_render_object_end(ss_ctx);
 
     CHECK(name,                     st == JES_NO_ERROR);
     CHECK("TC-SS-05 -100",          strstr(out, "-100")          != NULL);
@@ -142,17 +140,17 @@ static void test_all_scalar_types(void)
 static void test_nested_object(void)
 {
     const char *name = "TC-SS-06 nested object";
-    struct jes_streaming_serializer_context ss_ctx;
-    init_ss(&ss_ctx);
+    struct jes_streaming_serializer_context* ss_ctx;
+    ss_ctx = init_ss();
 
     jes_status st = JES_NO_ERROR;
-    st |= jes_render_object_start(&ss_ctx);
-        st |= jes_render_key(&ss_ctx, "outer", 5);
-        st |= jes_render_object_start(&ss_ctx);
-            st |= jes_render_key(&ss_ctx, "inner", 5);
-            st |= jes_render_string(&ss_ctx, "value", 5);
-        st |= jes_render_object_end(&ss_ctx);
-    st |= jes_render_object_end(&ss_ctx);
+    st |= jes_render_object_start(ss_ctx);
+        st |= jes_render_key(ss_ctx, "outer", 5);
+        st |= jes_render_object_start(ss_ctx);
+            st |= jes_render_key(ss_ctx, "inner", 5);
+            st |= jes_render_string(ss_ctx, "value", 5);
+        st |= jes_render_object_end(ss_ctx);
+    st |= jes_render_object_end(ss_ctx);
 
     CHECK(name,                     st == JES_NO_ERROR);
     CHECK("TC-SS-06 outer key",     strstr(out, "\"outer\"") != NULL);
@@ -169,15 +167,15 @@ static void test_nested_object(void)
 static void test_flat_array(void)
 {
     const char *name = "TC-SS-07 flat array";
-    struct jes_streaming_serializer_context ss_ctx;
-    init_ss(&ss_ctx);
+    struct jes_streaming_serializer_context* ss_ctx;
+    ss_ctx = init_ss();
 
     jes_status st = JES_NO_ERROR;
-    st |= jes_render_array_start(&ss_ctx);
-        st |= jes_render_int32(&ss_ctx, 1);
-        st |= jes_render_int32(&ss_ctx, 2);
-        st |= jes_render_int32(&ss_ctx, 3);
-    st |= jes_render_array_end(&ss_ctx);
+    st |= jes_render_array_start(ss_ctx);
+        st |= jes_render_int32(ss_ctx, 1);
+        st |= jes_render_int32(ss_ctx, 2);
+        st |= jes_render_int32(ss_ctx, 3);
+    st |= jes_render_array_end(ss_ctx);
 
     CHECK(name,                 st == JES_NO_ERROR);
     CHECK("TC-SS-07 [",         out[0] == '[');
@@ -193,17 +191,17 @@ static void test_flat_array(void)
 static void test_mixed_array(void)
 {
     const char *name = "TC-SS-08 mixed array";
-    struct jes_streaming_serializer_context ss_ctx;
-    init_ss(&ss_ctx);
+    struct jes_streaming_serializer_context* ss_ctx;
+    ss_ctx = init_ss();
 
     jes_status st = JES_NO_ERROR;
-    st |= jes_render_array_start(&ss_ctx);
-        st |= jes_render_true(&ss_ctx);
-        st |= jes_render_false(&ss_ctx);
-        st |= jes_render_null(&ss_ctx);
-        st |= jes_render_string(&ss_ctx, "text", 4);
-        st |= jes_render_int32(&ss_ctx, 99);
-    st |= jes_render_array_end(&ss_ctx);
+    st |= jes_render_array_start(ss_ctx);
+        st |= jes_render_true(ss_ctx);
+        st |= jes_render_false(ss_ctx);
+        st |= jes_render_null(ss_ctx);
+        st |= jes_render_string(ss_ctx, "text", 4);
+        st |= jes_render_int32(ss_ctx, 99);
+    st |= jes_render_array_end(ss_ctx);
 
     CHECK(name,                     st == JES_NO_ERROR);
     CHECK("TC-SS-08 true",          strstr(out, "true")    != NULL);
@@ -219,20 +217,20 @@ static void test_mixed_array(void)
 static void test_array_of_objects(void)
 {
     const char *name = "TC-SS-09 array of objects";
-    struct jes_streaming_serializer_context ss_ctx;
-    init_ss(&ss_ctx);
+    struct jes_streaming_serializer_context* ss_ctx;
+    ss_ctx = init_ss();
 
     jes_status st = JES_NO_ERROR;
-    st |= jes_render_array_start(&ss_ctx);
-        st |= jes_render_object_start(&ss_ctx);
-            st |= jes_render_key(&ss_ctx, "id", 2);
-            st |= jes_render_int32(&ss_ctx, 1);
-        st |= jes_render_object_end(&ss_ctx);
-        st |= jes_render_object_start(&ss_ctx);
-            st |= jes_render_key(&ss_ctx, "id", 2);
-            st |= jes_render_int32(&ss_ctx, 2);
-        st |= jes_render_object_end(&ss_ctx);
-    st |= jes_render_array_end(&ss_ctx);
+    st |= jes_render_array_start(ss_ctx);
+        st |= jes_render_object_start(ss_ctx);
+            st |= jes_render_key(ss_ctx, "id", 2);
+            st |= jes_render_int32(ss_ctx, 1);
+        st |= jes_render_object_end(ss_ctx);
+        st |= jes_render_object_start(ss_ctx);
+            st |= jes_render_key(ss_ctx, "id", 2);
+            st |= jes_render_int32(ss_ctx, 2);
+        st |= jes_render_object_end(ss_ctx);
+    st |= jes_render_array_end(ss_ctx);
 
     CHECK(name,                 st == JES_NO_ERROR);
     CHECK("TC-SS-09 [",         out[0] == '[');
@@ -250,19 +248,19 @@ static void test_array_of_objects(void)
 static void test_deep_nesting(void)
 {
     const char *name = "TC-SS-10 deep nesting";
-    struct jes_streaming_serializer_context ss_ctx;
-    init_ss(&ss_ctx);
+    struct jes_streaming_serializer_context* ss_ctx;
+    ss_ctx = init_ss();
 
     jes_status st = JES_NO_ERROR;
-    st |= jes_render_object_start(&ss_ctx);
-        st |= jes_render_key(&ss_ctx, "a", 1);
-        st |= jes_render_array_start(&ss_ctx);
-            st |= jes_render_object_start(&ss_ctx);
-                st |= jes_render_key(&ss_ctx, "b", 1);
-                st |= jes_render_true(&ss_ctx);
-            st |= jes_render_object_end(&ss_ctx);
-        st |= jes_render_array_end(&ss_ctx);
-    st |= jes_render_object_end(&ss_ctx);
+    st |= jes_render_object_start(ss_ctx);
+        st |= jes_render_key(ss_ctx, "a", 1);
+        st |= jes_render_array_start(ss_ctx);
+            st |= jes_render_object_start(ss_ctx);
+                st |= jes_render_key(ss_ctx, "b", 1);
+                st |= jes_render_true(ss_ctx);
+            st |= jes_render_object_end(ss_ctx);
+        st |= jes_render_array_end(ss_ctx);
+    st |= jes_render_object_end(ss_ctx);
 
     CHECK(name,                 st == JES_NO_ERROR);
     CHECK("TC-SS-10 a key",     strstr(out, "\"a\"") != NULL);
@@ -279,15 +277,15 @@ static void test_deep_nesting(void)
 static void test_output_is_valid_json(void)
 {
     const char *name = "TC-SS-11 output is valid JSON";
-    struct jes_streaming_serializer_context ss_ctx;
-    init_ss(&ss_ctx);
+    struct jes_streaming_serializer_context* ss_ctx;
+    ss_ctx = init_ss();
 
-    jes_render_object_start(&ss_ctx);
-        jes_render_key(&ss_ctx, "sensor", 6);
-        jes_render_string(&ss_ctx, "temp", 4);
-        jes_render_key(&ss_ctx, "value", 5);
-        jes_render_int32(&ss_ctx, 23);
-    jes_render_object_end(&ss_ctx);
+    jes_render_object_start(ss_ctx);
+        jes_render_key(ss_ctx, "sensor", 6);
+        jes_render_string(ss_ctx, "temp", 4);
+        jes_render_key(ss_ctx, "value", 5);
+        jes_render_int32(ss_ctx, 23);
+    jes_render_object_end(ss_ctx);
 
     /* Re-parse with the tree API */
     uint8_t  ws[JES_REQUIRED_SIZE(20)];
@@ -315,19 +313,19 @@ static void test_output_is_valid_json(void)
 static void test_buffer_too_small(void)
 {
     const char *name = "TC-SS-12 buffer too small";
-    struct jes_streaming_serializer_context ss_ctx;
+    struct jes_streaming_serializer_context* ss_ctx;
     char tiny[4];
-    uint8_t tiny_stack[JES_STREAMING_SERIALIZER_REQUIRED_STACK_SIZE];
+    uint8_t tiny_stack[JES_STREAMING_SERIALIZER_REQUIRED_SIZE];
 
-    jes_status init_st = jes_init_streaming(&ss_ctx, tiny, sizeof(tiny),
-                                            tiny_stack, sizeof(tiny_stack));
-    if (init_st != JES_NO_ERROR) { PASS(name); return; } /* init itself rejected */
+
+    ss_ctx = jes_init_streaming(workspace, sizeof(workspace), tiny, sizeof(tiny));
+    if (ss_ctx == NULL) { PASS(name); return; } /* init itself rejected */
 
     jes_status st = JES_NO_ERROR;
-    st |= jes_render_object_start(&ss_ctx);
-    st |= jes_render_key(&ss_ctx, "longkey", 7);
-    st |= jes_render_string(&ss_ctx, "longvalue", 9);
-    st |= jes_render_object_end(&ss_ctx);
+    st |= jes_render_object_start(ss_ctx);
+    st |= jes_render_key(ss_ctx, "longkey", 7);
+    st |= jes_render_string(ss_ctx, "longvalue", 9);
+    st |= jes_render_object_end(ss_ctx);
 
     CHECK(name, st != JES_NO_ERROR);
 }
@@ -338,12 +336,12 @@ static void test_buffer_too_small(void)
 static void test_empty_object(void)
 {
     const char *name = "TC-SS-13 empty object";
-    struct jes_streaming_serializer_context ss_ctx;
-    init_ss(&ss_ctx);
+    struct jes_streaming_serializer_context* ss_ctx;
+    ss_ctx = init_ss();
 
     jes_status st = JES_NO_ERROR;
-    st |= jes_render_object_start(&ss_ctx);
-    st |= jes_render_object_end(&ss_ctx);
+    st |= jes_render_object_start(ss_ctx);
+    st |= jes_render_object_end(ss_ctx);
 
     CHECK(name,             st == JES_NO_ERROR);
     CHECK("TC-SS-13 {}",    out[0] == '{' && strchr(out, '}') != NULL);
@@ -355,12 +353,12 @@ static void test_empty_object(void)
 static void test_empty_array(void)
 {
     const char *name = "TC-SS-14 empty array";
-    struct jes_streaming_serializer_context ss_ctx;
-    init_ss(&ss_ctx);
+    struct jes_streaming_serializer_context* ss_ctx;
+    ss_ctx = init_ss();
 
     jes_status st = JES_NO_ERROR;
-    st |= jes_render_array_start(&ss_ctx);
-    st |= jes_render_array_end(&ss_ctx);
+    st |= jes_render_array_start(ss_ctx);
+    st |= jes_render_array_end(ss_ctx);
 
     CHECK(name,             st == JES_NO_ERROR);
     CHECK("TC-SS-14 []",    out[0] == '[' && strchr(out, ']') != NULL);
@@ -373,17 +371,17 @@ static void test_empty_array(void)
 static void test_integer_boundaries(void)
 {
     const char *name = "TC-SS-15 integer boundaries";
-    struct jes_streaming_serializer_context ss_ctx;
-    init_ss(&ss_ctx);
+    struct jes_streaming_serializer_context* ss_ctx;
+    ss_ctx = init_ss();
 
     jes_status st = JES_NO_ERROR;
-    st |= jes_render_object_start(&ss_ctx);
-        st |= jes_render_key(&ss_ctx, "i32min", 6); st |= jes_render_int32(&ss_ctx,  -2147483647 - 1);
-        st |= jes_render_key(&ss_ctx, "i32max", 6); st |= jes_render_int32(&ss_ctx,   2147483647);
-        st |= jes_render_key(&ss_ctx, "u32max", 6); st |= jes_render_uint32(&ss_ctx,  4294967295u);
-        st |= jes_render_key(&ss_ctx, "i64min", 6); st |= jes_render_int64(&ss_ctx,  -9223372036854775807LL - 1);
-        st |= jes_render_key(&ss_ctx, "u64max", 6); st |= jes_render_uint64(&ss_ctx,  18446744073709551615ULL);
-    st |= jes_render_object_end(&ss_ctx);
+    st |= jes_render_object_start(ss_ctx);
+        st |= jes_render_key(ss_ctx, "i32min", 6); st |= jes_render_int32(ss_ctx,  -2147483647 - 1);
+        st |= jes_render_key(ss_ctx, "i32max", 6); st |= jes_render_int32(ss_ctx,   2147483647);
+        st |= jes_render_key(ss_ctx, "u32max", 6); st |= jes_render_uint32(ss_ctx,  4294967295u);
+        st |= jes_render_key(ss_ctx, "i64min", 6); st |= jes_render_int64(ss_ctx,  -9223372036854775807LL - 1);
+        st |= jes_render_key(ss_ctx, "u64max", 6); st |= jes_render_uint64(ss_ctx,  18446744073709551615ULL);
+    st |= jes_render_object_end(ss_ctx);
 
     CHECK(name,                               st == JES_NO_ERROR);
     CHECK("TC-SS-15 -2147483648",             strstr(out, "-2147483648")             != NULL);
@@ -401,14 +399,14 @@ static void test_integer_boundaries(void)
 static void test_comma_separation(void)
 {
     const char *name = "TC-SS-16 comma separation";
-    struct jes_streaming_serializer_context ss_ctx;
-    init_ss(&ss_ctx);
+    struct jes_streaming_serializer_context* ss_ctx;
+    ss_ctx = init_ss();
 
-    jes_render_array_start(&ss_ctx);
-    jes_render_int32(&ss_ctx, 1);
-    jes_render_int32(&ss_ctx, 2);
-    jes_render_int32(&ss_ctx, 3);
-    jes_render_array_end(&ss_ctx);
+    jes_render_array_start(ss_ctx);
+    jes_render_int32(ss_ctx, 1);
+    jes_render_int32(ss_ctx, 2);
+    jes_render_int32(ss_ctx, 3);
+    jes_render_array_end(ss_ctx);
 
     /* Must contain commas between values */
     CHECK(name,                         strchr(out, ',') != NULL);
