@@ -136,7 +136,7 @@ static inline void jes_parser_process_comma(struct jes_context* ctx)
 
 static inline void jes_parser_process_start_state(struct jes_context* ctx)
 {
-        printf("\nhere");
+
   switch (ctx->serdes.tokenizer.token.type) {
     case JES_TOKEN_OPENING_BRACE:
       jes_parser_process_opening_brace(ctx);
