@@ -133,7 +133,7 @@
  * @endcode
  */
 #define JES_STREAMING_SERIALIZER_REQUIRED_SIZE \
-    ((JES_STREAMING_SERIALIZER_MAX_DEPTH * 4) + 24)
+    ((JES_STREAMING_SERIALIZER_MAX_DEPTH * 4) + 28)
 
 /* =========================================================================
  * Enumerations
@@ -418,6 +418,31 @@ jes_status jes_get_status(struct jes_context* ctx);
  * @return jes_status_block with diagnostic details.
  */
 struct jes_status_block jes_get_status_block(struct jes_context* ctx);
+
+/**
+ * Returns the sticky error and resets the sticky error to JES_NO_ERROR.
+ *
+ * This allows a sequence of jes_render_*() calls to be written without
+ * per-call error checking. Any error is preserved internally and all
+ * subsequent calls become no-ops. Calling this function at the end
+ * retrieves the first error and clears it, leaving the context ready
+ * for the next operation.
+ *
+ * Example:
+ * @code
+ *   jes_render_object_start(&ss);
+ *   jes_render_key(&ss, "name", 4);  jes_render_string(&ss, "Alice", 5);
+ *   jes_render_key(&ss, "score", 5); jes_render_int32(&ss, 42);
+ *   jes_render_object_end(&ss);
+ *
+ *   if (jes_take_streaming_status(&ss) != JES_NO_ERROR) { \* handle error \* }
+ * @endcode
+ *
+ * @param ctx Streaming serializer context.
+ * @return The first error status since the last reset, or JES_NO_ERROR if no
+ *         error occurred.
+ */
+jes_status jes_take_streaming_status(struct jes_streaming_serializer_context* ctx);
 
 /* =========================================================================
  * Capacity & diagnostics

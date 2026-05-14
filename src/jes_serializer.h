@@ -21,6 +21,7 @@ struct jes_streaming_serializer_context {
   struct jes_streaming_container* stack;  /* User-provided stack memory */
   size_t              stack_size;         /* Stack size in bytes */
   int                 stack_top;          /* Current stack depth */
+  enum jes_status     sticky_error;
   unsigned int        state;
 };
 

@@ -907,7 +907,7 @@ static inline jes_status jes_streaming_serializer_render_double(
   return JES_RENDER_FAILED;
 }
 
-static jes_status jes_streaming_serializer_render_value_prepare(struct jes_streaming_serializer_context* ctx)
+static jes_status jes_streaming_serializer_prepare_value(struct jes_streaming_serializer_context* ctx)
 {
   jes_status result;
   enum jes_type container_type;
@@ -929,7 +929,7 @@ static jes_status jes_streaming_serializer_render_value_prepare(struct jes_strea
   return result;
 }
 
-static void jes_streaming_serializer_render_value_post(struct jes_streaming_serializer_context* ctx)
+static void jes_streaming_serializer_advance_state(struct jes_streaming_serializer_context* ctx)
 {
   enum jes_type container_type = jes_streaming_serializer_stack_get_container_type(ctx);
   switch (container_type) {
@@ -979,6 +979,10 @@ jes_status jes_render_object_start(struct jes_streaming_serializer_context* ctx)
     return JES_INVALID_CONTEXT;
   }
 
+  if (ctx->sticky_error != JES_NO_ERROR) {
+    return ctx->sticky_error;
+  }
+
   result = jes_streaming_serializer_validate_state_object_start(ctx);
   if (result == JES_NO_ERROR) {
     result = jes_streaming_serializer_stack_push(ctx, JES_OBJECT);
@@ -991,6 +995,7 @@ jes_status jes_render_object_start(struct jes_streaming_serializer_context* ctx)
     ctx->state = JES_EXPECT_KEY;
   }
 
+  ctx->sticky_error = result;
   return result;
 }
 
@@ -1001,6 +1006,10 @@ jes_status jes_render_object_end(struct jes_streaming_serializer_context* ctx)
 
   if (ctx == NULL) {
     return JES_INVALID_CONTEXT;
+  }
+
+  if (ctx->sticky_error != JES_NO_ERROR) {
+    return ctx->sticky_error;
   }
 
   result = jes_streaming_serializer_validate_state_object_end(ctx);
@@ -1025,6 +1034,7 @@ jes_status jes_render_object_end(struct jes_streaming_serializer_context* ctx)
     }
   }
 
+  ctx->sticky_error = result;
   return result;
 }
 
@@ -1034,6 +1044,10 @@ jes_status jes_render_array_start(struct jes_streaming_serializer_context* ctx)
 
   if (ctx == NULL) {
     return JES_INVALID_CONTEXT;
+  }
+
+  if (ctx->sticky_error != JES_NO_ERROR) {
+    return ctx->sticky_error;
   }
 
   result = jes_streaming_serializer_validate_state_array_start(ctx);
@@ -1048,6 +1062,7 @@ jes_status jes_render_array_start(struct jes_streaming_serializer_context* ctx)
     ctx->state = JES_EXPECT_ARRAY_VALUE;
   }
 
+  ctx->sticky_error = result;
   return result;
 }
 
@@ -1058,6 +1073,10 @@ jes_status jes_render_array_end(struct jes_streaming_serializer_context* ctx)
 
   if (ctx == NULL) {
     return JES_INVALID_CONTEXT;
+  }
+
+  if (ctx->sticky_error != JES_NO_ERROR) {
+    return ctx->sticky_error;
   }
 
   result = jes_streaming_serializer_validate_state_array_end(ctx);
@@ -1082,6 +1101,7 @@ jes_status jes_render_array_end(struct jes_streaming_serializer_context* ctx)
     }
   }
 
+  ctx->sticky_error = result;
   return result;
 }
 
@@ -1095,6 +1115,10 @@ jes_status jes_render_key(struct jes_streaming_serializer_context* ctx, const ch
 
   if (key == NULL) {
     return JES_INVALID_PARAMETER;
+  }
+
+  if (ctx->sticky_error != JES_NO_ERROR) {
+    return ctx->sticky_error;
   }
 
   result = jes_streaming_serializer_validate_state_key(ctx);
@@ -1116,6 +1140,7 @@ jes_status jes_render_key(struct jes_streaming_serializer_context* ctx, const ch
     ctx->state = JES_EXPECT_VALUE;
   }
 
+  ctx->sticky_error = result;
   return result;
 }
 
@@ -1128,15 +1153,20 @@ jes_status jes_render_int32(struct jes_streaming_serializer_context* ctx, int32_
     return JES_INVALID_CONTEXT;
   }
 
-  result = jes_streaming_serializer_render_value_prepare(ctx);
+  if (ctx->sticky_error != JES_NO_ERROR) {
+    return ctx->sticky_error;
+  }
+
+  result = jes_streaming_serializer_prepare_value(ctx);
 
   if (result == JES_NO_ERROR) {
     result = jes_streaming_serializer_render_int32(ctx, value);
     if (result == JES_NO_ERROR) {
-      jes_streaming_serializer_render_value_post(ctx);
+      jes_streaming_serializer_advance_state(ctx);
     }
   }
 
+  ctx->sticky_error = result;
   return result;
 }
 
@@ -1149,15 +1179,20 @@ jes_status jes_render_int64(struct jes_streaming_serializer_context* ctx, int64_
     return JES_INVALID_CONTEXT;
   }
 
-  result = jes_streaming_serializer_render_value_prepare(ctx);
+  if (ctx->sticky_error != JES_NO_ERROR) {
+    return ctx->sticky_error;
+  }
+
+  result = jes_streaming_serializer_prepare_value(ctx);
 
   if (result == JES_NO_ERROR) {
     result = jes_streaming_serializer_render_int64(ctx, value);
     if (result == JES_NO_ERROR) {
-      jes_streaming_serializer_render_value_post(ctx);
+      jes_streaming_serializer_advance_state(ctx);
     }
   }
 
+  ctx->sticky_error = result;
   return result;
 }
 
@@ -1170,15 +1205,20 @@ jes_status jes_render_uint32(struct jes_streaming_serializer_context* ctx, uint3
     return JES_INVALID_CONTEXT;
   }
 
-  result = jes_streaming_serializer_render_value_prepare(ctx);
+  if (ctx->sticky_error != JES_NO_ERROR) {
+    return ctx->sticky_error;
+  }
+
+  result = jes_streaming_serializer_prepare_value(ctx);
 
   if (result == JES_NO_ERROR) {
     result = jes_streaming_serializer_render_uint32(ctx, value);
     if (result == JES_NO_ERROR) {
-      jes_streaming_serializer_render_value_post(ctx);
+      jes_streaming_serializer_advance_state(ctx);
     }
   }
 
+  ctx->sticky_error = result;
   return result;
 }
 
@@ -1191,15 +1231,20 @@ jes_status jes_render_uint64(struct jes_streaming_serializer_context* ctx, uint6
     return JES_INVALID_CONTEXT;
   }
 
-  result = jes_streaming_serializer_render_value_prepare(ctx);
+  if (ctx->sticky_error != JES_NO_ERROR) {
+    return ctx->sticky_error;
+  }
+
+  result = jes_streaming_serializer_prepare_value(ctx);
 
   if (result == JES_NO_ERROR) {
     result = jes_streaming_serializer_render_uint64(ctx, value);
     if (result == JES_NO_ERROR) {
-      jes_streaming_serializer_render_value_post(ctx);
+      jes_streaming_serializer_advance_state(ctx);
     }
   }
 
+  ctx->sticky_error = result;
   return result;
 }
 
@@ -1212,15 +1257,20 @@ jes_status jes_render_double(struct jes_streaming_serializer_context* ctx, doubl
     return JES_INVALID_CONTEXT;
   }
 
-  result = jes_streaming_serializer_render_value_prepare(ctx);
+  if (ctx->sticky_error != JES_NO_ERROR) {
+    return ctx->sticky_error;
+  }
+
+  result = jes_streaming_serializer_prepare_value(ctx);
 
   if (result == JES_NO_ERROR) {
     result = jes_streaming_serializer_render_double(ctx, value);
     if (result == JES_NO_ERROR) {
-      jes_streaming_serializer_render_value_post(ctx);
+      jes_streaming_serializer_advance_state(ctx);
     }
   }
 
+  ctx->sticky_error = result;
   return result;
 }
 
@@ -1233,15 +1283,20 @@ jes_status jes_render_string(struct jes_streaming_serializer_context* ctx, const
     return JES_INVALID_CONTEXT;
   }
 
-  result = jes_streaming_serializer_render_value_prepare(ctx);
+  if (ctx->sticky_error != JES_NO_ERROR) {
+    return ctx->sticky_error;
+  }
+
+  result = jes_streaming_serializer_prepare_value(ctx);
 
   if (result == JES_NO_ERROR) {
     result = jes_streaming_serializer_render_string(ctx, string, length);
     if (result == JES_NO_ERROR) {
-      jes_streaming_serializer_render_value_post(ctx);
+      jes_streaming_serializer_advance_state(ctx);
     }
   }
 
+  ctx->sticky_error = result;
   return result;
 }
 
@@ -1254,15 +1309,20 @@ jes_status jes_render_null(struct jes_streaming_serializer_context* ctx)
     return JES_INVALID_CONTEXT;
   }
 
-  result = jes_streaming_serializer_render_value_prepare(ctx);
+  if (ctx->sticky_error != JES_NO_ERROR) {
+    return ctx->sticky_error;
+  }
+
+  result = jes_streaming_serializer_prepare_value(ctx);
 
   if (result == JES_NO_ERROR) {
     result = jes_streaming_serializer_render_literal(ctx, "null", sizeof("null") - 1);
     if (result == JES_NO_ERROR) {
-      jes_streaming_serializer_render_value_post(ctx);
+      jes_streaming_serializer_advance_state(ctx);
     }
   }
 
+  ctx->sticky_error = result;
   return result;
 }
 
@@ -1275,16 +1335,20 @@ jes_status jes_render_true(struct jes_streaming_serializer_context* ctx)
     return JES_INVALID_CONTEXT;
   }
 
-  result = jes_streaming_serializer_render_value_prepare(ctx);
+  if (ctx->sticky_error != JES_NO_ERROR) {
+    return ctx->sticky_error;
+  }
+
+  result = jes_streaming_serializer_prepare_value(ctx);
 
   if (result == JES_NO_ERROR) {
     result = jes_streaming_serializer_render_literal(ctx, "true", sizeof("true") - 1);
     if (result == JES_NO_ERROR) {
-      jes_streaming_serializer_render_value_post(ctx);
+      jes_streaming_serializer_advance_state(ctx);
     }
   }
 
-
+  ctx->sticky_error = result;
   return result;
 }
 
@@ -1297,14 +1361,26 @@ jes_status jes_render_false(struct jes_streaming_serializer_context* ctx)
     return JES_INVALID_CONTEXT;
   }
 
-  result = jes_streaming_serializer_render_value_prepare(ctx);
+  if (ctx->sticky_error != JES_NO_ERROR) {
+    return ctx->sticky_error;
+  }
+
+  result = jes_streaming_serializer_prepare_value(ctx);
 
   if (result == JES_NO_ERROR) {
     result = jes_streaming_serializer_render_literal(ctx, "false", sizeof("false") - 1);
     if (result == JES_NO_ERROR) {
-      jes_streaming_serializer_render_value_post(ctx);
+      jes_streaming_serializer_advance_state(ctx);
     }
   }
 
+  ctx->sticky_error = result;
   return result;
+}
+
+jes_status jes_take_streaming_status(struct jes_streaming_serializer_context* ctx)
+{
+  jes_status error = ctx->sticky_error;
+  ctx->sticky_error = JES_NO_ERROR;
+  return error;
 }
