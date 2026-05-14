@@ -907,7 +907,7 @@ static inline jes_status jes_streaming_serializer_render_double(
   return JES_RENDER_FAILED;
 }
 
-static jes_status jes_streaming_serializer_prepare_value(struct jes_streaming_serializer_context* ctx)
+static jes_status jes_streaming_serializer_render_value_pre(struct jes_streaming_serializer_context* ctx)
 {
   jes_status result;
   enum jes_type container_type;
@@ -1157,7 +1157,7 @@ jes_status jes_render_int32(struct jes_streaming_serializer_context* ctx, int32_
     return ctx->sticky_error;
   }
 
-  result = jes_streaming_serializer_prepare_value(ctx);
+  result = jes_streaming_serializer_render_value_pre(ctx);
 
   if (result == JES_NO_ERROR) {
     result = jes_streaming_serializer_render_int32(ctx, value);
@@ -1183,7 +1183,7 @@ jes_status jes_render_int64(struct jes_streaming_serializer_context* ctx, int64_
     return ctx->sticky_error;
   }
 
-  result = jes_streaming_serializer_prepare_value(ctx);
+  result = jes_streaming_serializer_render_value_pre(ctx);
 
   if (result == JES_NO_ERROR) {
     result = jes_streaming_serializer_render_int64(ctx, value);
@@ -1209,7 +1209,7 @@ jes_status jes_render_uint32(struct jes_streaming_serializer_context* ctx, uint3
     return ctx->sticky_error;
   }
 
-  result = jes_streaming_serializer_prepare_value(ctx);
+  result = jes_streaming_serializer_render_value_pre(ctx);
 
   if (result == JES_NO_ERROR) {
     result = jes_streaming_serializer_render_uint32(ctx, value);
@@ -1235,7 +1235,7 @@ jes_status jes_render_uint64(struct jes_streaming_serializer_context* ctx, uint6
     return ctx->sticky_error;
   }
 
-  result = jes_streaming_serializer_prepare_value(ctx);
+  result = jes_streaming_serializer_render_value_pre(ctx);
 
   if (result == JES_NO_ERROR) {
     result = jes_streaming_serializer_render_uint64(ctx, value);
@@ -1261,7 +1261,7 @@ jes_status jes_render_double(struct jes_streaming_serializer_context* ctx, doubl
     return ctx->sticky_error;
   }
 
-  result = jes_streaming_serializer_prepare_value(ctx);
+  result = jes_streaming_serializer_render_value_pre(ctx);
 
   if (result == JES_NO_ERROR) {
     result = jes_streaming_serializer_render_double(ctx, value);
@@ -1287,7 +1287,7 @@ jes_status jes_render_string(struct jes_streaming_serializer_context* ctx, const
     return ctx->sticky_error;
   }
 
-  result = jes_streaming_serializer_prepare_value(ctx);
+  result = jes_streaming_serializer_render_value_pre(ctx);
 
   if (result == JES_NO_ERROR) {
     result = jes_streaming_serializer_render_string(ctx, string, length);
@@ -1313,7 +1313,7 @@ jes_status jes_render_null(struct jes_streaming_serializer_context* ctx)
     return ctx->sticky_error;
   }
 
-  result = jes_streaming_serializer_prepare_value(ctx);
+  result = jes_streaming_serializer_render_value_pre(ctx);
 
   if (result == JES_NO_ERROR) {
     result = jes_streaming_serializer_render_literal(ctx, "null", sizeof("null") - 1);
@@ -1339,7 +1339,7 @@ jes_status jes_render_true(struct jes_streaming_serializer_context* ctx)
     return ctx->sticky_error;
   }
 
-  result = jes_streaming_serializer_prepare_value(ctx);
+  result = jes_streaming_serializer_render_value_pre(ctx);
 
   if (result == JES_NO_ERROR) {
     result = jes_streaming_serializer_render_literal(ctx, "true", sizeof("true") - 1);
@@ -1365,7 +1365,7 @@ jes_status jes_render_false(struct jes_streaming_serializer_context* ctx)
     return ctx->sticky_error;
   }
 
-  result = jes_streaming_serializer_prepare_value(ctx);
+  result = jes_streaming_serializer_render_value_pre(ctx);
 
   if (result == JES_NO_ERROR) {
     result = jes_streaming_serializer_render_literal(ctx, "false", sizeof("false") - 1);
