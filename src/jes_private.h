@@ -29,7 +29,7 @@
 
 #define HAS_PARENT(node_ptr) (((node_ptr) != NULL) ? (node_ptr)->parent < JES_INVALID_INDEX : false)
 #define HAS_SIBLING(node_ptr) (((node_ptr) != NULL) ? (node_ptr)->sibling < JES_INVALID_INDEX : false)
-#define HAS_CHILD(node_ptr) (((node_ptr) != NULL) ? (node_ptr)->last_child < JES_INVALID_INDEX : false)
+#define HAS_CHILD(node_ptr) (((node_ptr) != NULL) ? (node_ptr)->first_child < JES_INVALID_INDEX : false)
 
 #define GET_PARENT(node_mng_, node_ptr) (HAS_PARENT(node_ptr) ? &node_mng_.pool[(node_ptr)->parent] : NULL)
 #define GET_SIBLING(node_mng_, node_ptr) (HAS_SIBLING(node_ptr) ? &node_mng_.pool[(node_ptr)->sibling] : NULL)
