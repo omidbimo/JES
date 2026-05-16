@@ -185,13 +185,11 @@ jes_status jes_delete_element(struct jes_context* ctx, struct jes_element* eleme
 
   ctx->status = JES_NO_ERROR;
 
-  if (element != NULL) {
-    if (!jes_validate_node(ctx, (struct jes_node*)element)) {
+  if ((element == NULL) || (!jes_validate_node(ctx, (struct jes_node*)element))) {
       ctx->status = JES_INVALID_PARAMETER;
-    }
-    else {
-      jes_tree_delete_node(ctx, (struct jes_node*)element);
-    }
+  }
+  else {
+    jes_tree_delete_node(ctx, (struct jes_node*)element);
   }
 
   return ctx->status;
