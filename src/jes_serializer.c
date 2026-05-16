@@ -347,7 +347,7 @@ static void jes_serializer_state_machine(struct jes_context* ctx, struct jes_ser
 
   do {
 #if defined(JES_ENABLE_SERIALIZER_STATE_LOG)
-    JES_LOG_STATE("\nJES.Serializer.State: ", ctx->serdes.state, "");
+    JES_LOG_STATE("JES.Serializer.State: ", ctx->serdes.state, "\n");
 #endif
     switch (ctx->serdes.state) {
       case JES_EXPECT_KEY:
@@ -368,7 +368,7 @@ static void jes_serializer_state_machine(struct jes_context* ctx, struct jes_ser
     }
 
 #if defined(JES_ENABLE_SERIALIZER_NODE_LOG)
-    JES_LOG_NODE("\n", JES_NODE_INDEX(ctx->node_mng, ctx->serdes.iter),
+    JES_LOG_NODE("", JES_NODE_INDEX(ctx->node_mng, ctx->serdes.iter),
                           ctx->serdes.iter->json_tlv.type,
                           ctx->serdes.iter->json_tlv.length,
                           ctx->serdes.iter->json_tlv.value,
@@ -376,13 +376,13 @@ static void jes_serializer_state_machine(struct jes_context* ctx, struct jes_ser
                           ctx->serdes.iter->sibling,
                           ctx->serdes.iter->first_child,
                           ctx->serdes.iter->last_child,
-                          "");
+                          "\n");
 #endif
 
   } while ((ctx->serdes.state != JES_END) && (ctx->serdes.iter != NULL) && (ctx->status == JES_NO_ERROR));
 
 #if defined(JES_ENABLE_SERIALIZER_STATE_LOG)
-    JES_LOG_STATE("\nJES.Serializer.State: ", ctx->serdes.state, "");
+    JES_LOG_STATE("JES.Serializer.State: ", ctx->serdes.state, "\n");
 #endif
 }
 
@@ -406,6 +406,7 @@ size_t jes_render(struct jes_context *ctx, char* buffer, size_t buffer_length, b
   }
 
   /* First pass: just evaluate the JSON structure and calculate the required output buffer length. */
+  ctx->status = JES_NO_ERROR;
   serializer.renderer.opening_brace = jes_serializer_calculate_delimiter;
   serializer.renderer.closing_brace = jes_serializer_calculate_delimiter;
   serializer.renderer.opening_bracket = jes_serializer_calculate_delimiter;
@@ -473,6 +474,7 @@ size_t jes_evaluate(struct jes_context *ctx, bool compact)
     return 0;
   }
 
+  ctx->status = JES_NO_ERROR;
   serializer.renderer.opening_brace = jes_serializer_calculate_delimiter;
   serializer.renderer.closing_brace = jes_serializer_calculate_delimiter;
   serializer.renderer.opening_bracket = jes_serializer_calculate_delimiter;
