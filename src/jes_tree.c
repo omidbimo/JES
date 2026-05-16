@@ -213,6 +213,7 @@ struct jes_node* jes_tree_insert_key_node(struct jes_context* ctx,
                                           const char* keyword)
 {
   struct jes_node* new_node = NULL;
+  struct jes_node* duplicate_key_node = NULL;
 
   if (parent_object) {
     assert(NODE_TYPE(parent_object) == JES_OBJECT);
@@ -222,9 +223,9 @@ struct jes_node* jes_tree_insert_key_node(struct jes_context* ctx,
   }
 
   /* No duplicate keys in the same object are allowed. */
-  struct jes_node* node = ctx->node_mng.find_key_fn(ctx, parent_object, keyword, keyword_length);
+  duplicate_key_node = ctx->node_mng.find_key_fn(ctx, parent_object, keyword, keyword_length);
 
-  if (node) {
+  if (duplicate_key_node) {
     ctx->status = JES_DUPLICATE_KEY;
   }
   else
@@ -353,7 +354,7 @@ void jes_tree_delete_node(struct jes_context* ctx, struct jes_node* node)
 static struct jes_node* jes_tree_find_key(struct jes_context* ctx,
                                           struct jes_node* parent_object,
                                           const char* keyword,
-                                          size_t keyword_lenngth)
+                                          size_t keyword_length)
 {
   struct jes_node* key = NULL;
   struct jes_node* iter = parent_object;
@@ -368,8 +369,8 @@ static struct jes_node* jes_tree_find_key(struct jes_context* ctx,
   iter = GET_FIRST_CHILD(ctx->node_mng, iter);
 
   while ((iter != NULL) && (NODE_TYPE(iter) == JES_KEY)) {
-    if ((iter->json_tlv.length == keyword_lenngth) &&
-        (memcmp(iter->json_tlv.value, keyword, keyword_lenngth) == 0)) {
+    if ((iter->json_tlv.length == keyword_length) &&
+        (memcmp(iter->json_tlv.value, keyword, keyword_length) == 0)) {
       key = iter;
       break;
     }
