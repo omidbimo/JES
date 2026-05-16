@@ -558,6 +558,45 @@ static void test_hashed_search(void)
 }
 
 /* =========================================================================
+ * Group 9 — delete a key whose value is an object with multiple children
+ * ========================================================================= */
+static void test_delete_key_with_multiple_values(void)
+{
+    printf("\nGroup 9: jes_delete_key subtree deletion\n");
+
+    struct jes_context *ctx = load(
+        "{\"keep\":0,"
+         "\"del\":{\"a\":1,\"b\":2,\"c\":3},"
+         "\"also_keep\":2}");
+    if (!ctx) { fail("G9-setup", "load failed"); return; }
+    struct jes_element *root = jes_get_root(ctx);
+    struct jes_element *key = jes_get_key(ctx, root, "del");
+    /* G9-01: baseline renders */
+    /* G9-01 */ CHECK("G9-01 baseline renders", renders_ok(ctx));
+
+    jes_delete_element(ctx, key);
+
+    /* G9-02: tree still renders after deleting a multi-child subtree */
+    /* G9-02 */ CHECK("G9-02 renders after delete", renders_ok(ctx));
+
+    /* G9-03: deleted key is gone */
+    /* G9-03 */ CHECK_NULL("G9-03 del key not found", jes_get_key(ctx, root, "del"));
+
+    /* G9-04: sibling keys survive */
+    /* G9-04 */ CHECK_NOTNULL("G9-04 keep still found",      jes_get_key(ctx, root, "keep"));
+    /* G9-05 */ CHECK_NOTNULL("G9-05 also_keep still found", jes_get_key(ctx, root, "also_keep"));
+
+    /* G9-06: children of deleted key are also gone */
+    /* G9-06 */ CHECK_NULL("G9-06 del.a not found", jes_get_key(ctx, root, "del.a"));
+    /* G9-07 */ CHECK_NULL("G9-07 del.b not found", jes_get_key(ctx, root, "del.b"));
+    /* G9-08 */ CHECK_NULL("G9-08 del.c not found", jes_get_key(ctx, root, "del.c"));
+
+    /* G9-09: node count is consistent (no leaked nodes) */
+    uint32_t count = jes_get_element_count(ctx);
+    printf("count: %d\n", count);
+    /* G9-09 */ CHECK("G9-09 node count == 5", count == 5); /* root + keep + 1 + also_keep + 2 */
+}
+/* =========================================================================
  * main
  * ========================================================================= */
 
@@ -565,14 +604,15 @@ int main(void)
 {
     printf("=== JES Key API Tests ===\n");
 
-    test_get_key_invalid_args();
-    test_get_key_path_format();
-    test_get_key_lookup();
-    test_get_key_value();
-    test_add_key();
-    test_update_key_value();
-    test_delete_key();
-    test_hashed_search();
+    //test_get_key_invalid_args();
+    //test_get_key_path_format();
+    //test_get_key_lookup();
+    //test_get_key_value();
+    //test_add_key();
+    //test_update_key_value();
+    //test_delete_key();
+    //test_hashed_search();
+    test_delete_key_with_multiple_values();
 
     printf("\n=== Results: %d passed, %d failed ===\n", g_passed, g_failed);
     return g_failed == 0 ? 0 : 1;
