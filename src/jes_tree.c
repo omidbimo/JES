@@ -87,10 +87,10 @@ bool jes_validate_node(struct jes_context* ctx, struct jes_node* node)
     /* Check if the node is correctly aligned */
     if ((((void*)node - (void*)(mng_ctx->pool)) % sizeof(*node)) == 0) {
       /* Check if the node links are in bound */
-      if (((node->parent == JES_INVALID_INDEX)      || (node->parent <= mng_ctx->capacity))      &&
-          ((node->first_child == JES_INVALID_INDEX) || (node->first_child <= mng_ctx->capacity)) &&
-          ((node->last_child == JES_INVALID_INDEX)  || (node->last_child <= mng_ctx->capacity))  &&
-          ((node->sibling == JES_INVALID_INDEX)     || (node->sibling <= mng_ctx->capacity))) {
+      if (((node->parent == JES_INVALID_INDEX)      || (node->parent < mng_ctx->capacity))      &&
+          ((node->first_child == JES_INVALID_INDEX) || (node->first_child < mng_ctx->capacity)) &&
+          ((node->last_child == JES_INVALID_INDEX)  || (node->last_child < mng_ctx->capacity))  &&
+          ((node->sibling == JES_INVALID_INDEX)     || (node->sibling < mng_ctx->capacity))) {
         return true;
       }
     }
@@ -182,10 +182,10 @@ struct jes_node* jes_tree_insert_node(struct jes_context* ctx,
       else {
         /* There is no node before. Prepend node */
         new_node->sibling = parent->first_child;
-        parent->first_child = JES_NODE_INDEX(ctx->node_mng, new_node);
         if (!HAS_CHILD(parent)) {
           parent->last_child = JES_NODE_INDEX(ctx->node_mng, new_node);
         }
+        parent->first_child = JES_NODE_INDEX(ctx->node_mng, new_node);
       }
     }
     else {
@@ -282,6 +282,10 @@ void jes_tree_delete_node(struct jes_context* ctx, struct jes_node* node)
 
     /* Update parent's first_child to skip the node being deleted */
     parent->first_child = iter->sibling;
+    if (parent->last_child == JES_NODE_INDEX(ctx->node_mng, iter)) {
+      parent->last_child = JES_INVALID_INDEX;
+    }
+
 #if defined(JES_ENABLE_PARSER_NODE_LOG)
     JES_LOG_NODE("\n    - ", JES_NODE_INDEX(ctx->node_mng, iter), NODE_TYPE(iter),
                   iter->json_tlv.length, iter->json_tlv.value,
