@@ -67,7 +67,7 @@ static void jes_free(struct jes_context* ctx, struct jes_node* node)
     mng_ctx->node_count--;
     /* prepend the node to the free LIFO */
     if (mng_ctx->freed) {
-      free_node->next = mng_ctx->freed->next;
+      free_node->next = mng_ctx->freed;
     }
     mng_ctx->freed = free_node;
   }
