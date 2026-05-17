@@ -98,7 +98,6 @@ static inline void jes_parser_process_closing_bracket(struct jes_context* ctx)
   /* If current node is not an ARRAY type, navigate up to find the parent ARRAY */
   if (NODE_TYPE(ctx->serdes.iter) != JES_ARRAY) {
     ctx->serdes.iter = jes_tree_get_parent_node_by_type(ctx, ctx->serdes.iter, JES_ARRAY);
-    assert(ctx->serdes.iter != NULL);
   }
 
   if (ctx->serdes.iter != NULL) {
@@ -318,7 +317,7 @@ static inline void jes_parser_process_expect_colon_state(struct jes_context* ctx
 void jes_parser_state_machine(struct jes_context *ctx)
 {
   #if defined(JES_ENABLE_PARSER_STATE_LOG)
-    JES_LOG_STATE("\nJES.Parser.State: ", ctx->serdes.state, "");
+    JES_LOG_STATE("JES.Parser.State: ", ctx->serdes.state, "\n");
 #endif
 
   do {
@@ -354,7 +353,7 @@ void jes_parser_state_machine(struct jes_context *ctx)
     }
 
 #if defined(JES_ENABLE_PARSER_STATE_LOG)
-    JES_LOG_STATE("\nJES.Parser.State: ", ctx->serdes.state, "");
+    JES_LOG_STATE("JES.Parser.State: ", ctx->serdes.state, "\n");
 #endif
 
   } while ((ctx->status == JES_NO_ERROR) && (ctx->serdes.state != JES_END));
