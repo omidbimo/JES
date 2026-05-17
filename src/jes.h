@@ -88,17 +88,21 @@
 #if __SIZEOF_POINTER__ == 4
   #define JES_CONTEXT_SIZE  128
   #ifdef JES_USE_32BIT_NODE_DESCRIPTOR
-    #define JES_NODE_SIZE     24
+    #define JES_NODE_SIZE   24
   #else
-    #define JES_NODE_SIZE     16
+    #define JES_NODE_SIZE   16
   #endif
+  #define JES_STREAMING_SERIALIZER_CONTAINER_SIZE 4
+  #define JES_STREAMING_SERIALIZER_CONTEXT_SIZE   28
 #else
   #define JES_CONTEXT_SIZE  248
   #ifdef JES_USE_32BIT_NODE_DESCRIPTOR
-    #define JES_NODE_SIZE     28
+    #define JES_NODE_SIZE   28
   #else
-    #define JES_NODE_SIZE     16
+    #define JES_NODE_SIZE   24
   #endif
+  #define JES_STREAMING_SERIALIZER_CONTAINER_SIZE 4
+  #define JES_STREAMING_SERIALIZER_CONTEXT_SIZE   48
 #endif
 
 /**
@@ -133,8 +137,8 @@
  * @endcode
  */
 #define JES_STREAMING_SERIALIZER_REQUIRED_SIZE \
-    ((JES_STREAMING_SERIALIZER_MAX_DEPTH * 4) + 28)
-
+  ((JES_STREAMING_SERIALIZER_MAX_DEPTH * JES_STREAMING_SERIALIZER_CONTAINER_SIZE) \
+  + JES_STREAMING_SERIALIZER_CONTEXT_SIZE)
 /* =========================================================================
  * Enumerations
  * ========================================================================= */
