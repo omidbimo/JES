@@ -593,7 +593,6 @@ static void test_delete_key_with_multiple_values(void)
 
     /* G9-09: node count is consistent (no leaked nodes) */
     uint32_t count = jes_get_element_count(ctx);
-    printf("count: %d\n", count);
     /* G9-09 */ CHECK("G9-09 node count == 5", count == 5); /* root + keep + 1 + also_keep + 2 */
 }
 /* =========================================================================
@@ -604,14 +603,14 @@ int main(void)
 {
     printf("=== JES Key API Tests ===\n");
 
-    //test_get_key_invalid_args();
-    //test_get_key_path_format();
-    //test_get_key_lookup();
-    //test_get_key_value();
-    //test_add_key();
-    //test_update_key_value();
-    //test_delete_key();
-    //test_hashed_search();
+    test_get_key_invalid_args();
+    test_get_key_path_format();
+    test_get_key_lookup();
+    test_get_key_value();
+    test_add_key();
+    test_update_key_value();
+    test_delete_key();
+    test_hashed_search();
     test_delete_key_with_multiple_values();
 
     printf("\n=== Results: %d passed, %d failed ===\n", g_passed, g_failed);
