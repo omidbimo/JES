@@ -19,7 +19,19 @@ JES provides a simple and efficient API to:
 - ✅ **Fast Key search**  – Can be configured at compile time to utilise a hash table key lookup for faster key searching in large JSON data.
 - ✅ **Flexible output formatting** – The output can be generated as a compact string or formatted with indentation for readability.
 - ✅ **Incremental JSON serialization (AKA: Streaming Serialization)** - Write your JSON elemnts directly into the output buffer.
-- 
+
+## Usage
+
+JES provides two independent components for working with JSON in C.
+
+### Tree-Based Parser / Serializer
+Parses a JSON document into an in-memory node tree, enabling traversal, modification of individual elements and re-serializing the tree.
+Use this when you need to read or manipulate existing JSON data.
+
+### Streaming Serializer
+Produces JSON output incrementally without allocating a tree, writing directly to the output buffer with minimal memory overhead and maximum throughput.
+Use this when generating JSON from scratch where the output structure is known upfront and memory or performance are a concern.
+
 ## [API Documentation](https://github.com/omidbimo/JES/blob/main/documentation.md)
 
 ## Limitations
