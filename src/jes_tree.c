@@ -261,20 +261,22 @@ static struct jes_node* jes_get_leaf(struct jes_context* ctx,
 }
 
 static struct jes_node* jes_get_left_sibling(struct jes_context* ctx,
-                                             struct jes_node* parent,
-                                             struct jes_node* child)
+                                             struct jes_node* node)
 {
   struct jes_node* prev_sibling = NULL;
+  struct jes_node* parent = NULL;
   struct jes_node* iter = NULL;
-  assert(parent != NULL);
+  assert(node != NULL);
 
-  iter = GET_FIRST_CHILD(ctx->node_mng, parent);
+  parent = GET_PARENT(ctx->node_mng, node);
+  if (parent != NULL) {
+    iter = GET_FIRST_CHILD(ctx->node_mng, parent);
 
-  while ((iter != NULL) && (iter != child)) {
-    prev_sibling = iter;
-    iter = GET_SIBLING(ctx->node_mng, iter);
+    while ((iter != NULL) && (iter != node)) {
+      prev_sibling = iter;
+      iter = GET_SIBLING(ctx->node_mng, iter);
+    }
   }
-
   return prev_sibling;
 }
 
@@ -344,8 +346,10 @@ void jes_tree_delete_node(struct jes_context* ctx, struct jes_node* node)
   /* Second phase: Delete the original node and update parent references */
   parent = GET_PARENT(ctx->node_mng, node);
   if (parent != NULL) {
-    struct jes_node* prev_sibling = jes_get_left_sibling(ctx, parent , node);
+    struct jes_node* prev_sibling = jes_get_left_sibling(ctx, node);
+
     if (prev_sibling) {
+      assert(prev_sibling->parent == JES_NODE_INDEX(ctx->node_mng, parent));
       /* Node is not the first child of its parent */
       prev_sibling->sibling = node->sibling;
 
