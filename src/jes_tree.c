@@ -37,7 +37,11 @@ static struct jes_node* jes_allocate(struct jes_context* ctx)
       mng_ctx->next_free++;
     }
     /* Setting node descriptors to their default values. */
-    memset(((struct jes_element*)new_node) + 1, 0xFF, sizeof(jes_node_descriptor) * 4);
+    new_node->parent = JES_INVALID_INDEX;
+    new_node->sibling = JES_INVALID_INDEX;
+    new_node->first_child = JES_INVALID_INDEX;
+    new_node->last_child = JES_INVALID_INDEX;
+
     mng_ctx->node_count++;
   }
   else {
@@ -82,8 +86,8 @@ bool jes_validate_node(struct jes_context* ctx, struct jes_node* node)
   assert(ctx->cookie == JES_CONTEXT_COOKIE);
 
   mng_ctx = &ctx->node_mng;
-  if (((void*)node >= (void*)(mng_ctx->pool)) &&
-      (((void*)node + sizeof(*node)) <= ((void*)(mng_ctx->pool) + mng_ctx->size))) {
+  if (((uintptr_t)node >= (uintptr_t)(mng_ctx->pool)) &&
+      (((uintptr_t)node + sizeof(*node)) <= ((uintptr_t)(mng_ctx->pool) + mng_ctx->size))) {
     /* Check if the node is correctly aligned */
     if ((((void*)node - (void*)(mng_ctx->pool)) % sizeof(*node)) == 0) {
       /* Check if the node links are in bound */
