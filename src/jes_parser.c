@@ -252,10 +252,10 @@ static inline void jes_parser_process_expect_value_state(struct jes_context* ctx
       return;
   case JES_TOKEN_EOF:
     ctx->status = JES_UNEXPECTED_EOF;
-    break;
-    default:
-      ctx->status = JES_UNEXPECTED_TOKEN;
-      return;
+    return;
+  default:
+    ctx->status = JES_UNEXPECTED_TOKEN;
+    return;
   }
 
   ctx->serdes.iter = jes_tree_insert_node(ctx,
