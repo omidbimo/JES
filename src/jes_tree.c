@@ -312,7 +312,6 @@ void jes_tree_delete_node(struct jes_context* ctx, struct jes_node* node)
 
     /* Get parent before deleting the node */
     parent = GET_PARENT(ctx->node_mng, to_remove);
-    assert(parent != NULL);
     if (parent == NULL) {
       ctx->status = JES_BROKEN_TREE;
       return;
@@ -446,5 +445,14 @@ jes_status jes_tree_init(struct jes_context* ctx, void *buffer, size_t buffer_si
     ctx->node_mng.find_key_fn = jes_hash_table_find_key;
   }
 
-  return jes_tree_resize(&ctx->node_mng, buffer, buffer_size);
+  ctx->node_mng.pool = buffer;
+  ctx->node_mng.size = buffer_size;
+
+  /* Cap capacity to JES_INVALID_INDEX - 1 to ensure node index JES_INVALID_INDEX
+     remains available as a sentinel value meaning "no node". */
+  ctx->node_mng.capacity = (ctx->node_mng.size / sizeof(struct jes_node)) < JES_INVALID_INDEX
+                         ? ctx->node_mng.size / sizeof(struct jes_node)
+                         : JES_INVALID_INDEX - 1;
+
+  return ctx->node_mng.capacity == 0 ? JES_BUFFER_TOO_SMALL : JES_NO_ERROR;
 }
