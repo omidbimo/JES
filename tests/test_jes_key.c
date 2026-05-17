@@ -566,7 +566,7 @@ static void test_delete_key_with_multiple_values(void)
 
     struct jes_context *ctx = load(
         "{\"keep\":0,"
-         "\"del\":{\"a\":1,\"b\":2,\"c\":3},"
+         "\"del\":{\"a\":1,\"b\":2,\"c\":[1,2,3,4,5,6,7]},"
          "\"also_keep\":2}");
     if (!ctx) { fail("G9-setup", "load failed"); return; }
     struct jes_element *root = jes_get_root(ctx);
