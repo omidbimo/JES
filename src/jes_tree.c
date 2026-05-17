@@ -197,9 +197,9 @@ struct jes_node* jes_tree_insert_node(struct jes_context* ctx,
     new_node->json_tlv.length = length;
     new_node->json_tlv.value = value;
 #if defined(JES_ENABLE_PARSER_NODE_LOG)
-    JES_LOG_NODE("\n    + ", JES_NODE_INDEX(ctx->node_mng, new_node), NODE_TYPE(new_node),
+    JES_LOG_NODE("    + ", JES_NODE_INDEX(ctx->node_mng, new_node), NODE_TYPE(new_node),
                   new_node->json_tlv.length, new_node->json_tlv.value,
-                  new_node->parent, new_node->sibling, new_node->first_child, new_node->last_child, "");
+                  new_node->parent, new_node->sibling, new_node->first_child, new_node->last_child, "\n");
 #endif
   }
 
@@ -241,104 +241,129 @@ struct jes_node* jes_tree_insert_key_node(struct jes_context* ctx,
   return new_node;
 }
 
+static struct jes_node* jes_get_leaf(struct jes_context* ctx,
+                                     struct jes_node* parent)
+{
+  struct jes_node* leaf = NULL;
+
+  assert(parent != NULL);
+
+  do {
+    leaf = GET_FIRST_CHILD(ctx->node_mng, parent);
+    parent = leaf;
+  } while (HAS_CHILD(parent));
+
+  return leaf;
+}
+
+static struct jes_node* jes_get_left_sibling(struct jes_context* ctx,
+                                             struct jes_node* parent,
+                                             struct jes_node* child)
+{
+  struct jes_node* prev_sibling = NULL;
+  struct jes_node* iter = NULL;
+  assert(parent != NULL);
+
+  iter = GET_FIRST_CHILD(ctx->node_mng, parent);
+
+  while ((iter != NULL) && (iter != child)) {
+    prev_sibling = iter;
+    iter = GET_SIBLING(ctx->node_mng, iter);
+  }
+
+  return prev_sibling;
+}
+
 /**
  * @brief Deletes a JSON node and all its children from the parse tree.
- *
- * This function performs a post-order traversal to delete a node and its entire subtree.
+ *        Iterative bottom-up leaf removal.
  */
 void jes_tree_delete_node(struct jes_context* ctx, struct jes_node* node)
 {
-  struct jes_node* iter = node;
-  struct jes_node* parent = NULL;
+  struct jes_node* to_remove = NULL;
+  struct jes_node* parent = node;
 
   if (node == NULL) {
     return;
   }
 
-  /* First phase: Delete all children using post-order traversal
-   * The deletion process:
-   * 1. Traverse to the deepest leaf node in the subtree
-   * 2. Delete leaf nodes, working back up the tree
-   * 3. Update parent-child and sibling references
-   * 4. Remove any hash table entries for keys
-   */
+  /* First phase: Delete all children */
   while (true) {
+    to_remove = jes_get_leaf(ctx, parent);
 
-    /* Navigate to the deepest leaf node in this branch */
-    while (HAS_CHILD(iter)) {
-      iter = GET_FIRST_CHILD(ctx->node_mng, iter);
-    }
+    if (to_remove == NULL) {
+      /* Current node has no leaves anymore. Move to its parent and repeat the cycle. */
 
-    /* If we're back at the original node, all children have been deleted */
-    if (iter == node) {
-      break;
+      if (parent == node) {
+        /* Reached the original node requested to be removed. break phase 1 and
+           proceed with phase 2. */
+        break;
+      }
+      /* Start traversing from node again */
+      parent = node;
+      continue;
     }
 
     /* Get parent before deleting the node */
-    parent = GET_PARENT(ctx->node_mng, iter);
+    parent = GET_PARENT(ctx->node_mng, to_remove);
+    assert(parent != NULL);
     if (parent == NULL) {
       ctx->status = JES_BROKEN_TREE;
       return;
     }
 
-    /* Update parent's first_child to skip the node being deleted */
-    parent->first_child = iter->sibling;
-    if (parent->last_child == JES_NODE_INDEX(ctx->node_mng, iter)) {
+    /* Detach node from its parent */
+    if (parent->first_child == parent->last_child) {
       parent->last_child = JES_INVALID_INDEX;
     }
+    parent->first_child = to_remove->sibling;
 
 #if defined(JES_ENABLE_PARSER_NODE_LOG)
-    JES_LOG_NODE("\n    - ", JES_NODE_INDEX(ctx->node_mng, iter), NODE_TYPE(iter),
-                  iter->json_tlv.length, iter->json_tlv.value,
-                  iter->parent, iter->sibling, iter->first_child, iter->last_child, "");
+    JES_LOG_NODE("    - ", JES_NODE_INDEX(ctx->node_mng, to_remove),
+                  NODE_TYPE(to_remove),
+                  to_remove->json_tlv.length, to_remove->json_tlv.value,
+                  to_remove->parent, to_remove->sibling,
+                  to_remove->first_child, to_remove->last_child, "\n");
 #endif
 
     /* Remove key from hash table if applicable */
     if (JES_SEARCH_HASHED == ctx->mode) {
-      if (NODE_TYPE(iter) == JES_KEY) {
+      if (NODE_TYPE(to_remove) == JES_KEY) {
         assert(ctx->hash_table.remove_fn != NULL);
-        ctx->hash_table.remove_fn(ctx, parent, iter);
+        ctx->hash_table.remove_fn(ctx, parent, to_remove);
       }
     }
 
-    jes_free(ctx, iter);
-    iter = parent;
+    jes_free(ctx, to_remove);
   }
 
   /* Second phase: Delete the original node and update parent references */
   parent = GET_PARENT(ctx->node_mng, node);
   if (parent != NULL) {
-    if (parent->first_child == JES_NODE_INDEX(ctx->node_mng, node)) {
-      /* Node is the first child of its parent */
-      parent->first_child = node->sibling;
+    struct jes_node* prev_sibling = jes_get_left_sibling(ctx, parent , node);
+    if (prev_sibling) {
+      /* Node is not the first child of its parent */
+      prev_sibling->sibling = node->sibling;
 
-      /* If this was the only child, update last_child as well */
       if (parent->last_child == JES_NODE_INDEX(ctx->node_mng, node)) {
-        parent->last_child = node->sibling;
+        /* Node is the last child of its parent */
+        parent->last_child = JES_NODE_INDEX(ctx->node_mng, prev_sibling);
       }
     }
     else {
-      /* Node is not the first child - find the sibling that points to it */
-      for (iter = GET_FIRST_CHILD(ctx->node_mng, parent);
-           iter != NULL && iter->sibling != JES_NODE_INDEX(ctx->node_mng, node);
-           iter = GET_SIBLING(ctx->node_mng, iter)) {
-        /* Just find the node whose sibling pointer points to our target node */
+      /* Node is the first child of its parent */
+      if (parent->last_child == parent->first_child) {
+        /* parent has only one single child */
+        parent->last_child = JES_INVALID_INDEX;
       }
-
-      if (iter != NULL) {
-        iter->sibling = node->sibling;
-        /* Update parent's last_child if necessary */
-        if (parent->last_child == JES_NODE_INDEX(ctx->node_mng, node)) {
-          parent->last_child = JES_NODE_INDEX(ctx->node_mng, iter);
-        }
-      }
+      parent->first_child = node->sibling;
     }
   }
 
 #if defined(JES_ENABLE_PARSER_NODE_LOG)
-  JES_LOG_NODE("\n    - ", JES_NODE_INDEX(ctx->node_mng, node), NODE_TYPE(node),
+  JES_LOG_NODE("    - ", JES_NODE_INDEX(ctx->node_mng, node), NODE_TYPE(node),
                 node->json_tlv.length, node->json_tlv.value,
-                node->parent, node->sibling, node->first_child, node->last_child, "");
+                node->parent, node->sibling, node->first_child, node->last_child, "\n");
 #endif
   /* Remove from hash table if it's a key */
   if (JES_SEARCH_HASHED == ctx->mode) {
@@ -415,4 +440,3 @@ jes_status jes_tree_init(struct jes_context* ctx, void *buffer, size_t buffer_si
 
   return jes_tree_resize(&ctx->node_mng, buffer, buffer_size);
 }
-
