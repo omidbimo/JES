@@ -344,17 +344,6 @@ size_t jes_context_size(void);
  */
 size_t jes_node_size(void);
 
-/**
- * JES_REQUIRED_BUFFER_SIZE(nodes_count)
- *
- * Runtime equivalent of JES_REQUIRED_SIZE using the actual sizes returned by
- * jes_context_size() and jes_node_size(). Prefer this when buffer sizing
- * must account for run-time build configuration.
- */
-#define JES_REQUIRED_BUFFER_SIZE(nodes_count) \
-    (jes_context_size() + \
-    (nodes_count) * jes_node_size() )
-
 /* =========================================================================
  * Parse & serialize
  * ========================================================================= */
