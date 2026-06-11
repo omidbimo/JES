@@ -18,7 +18,7 @@ JES provides a simple and efficient API to:
 - ✅ **No external dependencies** – Fully self-contained, making it easy to integrate into embedded projects.
 - ✅ **Fast Key search**  – Can be configured at compile time to utilise a hash table key lookup for faster key searching in large JSON data.
 - ✅ **Flexible output formatting** – The output can be generated as a compact string or formatted with indentation for readability.
-- ✅ **Incremental JSON serialization (AKA: Streaming Serialization)** - Write your JSON elemnts directly into the output buffer.
+- ✅ **Incremental JSON serialization (AKA: Streaming Serialization)** - Write your JSON elements directly into the output buffer.
 
 ## Usage
 
