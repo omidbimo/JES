@@ -584,9 +584,7 @@ enum jes_status jes_tokenizer_validate_string(struct jes_context* ctx, const cha
     ch = jes_tokenizer_get_char(&cursor);
 
     if (ch == '\0') {
-      if (cursor.pos < cursor.end) {
-        status = JES_UNEXPECTED_EOF;
-      }
+      status = JES_UNEXPECTED_EOF;
       break;
     }
 
