@@ -412,18 +412,6 @@ static struct jes_node* jes_tree_find_key(struct jes_context* ctx,
   return key;
 }
 
-jes_status jes_tree_resize(struct jes_node_mng_context* ctx, void *buffer, size_t buffer_size)
-{
-  ctx->pool = buffer;
-  ctx->size = buffer_size;
-
-  ctx->capacity = (ctx->size / sizeof(struct jes_node)) < JES_INVALID_INDEX
-                ? ctx->size / sizeof(struct jes_node)
-                : JES_INVALID_INDEX -1;
-
-  return ctx->capacity == 0 ? JES_BUFFER_TOO_SMALL : JES_NO_ERROR;
-}
-
 void jes_tree_reset(struct jes_node_mng_context* ctx)
 {
   ctx->node_count = 0;
