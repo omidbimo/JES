@@ -571,7 +571,7 @@ enum jes_status jes_tokenizer_validate_string(struct jes_context* ctx, const cha
 
   if (length == 0) {
     /* A string with zero length is a valid string */
-    return true;
+    return JES_NO_ERROR;
   }
 
   cursor.pos = value;
