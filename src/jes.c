@@ -1,8 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
+
 #include "jes.h"
 #include "jes_private.h"
 #include "jes_logger.h"
@@ -447,6 +449,11 @@ struct jes_element* jes_add_key(struct jes_context* ctx, struct jes_element* par
     return NULL;
   }
 
+  if (keyword_length > UINT16_MAX) {
+    ctx->status = JES_INVALID_PARAMETER;
+    return NULL;
+  }
+
   if (jes_tokenizer_validate_user_string(ctx, keyword, keyword_length) != JES_NO_ERROR) {
     ctx->status = JES_INVALID_PARAMETER;
     return NULL;
@@ -494,6 +501,11 @@ struct jes_element* jes_add_key_before(struct jes_context* ctx, struct jes_eleme
     return NULL;
   }
 
+  if (keyword_length > UINT16_MAX) {
+    ctx->status = JES_INVALID_PARAMETER;
+    return NULL;
+  }
+
   parent = GET_PARENT(ctx->node_mng, key_node);
   assert(parent != NULL);
   assert(NODE_TYPE(parent) == JES_OBJECT);
@@ -527,6 +539,11 @@ struct jes_element* jes_add_key_after(struct jes_context* ctx, struct jes_elemen
     return NULL;
   }
 
+  if (keyword_length > UINT16_MAX) {
+    ctx->status = JES_INVALID_PARAMETER;
+    return NULL;
+  }
+
   parent = GET_PARENT(ctx->node_mng, key_node);
   assert(parent != NULL);
   assert(NODE_TYPE(parent) == JES_OBJECT);
@@ -545,6 +562,11 @@ struct jes_element* jes_update_key_value(struct jes_context* ctx, struct jes_ele
   }
 
   if ((key == NULL) || !jes_validate_node(ctx, (struct jes_node*)key) || (value == NULL) || (value_length == 0)) {
+    ctx->status = JES_INVALID_PARAMETER;
+    return NULL;
+  }
+
+  if (value_length > UINT16_MAX) {
     ctx->status = JES_INVALID_PARAMETER;
     return NULL;
   }
@@ -597,6 +619,11 @@ struct jes_element* jes_update_array_value(struct jes_context* ctx, struct jes_e
     return NULL;
   }
 
+  if (value_length > UINT16_MAX) {
+    ctx->status = JES_INVALID_PARAMETER;
+    return NULL;
+  }
+
   array_size = jes_get_array_size(ctx, array);
   if (index < 0) { /* converting negative index to an index from the end of array. */
     index = array_size + index;
@@ -644,6 +671,11 @@ struct jes_element* jes_append_array_value(struct jes_context* ctx, struct jes_e
     return NULL;
   }
 
+  if (value_length > UINT16_MAX) {
+    ctx->status = JES_INVALID_PARAMETER;
+    return NULL;
+  }
+
   new_node = jes_tree_insert_node(ctx, (struct jes_node*)array, GET_LAST_CHILD(ctx->node_mng, (struct jes_node*)array), type, value_length, value);
 
   return (struct jes_element*)new_node;
@@ -663,6 +695,11 @@ struct jes_element* jes_add_array_value(struct jes_context* ctx, struct jes_elem
   ctx->status = JES_NO_ERROR;
 
   if ((array == NULL) || !jes_validate_node(ctx, (struct jes_node*)array) || (array->type != JES_ARRAY) || (value == NULL)) {
+    ctx->status = JES_INVALID_PARAMETER;
+    return NULL;
+  }
+
+  if (value_length > UINT16_MAX) {
     ctx->status = JES_INVALID_PARAMETER;
     return NULL;
   }
