@@ -210,41 +210,6 @@ struct jes_node* jes_tree_insert_node(struct jes_context* ctx,
   return new_node;
 }
 
-struct jes_node* jes_tree_insert_key_node(struct jes_context* ctx,
-                                          struct jes_node* parent_object,
-                                          struct jes_node* anchor,
-                                          uint16_t keyword_length,
-                                          const char* keyword)
-{
-  struct jes_node* new_node = NULL;
-  struct jes_node* duplicate_key_node = NULL;
-
-  if (parent_object) {
-    assert(NODE_TYPE(parent_object) == JES_OBJECT);
-  }
-  else {
-    assert(anchor == NULL);
-  }
-
-  /* No duplicate keys in the same object are allowed. */
-  duplicate_key_node = ctx->node_mng.find_key_fn(ctx, parent_object, keyword, keyword_length);
-
-  if (duplicate_key_node) {
-    ctx->status = JES_DUPLICATE_KEY;
-  }
-  else
-  {
-    new_node = jes_tree_insert_node(ctx, parent_object, anchor, JES_KEY, keyword_length, keyword);
-  }
-
-  if ((new_node) && (JES_SEARCH_HASHED == ctx->mode)) {
-    assert(ctx->hash_table.add_fn != NULL);
-    ctx->hash_table.add_fn(ctx, parent_object, new_node);
-  }
-
-  return new_node;
-}
-
 static struct jes_node* jes_get_leaf(struct jes_context* ctx,
                                      struct jes_node* parent)
 {
@@ -381,6 +346,44 @@ void jes_tree_delete_node(struct jes_context* ctx, struct jes_node* node)
   }
 
   jes_free(ctx, node);
+}
+
+struct jes_node* jes_tree_insert_key_node(struct jes_context* ctx,
+                                          struct jes_node* parent_object,
+                                          struct jes_node* anchor,
+                                          uint16_t keyword_length,
+                                          const char* keyword)
+{
+  struct jes_node* new_node = NULL;
+  struct jes_node* duplicate_key_node = NULL;
+
+  if (parent_object) {
+    assert(NODE_TYPE(parent_object) == JES_OBJECT);
+  }
+  else {
+    assert(anchor == NULL);
+  }
+
+  /* No duplicate keys in the same object are allowed. */
+  duplicate_key_node = ctx->node_mng.find_key_fn(ctx, parent_object, keyword, keyword_length);
+
+  if (duplicate_key_node) {
+    ctx->status = JES_DUPLICATE_KEY;
+  }
+  else
+  {
+    new_node = jes_tree_insert_node(ctx, parent_object, anchor, JES_KEY, keyword_length, keyword);
+  }
+
+  if ((new_node) && (JES_SEARCH_HASHED == ctx->mode)) {
+    assert(ctx->hash_table.add_fn != NULL);
+    if (ctx->hash_table.add_fn(ctx, parent_object, new_node) != JES_NO_ERROR) {
+      jes_tree_delete_node(ctx, new_node);
+      new_node = NULL;
+    }
+  }
+
+  return new_node;
 }
 
 static struct jes_node* jes_tree_find_key(struct jes_context* ctx,
