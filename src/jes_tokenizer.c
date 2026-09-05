@@ -388,25 +388,17 @@ static void jes_tokenizer_process_escaped_utf_16_token(struct jes_cursor* cursor
   }
 }
 
-static inline bool jes_tokenizer_process_string_token(struct jes_cursor* cursor,
-                                                      struct jes_token* token,
-                                                      enum jes_status* status)
+static enum jes_status jes_tokenizer_validate_string(struct jes_cursor* cursor, struct jes_token* token)
 {
-  char ch = jes_tokenizer_get_char(cursor);
+  enum jes_status status = JES_NO_ERROR;
+  char ch;
 
-  if (ch != '\"') {
-    return false;
-  }
-
-  jes_tokenizer_update_token(token, JES_TOKEN_STRING, 0, cursor->pos);
-  jes_tokenizer_advance(cursor);
-
-  while (*status == JES_NO_ERROR) {
+  while (status == JES_NO_ERROR) {
 
     ch = jes_tokenizer_get_char(cursor);
 
     if (ch == '\0') {
-      *status = JES_UNEXPECTED_EOF;
+      status = JES_UNEXPECTED_EOF;
       break;
     }
 
@@ -437,15 +429,15 @@ static inline bool jes_tokenizer_process_string_token(struct jes_cursor* cursor,
         case 'u':
           token->length++;
           jes_tokenizer_advance(cursor);
-          jes_tokenizer_process_escaped_utf_16_token(cursor, token, status);
+          jes_tokenizer_process_escaped_utf_16_token(cursor, token, &status);
           break;
         default:
-          *status = JES_INVALID_ESCAPED_SYMBOL;
-          return true;
+          status = JES_INVALID_ESCAPED_SYMBOL;
+          break;
       }
     }
     else if ((ch =='\b') || (ch =='\f') || (ch =='\n') || (ch =='\r') || (ch =='\t')) {
-      *status = JES_UNEXPECTED_SYMBOL;
+      status = JES_UNEXPECTED_SYMBOL;
       break;
     }
     else {
@@ -454,6 +446,24 @@ static inline bool jes_tokenizer_process_string_token(struct jes_cursor* cursor,
 
     jes_tokenizer_advance(cursor);
   }
+
+  return status;
+}
+
+static inline bool jes_tokenizer_process_string_token(struct jes_cursor* cursor,
+                                                      struct jes_token* token,
+                                                      enum jes_status* status)
+{
+  char ch = jes_tokenizer_get_char(cursor);
+
+  if (ch != '\"') {
+    return false;
+  }
+
+  jes_tokenizer_update_token(token, JES_TOKEN_STRING, 0, cursor->pos);
+  jes_tokenizer_advance(cursor);
+  *status = jes_tokenizer_validate_string(cursor, token);
+
   return true;
 }
 
@@ -539,7 +549,7 @@ enum jes_status jes_tokenizer_get_token(struct jes_tokenizer_context* ctx)
   return status;
 }
 
-enum jes_status jes_tokenizer_validate_number(struct jes_context* ctx, const char* value, size_t length)
+enum jes_status jes_tokenizer_validate_user_number(struct jes_context* ctx, const char* value, size_t length)
 {
   struct jes_token token = { 0 };
   struct jes_cursor cursor = { 0 };
@@ -558,7 +568,7 @@ enum jes_status jes_tokenizer_validate_number(struct jes_context* ctx, const cha
   return status;
 }
 
-enum jes_status jes_tokenizer_validate_string(struct jes_context* ctx, const char* value, size_t length)
+enum jes_status jes_tokenizer_validate_user_string(struct jes_context* ctx, const char* value, size_t length)
 {
 
   struct jes_token token = { 0 };
@@ -579,37 +589,15 @@ enum jes_status jes_tokenizer_validate_string(struct jes_context* ctx, const cha
 
   jes_tokenizer_update_token(&token, JES_TOKEN_STRING, 0, cursor.pos);
 
-  while (cursor.pos < cursor.end) {
+  status = jes_tokenizer_validate_string(&cursor, &token);
 
-    ch = jes_tokenizer_get_char(&cursor);
+  if ((status == JES_NO_ERROR) && (token.length != length)) {
+    status = JES_INVALID_STRING;
+  }
 
-    if (ch == '\0') {
-      status = JES_UNEXPECTED_EOF;
-      break;
-    }
-
-    if (ch == '\\') {
-      token.length++;
-      jes_tokenizer_advance(&cursor);
-      if (jes_tokenizer_get_char(&cursor) == 'u') {
-        token.length++;
-        jes_tokenizer_advance(&cursor);
-        jes_tokenizer_process_escaped_utf_16_token(&cursor, &token, &status);
-      }
-      else {
-        status = JES_UNEXPECTED_SYMBOL;
-        break;
-      }
-    }
-    else if ((ch == '\"') || (ch =='\b') || (ch =='\f') || (ch =='\n') || (ch =='\r') || (ch =='\t')) {
-      status = JES_UNEXPECTED_SYMBOL;
-      break;
-    }
-    else {
-      token.length++;
-    }
-
-    jes_tokenizer_advance(&cursor);
+  if ((status == JES_UNEXPECTED_EOF) && (token.length == length)) {
+    /* the tokenizer expects an end of string symbol which is not provided by this function. Ignore the error. */
+    status = JES_NO_ERROR;
   }
 
   return status;

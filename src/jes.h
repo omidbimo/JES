@@ -157,6 +157,7 @@ enum jes_search_mode {
 typedef enum jes_status {
   JES_NO_ERROR = 0,
   JES_UNEXPECTED_SYMBOL,      /* Tokenizer error */
+  JES_INVALID_STRING,         /* Tokenizer error */
   JES_INVALID_UNICODE,        /* Tokenizer error */
   JES_INVALID_NUMBER,         /* Tokenizer error */
   JES_INVALID_ESCAPED_SYMBOL, /* Tokenizer error */

@@ -393,14 +393,14 @@ struct jes_element* jes_add_element(struct jes_context* ctx, struct jes_element*
 
   switch (type) {
     case JES_NUMBER:
-      if (jes_tokenizer_validate_number(ctx, value, value_length) != JES_NO_ERROR) {
+      if (jes_tokenizer_validate_user_number(ctx, value, value_length) != JES_NO_ERROR) {
         ctx->status = JES_INVALID_PARAMETER;
         return NULL;
       }
       break;
     case JES_KEY: /* Fall through is intended */
     case JES_STRING:
-      if (jes_tokenizer_validate_string(ctx, value, value_length) != JES_NO_ERROR) {
+      if (jes_tokenizer_validate_user_string(ctx, value, value_length) != JES_NO_ERROR) {
         ctx->status = JES_INVALID_PARAMETER;
         return NULL;
       }
@@ -447,7 +447,7 @@ struct jes_element* jes_add_key(struct jes_context* ctx, struct jes_element* par
     return NULL;
   }
 
-  if (jes_tokenizer_validate_string(ctx, keyword, keyword_length) != JES_NO_ERROR) {
+  if (jes_tokenizer_validate_user_string(ctx, keyword, keyword_length) != JES_NO_ERROR) {
     ctx->status = JES_INVALID_PARAMETER;
     return NULL;
   }
