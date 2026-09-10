@@ -333,6 +333,11 @@ static void jes_tokenizer_process_escaped_utf_16_token(struct jes_cursor* cursor
 
     ch = jes_tokenizer_get_char(cursor);
 
+    if (ch == '\0') {
+      *status = JES_UNEXPECTED_EOF;
+      break;
+    }
+
     if ((ch == '\"') || (ch =='\b') || (ch =='\f') || (ch =='\n') ||
         (ch =='\r') || (ch =='\t')) {
       *status = JES_UNEXPECTED_SYMBOL;
@@ -416,6 +421,9 @@ static enum jes_status jes_tokenizer_validate_string(struct jes_cursor* cursor, 
       ch = jes_tokenizer_get_char(cursor);
 
       switch (ch) {
+        case '\0':
+          status = JES_UNEXPECTED_EOF;
+          break;
         case '"':
         case '\\':
         case '/':
@@ -424,8 +432,8 @@ static enum jes_status jes_tokenizer_validate_string(struct jes_cursor* cursor, 
         case 'n':
         case 'r':
         case 't':
-            token->length++;
-            break;
+          token->length++;
+          break;
         case 'u':
           token->length++;
           jes_tokenizer_advance(cursor);
@@ -456,7 +464,7 @@ static inline bool jes_tokenizer_process_string_token(struct jes_cursor* cursor,
 {
   char ch = jes_tokenizer_get_char(cursor);
 
-  if (ch != '\"') {
+  if (ch != '\"') { /* JSON strings are always surrounded by double quotes */
     return false;
   }
 
