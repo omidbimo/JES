@@ -450,7 +450,7 @@ struct jes_element* jes_add_key(struct jes_context* ctx, struct jes_element* par
   }
 
   if (keyword_length > UINT16_MAX) {
-    ctx->status = JES_INVALID_PARAMETER;
+    ctx->status = JES_UNSUPPORTED_ELEMENT_SIZE;
     return NULL;
   }
 
@@ -502,7 +502,7 @@ struct jes_element* jes_add_key_before(struct jes_context* ctx, struct jes_eleme
   }
 
   if (keyword_length > UINT16_MAX) {
-    ctx->status = JES_INVALID_PARAMETER;
+    ctx->status = JES_UNSUPPORTED_ELEMENT_SIZE;
     return NULL;
   }
 
@@ -540,7 +540,7 @@ struct jes_element* jes_add_key_after(struct jes_context* ctx, struct jes_elemen
   }
 
   if (keyword_length > UINT16_MAX) {
-    ctx->status = JES_INVALID_PARAMETER;
+    ctx->status = JES_UNSUPPORTED_ELEMENT_SIZE;
     return NULL;
   }
 
@@ -567,7 +567,7 @@ struct jes_element* jes_update_key_value(struct jes_context* ctx, struct jes_ele
   }
 
   if (value_length > UINT16_MAX) {
-    ctx->status = JES_INVALID_PARAMETER;
+    ctx->status = JES_UNSUPPORTED_ELEMENT_SIZE;
     return NULL;
   }
 
@@ -620,7 +620,7 @@ struct jes_element* jes_update_array_value(struct jes_context* ctx, struct jes_e
   }
 
   if (value_length > UINT16_MAX) {
-    ctx->status = JES_INVALID_PARAMETER;
+    ctx->status = JES_UNSUPPORTED_ELEMENT_SIZE;
     return NULL;
   }
 
@@ -672,7 +672,7 @@ struct jes_element* jes_append_array_value(struct jes_context* ctx, struct jes_e
   }
 
   if (value_length > UINT16_MAX) {
-    ctx->status = JES_INVALID_PARAMETER;
+    ctx->status = JES_UNSUPPORTED_ELEMENT_SIZE;
     return NULL;
   }
 
@@ -700,7 +700,7 @@ struct jes_element* jes_add_array_value(struct jes_context* ctx, struct jes_elem
   }
 
   if (value_length > UINT16_MAX) {
-    ctx->status = JES_INVALID_PARAMETER;
+    ctx->status = JES_UNSUPPORTED_ELEMENT_SIZE;
     return NULL;
   }
 
