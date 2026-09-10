@@ -1,8 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
+
 #include "jes.h"
 #include "jes_private.h"
 #include "jes_logger.h"
@@ -168,6 +170,12 @@ struct jes_node* jes_tree_insert_node(struct jes_context* ctx,
                                       uint16_t type, uint16_t length, const char* value)
 {
   struct jes_node *new_node = NULL;
+
+  if (length > UINT16_MAX) {
+    /* Currently each JASON element can contain only up to 16 bits of data. See jes_element structure. */
+    ctx->status = JES_UNSUPPORTED_ELEMENT_SIZE;
+    return NULL;
+  }
 
   new_node = jes_allocate(ctx);
 

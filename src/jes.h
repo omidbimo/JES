@@ -156,24 +156,25 @@ enum jes_search_mode {
  */
 typedef enum jes_status {
   JES_NO_ERROR = 0,
-  JES_UNEXPECTED_SYMBOL,      /* Tokenizer error */
-  JES_INVALID_STRING,         /* Tokenizer error */
-  JES_INVALID_UNICODE,        /* Tokenizer error */
-  JES_INVALID_NUMBER,         /* Tokenizer error */
-  JES_INVALID_ESCAPED_SYMBOL, /* Tokenizer error */
-  JES_UNEXPECTED_EOF,         /* Tokenizer, parser and serializer error */
-  JES_OUT_OF_MEMORY,          /* Parser error: workspace exhausted */
-  JES_UNEXPECTED_TOKEN,       /* Parser error */
-  JES_UNEXPECTED_STATE,       /* Parser and Serializer error */
-  JES_UNEXPECTED_ELEMENT,     /* Serializer and Tree management error */
-  JES_BUFFER_TOO_SMALL,       /* Serializer error: output buffer too small */
-  JES_INVALID_PARAMETER,      /* API error: bad argument */
-  JES_ELEMENT_NOT_FOUND,      /* API error: key or path not found */
-  JES_INVALID_CONTEXT,        /* API error: context not properly initialized */
-  JES_BROKEN_TREE,            /* API and Tree management error */
-  JES_DUPLICATE_KEY,          /* Tree management error: key already exists */
-  JES_INVALID_OPERATION,      /* API error: operation not valid in current state */
-  JES_PATH_TOO_LONG,          /* API error: path exceeds JES_MAX_PATH_LENGTH */
+  JES_UNEXPECTED_SYMBOL,        /* Tokenizer error */
+  JES_INVALID_STRING,           /* Tokenizer error */
+  JES_INVALID_UNICODE,          /* Tokenizer error */
+  JES_INVALID_NUMBER,           /* Tokenizer error */
+  JES_INVALID_ESCAPED_SYMBOL,   /* Tokenizer error */
+  JES_UNEXPECTED_EOF,           /* Tokenizer, parser and serializer error */
+  JES_OUT_OF_MEMORY,            /* Parser error: workspace exhausted */
+  JES_UNEXPECTED_TOKEN,         /* Parser error */
+  JES_UNEXPECTED_STATE,         /* Parser and Serializer error */
+  JES_UNEXPECTED_ELEMENT,       /* Serializer and Tree management error */
+  JES_BUFFER_TOO_SMALL,         /* Serializer error: output buffer too small */
+  JES_INVALID_PARAMETER,        /* API error: bad argument */
+  JES_ELEMENT_NOT_FOUND,        /* API error: key or path not found */
+  JES_INVALID_CONTEXT,          /* API error: context not properly initialized */
+  JES_BROKEN_TREE,              /* API and Tree management error */
+  JES_DUPLICATE_KEY,            /* Tree management error: key already exists */
+  JES_INVALID_OPERATION,        /* API error: operation not valid in current state */
+  JES_PATH_TOO_LONG,            /* API error: path exceeds JES_MAX_PATH_LENGTH */
+  JES_UNSUPPORTED_ELEMENT_SIZE, /* API and Tree error. An element contains data larger than 16 bits. */
   JES_RENDER_FAILED,
   JES_MAX_DEPTH_EXCEEDED,
 } jes_status;
