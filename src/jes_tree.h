@@ -8,12 +8,12 @@ bool jes_validate_node(struct jes_context* ctx, struct jes_node* node);
 
 struct jes_node* jes_tree_insert_node(struct jes_context* ctx,
                                       struct jes_node* parent, struct jes_node* anchor,
-                                      uint16_t type, uint16_t length, const char* value);
+                                      uint16_t type, size_t length, const char* value);
 
 struct jes_node* jes_tree_insert_key_node(struct jes_context* ctx,
                                           struct jes_node* parent_object,
                                           struct jes_node* anchor,
-                                          uint16_t keyword_length, const char* keyword);
+                                          size_t keyword_length, const char* keyword);
 
 void jes_tree_delete_node(struct jes_context* ctx, struct jes_node* node);
 
