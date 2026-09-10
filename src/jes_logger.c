@@ -24,6 +24,10 @@ static char jes_status_str[][JES_HELPER_STR_LENGTH] = {
   "BROKEN_TREE",
   "DUPLICATE_KEY",
   "INVALID_OPERATION",
+  "PATH_TOO_LONG",
+  "UNSUPPORTED_ELEMENT_SIZE",
+  "RENDER_FAILED",
+  "MAX_DEPTH_EXCEEDED",
 };
 
 static char jes_token_type_str[][JES_HELPER_STR_LENGTH] = {
