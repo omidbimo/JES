@@ -28,10 +28,11 @@
  *       -std=c99 -DNDEBUG -o test_jes_ss
  */
 
-#include "../src/jes.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include <stddef.h>
+#include "../src/jes.h"
 
 /* =========================================================================
  * Harness

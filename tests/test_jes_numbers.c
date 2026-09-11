@@ -9,7 +9,14 @@
  *   2. Invalid numbers — jes_load() must fail with JES_INVALID_NUMBER or
  *                        JES_UNEXPECTED_EOF (truncated input) or JES_UNEXPECTED_TOKEN.
  *
- * Build (from repo root):
+ * Every case in both groups loads from a freshly malloc'd, exact-size buffer
+ * (see run_exact_load()) rather than a string literal, so that any tokenizer
+ * bug reading past the declared input length shows up as an ASan
+ * heap-buffer-overflow instead of silently reading valid-but-out-of-scope
+ * bytes belonging to the backing literal. This matters most for the
+ * "truncated" negative cases, which exist specifically to hit EOF mid-token.
+ *
+ * Build (from repo root), sanitizers recommended for the reason above:
  *   gcc jes_numbers_test.c src/jes.c src/jes_tokenizer.c src/jes_parser.c \
  *       src/jes_serializer.c src/jes_tree.c src/jes_hash_table.c \
  *       src/jes_logger.c -std=c99 -DNDEBUG -o jes_numbers_test
@@ -18,6 +25,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdbool.h>
+#include <stdlib.h>
 #include "../src/jes.h"
 
 /* =========================================================================
@@ -62,6 +71,7 @@ static const positive_case POSITIVE[] = {
     { "{\"n\":123}",                        "123"                        },
     { "{\"n\":1234567890}",                 "1234567890"                 },
     { "{\"n\":-1}",                         "-1"                         },
+    { "{\"n\":-0}",                         "-0"                         },
     { "{\"n\":-1234567890}",               "-1234567890"                },
 
     /* ── decimals ──────────────────────────────────────────────────────── */
@@ -225,20 +235,37 @@ static const negative_case NEGATIVE[] = {
  * Helpers
  * ========================================================================= */
 
-/* Extract the stored number token for the key "n" from a freshly parsed doc. */
-static struct jes_element *parse_and_get_value(const char *json)
-{
-    struct jes_context *ctx = jes_init(g_ws, sizeof(g_ws), JES_SEARCH_LINEAR);
-    if (!ctx) return NULL;
-    if (jes_load(ctx, json, strlen(json)) != JES_NO_ERROR) return NULL;
-    struct jes_element *root = jes_get_root(ctx);
-    struct jes_element *key  = jes_get_key(ctx, root, "n");
-    return key ? jes_get_key_value(ctx, key) : NULL;
-}
-
 static int is_acceptable_error(jes_status actual, jes_status s1, jes_status s2)
 {
     return actual == s1 || ((int)s2 != -1 && actual == s2);
+}
+
+/**
+ * run_exact_load()
+ *
+ * Loads JSON from a freshly malloc'd buffer sized to *exactly* `len` bytes
+ * (no trailing NUL, no slack), then frees it. jes_load()'s contract is that
+ * it must never read past json_data[len-1] — routing every case (especially
+ * the truncated/EOF ones below) through an exact-size heap allocation means
+ * AddressSanitizer will flag any out-of-bounds read the moment it happens,
+ * instead of silently reading valid-but-out-of-scope bytes belonging to the
+ * backing string literal. See test_jes_load.c's Group 6/7 for the same
+ * pattern and the OOB-read bug (fixed in commit a31d201) it was added for.
+ */
+static jes_status run_exact_load(const char *json, size_t len)
+{
+    struct jes_context *ctx = jes_init(g_ws, sizeof(g_ws), JES_SEARCH_LINEAR);
+    jes_status st;
+    char *buf;
+
+    if (!ctx) return JES_INVALID_CONTEXT;
+
+    buf = (char *)malloc(len ? len : 1);
+    if (!buf) return JES_OUT_OF_MEMORY;
+    if (len) memcpy(buf, json, len);
+    st = jes_load(ctx, buf, len);
+    free(buf);
+    return st;
 }
 
 /* =========================================================================
@@ -256,14 +283,25 @@ static void test_group_valid_numbers(void)
         const positive_case *tc = &POSITIVE[i];
         snprintf(label, sizeof(label), "G1-%02zu  %s", i + 1, tc->json);
 
-        /* ── parse must succeed ─────────────────────────────────────── */
+        /* ── parse must succeed (exact-size buffer, no trailing slack) ──
+         * NOTE: jes_element->value points directly into the buffer passed
+         * to jes_load() — JES does not copy input data — so `buf` must
+         * stay alive for as long as we read from the parsed tree below,
+         * and is only freed once, right before this iteration ends. */
         struct jes_context *ctx = jes_init(g_ws, sizeof(g_ws), JES_SEARCH_LINEAR);
         if (!ctx) { fail(label, "ctx init"); continue; }
 
-        if (jes_load(ctx, tc->json, strlen(tc->json)) != JES_NO_ERROR) {
+        size_t json_len = strlen(tc->json);
+        char *buf = (char *)malloc(json_len);
+        if (!buf) { fail(label, "malloc failed"); continue; }
+        memcpy(buf, tc->json, json_len);
+        jes_status st = jes_load(ctx, buf, json_len);
+
+        if (st != JES_NO_ERROR) {
             char m[64];
-            snprintf(m, sizeof(m), "parse failed, status=%d", (int)jes_get_status(ctx));
+            snprintf(m, sizeof(m), "parse failed, status=%d", (int)st);
             fail(label, m);
+            free(buf);
             continue;
         }
 
@@ -272,12 +310,13 @@ static void test_group_valid_numbers(void)
         struct jes_element *key  = jes_get_key(ctx, root, "n");
         struct jes_element *val  = key ? jes_get_key_value(ctx, key) : NULL;
 
-        if (!val) { fail(label, "value element not found"); continue; }
+        if (!val) { fail(label, "value element not found"); free(buf); continue; }
 
         if (val->type != JES_NUMBER) {
             char m[64];
             snprintf(m, sizeof(m), "expected JES_NUMBER, got %d", (int)val->type);
             fail(label, m);
+            free(buf);
             continue;
         }
 
@@ -289,12 +328,16 @@ static void test_group_valid_numbers(void)
             snprintf(m, sizeof(m), "value mismatch: got \"%.*s\", expected \"%s\"",
                      (int)val->length, val->value, tc->expected_token);
             fail(label, m);
+            free(buf);
             continue;
         }
 
         /* ── render round-trip must succeed ─────────────────────────── */
         char out[512];
-        if (jes_render(ctx, out, sizeof(out), true) == 0) {
+        bool render_ok = jes_render(ctx, out, sizeof(out), true) != 0;
+        free(buf); /* nothing below this line touches the parsed tree */
+
+        if (!render_ok) {
             fail(label, "render failed");
             continue;
         }
@@ -317,7 +360,11 @@ static void test_group_invalid_numbers(void)
         struct jes_context *ctx = jes_init(g_ws, sizeof(g_ws), JES_SEARCH_LINEAR);
         if (!ctx) { fail(label, "ctx init"); continue; }
 
-        jes_status st = jes_load(ctx, tc->json, strlen(tc->json));
+        /* Exact-size heap buffer: any OOB read past the JSON text is an
+         * ASan heap-buffer-overflow, not just a wrong status code — this
+         * matters especially for the "truncated"/EOF cases in this table.
+         * run_exact_load() re-initializes its own context internally. */
+        jes_status st = run_exact_load(tc->json, strlen(tc->json));
 
         if (st == JES_NO_ERROR) {
             fail(label, "expected parse failure, got JES_NO_ERROR");
@@ -326,11 +373,6 @@ static void test_group_invalid_numbers(void)
 
         if (!is_acceptable_error(st, tc->s1, tc->s2)) {
             char m[128];
-            snprintf(m, sizeof(m), "wrong status %d (expected %d%s%s)",
-                     (int)st, (int)tc->s1,
-                     (int)tc->s2 != -1 ? " or " : "",
-                     (int)tc->s2 != -1 ? (char[]){(char)('0'+(int)tc->s2), '\0'} : "");
-            /* Rebuild with proper status name */
             snprintf(m, sizeof(m), "status=%d, expected %d%s%d",
                      (int)st, (int)tc->s1,
                      (int)tc->s2 != -1 ? " or " : "",

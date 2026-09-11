@@ -318,43 +318,53 @@ static void test_add_key(void)
 
     struct jes_element *found = jes_get_key(ctx, root, "c");
     /* G5-06 */ CHECK_NOTNULL("G5-06 new key findable", found);
-
+    /* A zero-length keyword is NOT an error: JSON strings may be empty
+     * ("" is a valid JSON string, and thus a valid object key), and the
+     * parser itself already accepts {"": ...} (see test_jes_load.c,
+     * "empty-string key" / "empty key and value" cases). jes_add_key()
+     * only rejects a NULL keyword pointer (G5-19), not a zero length. */
+    struct jes_element *k_empty = jes_add_key(ctx, root, "z", 0);
+    /* G5-07a */ CHECK_NOTNULL("G5-07a add_key zero length is valid (empty key)", k_empty);
+    /* G5-07b */ CHECK_TYPE("G5-07b empty key type == JES_KEY", k_empty, JES_KEY);
+    /* G5-07c */ CHECK("G5-07c empty key length == 0", k_empty && k_empty->length == 0);
+    jes_update_key_value(ctx, k_empty, JES_STRING, "tmp", 3);  // give it a value so the tree renders
+    /* G5-07d */ CHECK_NOTNULL("G5-07d empty key findable via jes_get_key",
+                               jes_get_key(ctx, root, ""));
     /* ── duplicate key must fail ─────────────────────────────────────── */
-    /* G5-07 */ CHECK_NULL("G5-07 duplicate key returns NULL",
+    /* G5-08 */ CHECK_NULL("G5-08 duplicate key returns NULL",
                            jes_add_key(ctx, root, "b", 1));
-    /* G5-08 */ CHECK_STATUS("G5-08 duplicate key status", ctx, JES_DUPLICATE_KEY);
+    /* G5-09 */ CHECK_STATUS("G5-09 duplicate key status", ctx, JES_DUPLICATE_KEY);
 
     /* ── jes_add_key_before ──────────────────────────────────────────── */
     struct jes_element *k_b = jes_get_key(ctx, root, "b");
     struct jes_element *k_a = jes_add_key_before(ctx, k_b, "a", 1);
-    /* G5-09 */ CHECK_NOTNULL("G5-09 add_key_before returns element", k_a);
-    /* G5-10 */ CHECK("G5-10 tree doesn't render after add_key_before", renders_ok(ctx) == 0);
+    /* G5-10 */ CHECK_NOTNULL("G5-10 add_key_before returns element", k_a);
+    /* G5-11 */ CHECK("G5-11 tree doesn't render after add_key_before", renders_ok(ctx) == 0);
     jes_update_key_value(ctx, k_a, JES_STRING, "tmp", 3);  // give it a value first
-    /* G5-11 */ CHECK("G5-11 tree renders after update_key_value", renders_ok(ctx));
+    /* G5-12 */ CHECK("G5-12 tree renders after update_key_value", renders_ok(ctx));
     /* Verify ordering: "a" must appear before "b" in the rendered output */
     char out[256];
     jes_render(ctx, out, sizeof(out), true);
     const char *pa = strstr(out, "\"a\"");
     const char *pb = strstr(out, "\"b\"");
-    /* G5-12 */ CHECK("G5-12 a inserted before b", pa && pb && pa < pb);
+    /* G5-13 */ CHECK("G5-13 a inserted before b", pa && pb && pa < pb);
 
     /* ── jes_add_key_after ───────────────────────────────────────────── */
     struct jes_element *k_bb = jes_add_key_after(ctx, k_b, "bb", 2);
-    /* G5-13 */ CHECK_NOTNULL("G5-13 add_key_after returns element", k_bb);
-    /* G5-14 */ CHECK("G5-14 tree doesn't render after add_key_after", renders_ok(ctx) == 0);
+    /* G5-14 */ CHECK_NOTNULL("G5-14 add_key_after returns element", k_bb);
+    /* G5-15 */ CHECK("G5-15 tree doesn't render after add_key_after", renders_ok(ctx) == 0);
     jes_update_key_value(ctx, k_bb, JES_STRING, "tmp", 3);  // give it a value first
-    /* G5-15 */ CHECK("G5-15 tree renders after update_key_value", renders_ok(ctx));
+    /* G5-16 */ CHECK("G5-16 tree renders after update_key_value", renders_ok(ctx));
 
     jes_render(ctx, out, sizeof(out), true);
     pb = strstr(out, "\"b\"");
     const char *pbb = strstr(out, "\"bb\"");
-    /* G5-16 */ CHECK("G5-16 bb inserted after b", pb && pbb && pb < pbb);
+    /* G5-17 */ CHECK("G5-17 bb inserted after b", pb && pbb && pb < pbb);
 
     /* ── invalid args ────────────────────────────────────────────────── */
-    /* G5-17 */ CHECK_NULL("G5-17 add_key NULL ctx",    jes_add_key(NULL, root, "z", 1));
-    /* G5-18 */ CHECK_NULL("G5-18 add_key NULL parent", jes_add_key(ctx, NULL, "z", 1));
-    /* G5-19 */ CHECK_NULL("G5-19 add_key NULL name",   jes_add_key(ctx, root, NULL, 0));
-    /* G5-20 */ CHECK_NULL("G5-20 add_key zero length", jes_add_key(ctx, root, "z", 0));
+    /* G5-18 */ CHECK_NULL("G5-18 add_key NULL ctx",    jes_add_key(NULL, root, "z", 1));
+    /* G5-19 */ CHECK_NULL("G5-19 add_key NULL parent", jes_add_key(ctx, NULL, "z", 1));
+    /* G5-20 */ CHECK_NULL("G5-20 add_key NULL name",   jes_add_key(ctx, root, NULL, 0));
     /* G5-21 */ CHECK_NULL("G5-21 add_key_before NULL ref",
                            jes_add_key_before(ctx, NULL, "z", 1));
     /* G5-22 */ CHECK_NULL("G5-22 add_key_after NULL ref",

@@ -10,17 +10,27 @@
  *   3. Valid escape sequences — string literals with all recognised escapes
  *   4. Structural errors      — mismatched brackets, missing tokens, etc.
  *   5. Token-level errors     — bad literals, invalid escapes, invalid unicode
- *   6. Truncated input        — every prefix of a valid document must fail
+ *   6. Truncated input        — every prefix of a valid document must fail,
+ *                              AND must not read past the supplied buffer
+ *                              (see run_exact_load(): every case here loads
+ *                              from an exact-size heap allocation with no
+ *                              trailing slack/NUL, so this group only passes
+ *                              cleanly under AddressSanitizer)
+ *   7. Memory-safety regressions — targeted reproductions of past OOB-read
+ *                              bugs, kept as permanent regression guards
  *
- * Build (from repo root):
- *   gcc jes_load_test.c src/jes.c src/jes_tokenizer.c src/jes_parser.c \
+ * Build (from repo root), with sanitizers strongly recommended so that
+ * Group 6/7's exact-size buffers can actually catch out-of-bounds reads:
+ *   gcc tests/test_jes_load.c src/jes.c src/jes_tokenizer.c src/jes_parser.c \
  *       src/jes_serializer.c src/jes_tree.c src/jes_hash_table.c \
- *       src/jes_logger.c -std=c99 -DNDEBUG -o jes_load_test
+ *       src/jes_logger.c -std=c11 -DNDEBUG -Isrc \
+ *       -fsanitize=address,undefined -o jes_load_test
  */
 
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include "../src/jes.h"
 
 /* =========================================================================
@@ -40,6 +50,36 @@ static void fail(const char *label, const char *reason)
 static int status_matches(jes_status actual, jes_status s1, jes_status s2)
 {
     return actual == s1 || ((int)s2 != -1 && actual == s2);
+}
+
+/**
+ * run_exact_load()
+ *
+ * Copies `len` bytes of `json` into a freshly malloc'd buffer sized to
+ * *exactly* `len` bytes (no trailing NUL, no slack) and calls jes_load()
+ * on it, then frees it immediately.
+ *
+ * This matters because jes_load()'s documented contract is that it must
+ * never read past json_data[len-1] — the input is explicitly NOT required
+ * to be NUL-terminated. Passing string-literal or stack-array prefixes
+ * (as in `jes_load(ctx, full, cut)` with `full` a bigger literal) cannot
+ * catch a tokenizer/parser bug that reads past `cut`, because the bytes
+ * immediately after are still valid, readable memory belonging to the
+ * same literal/array. Routing every truncation/fuzz case through an
+ * exact-size heap allocation instead means AddressSanitizer will reliably
+ * flag any out-of-bounds read the moment it happens, regardless of which
+ * internal function causes it. This is how the \u-escape OOB read
+ * (fixed in commit a31d201) should have been caught by this suite.
+ */
+static jes_status run_exact_load(struct jes_context *ctx, const char *json, size_t len)
+{
+    jes_status st;
+    char *buf = (char *)malloc(len ? len : 1);
+    if (!buf) return JES_OUT_OF_MEMORY;
+    if (len) memcpy(buf, json, len);
+    st = jes_load(ctx, buf, len);
+    free(buf);
+    return st;
 }
 
 /* =========================================================================
@@ -434,12 +474,107 @@ static void test_group_truncated_input(void)
             struct jes_context *ctx = fresh_ctx();
             if (!ctx) { fail(label, "ctx init"); continue; }
 
-            jes_status st = jes_load(ctx, full, cut);
+            /* Exact-size heap buffer: any OOB read past `cut` bytes is an
+             * ASan heap-buffer-overflow, not just a wrong status code. */
+            jes_status st = run_exact_load(ctx, full, cut);
             if (st == JES_NO_ERROR)
                 fail(label, "expected failure, got JES_NO_ERROR");
             else
                 pass(label);
         }
+    }
+}
+
+/* =========================================================================
+ * Group 7 — Memory-safety regressions
+ *
+ * Each case here is a minimal reproduction of a specific bug found during
+ * security review. They intentionally use run_exact_load() (exact-size
+ * heap buffer, no NUL padding) so that a reintroduction of the underlying
+ * bug shows up as an ASan/Valgrind crash, not just a wrong status code —
+ * a wrong-but-in-bounds status would still "pass" a naive check.
+ * ========================================================================= */
+
+static void test_group_memory_safety_regressions(void)
+{
+    printf("\nGroup 7: Memory-safety regressions\n");
+
+    /* G7-01: Regression for the \u-escape OOB read (fixed in a31d201).
+     * Buffer ends mid-escape, right after two hex digits, with nothing
+     * beyond it. jes_tokenizer_process_escaped_utf_16_token() must stop
+     * at the buffer boundary instead of reading past it while looking
+     * for a full \uXXXX (or \uXXXX\uXXXX surrogate pair) sequence. */
+    {
+        const char json[] = { '"', '\\', 'u', 'D', '8' }; /* no closing quote */
+        struct jes_context *ctx = fresh_ctx();
+        jes_status st = run_exact_load(ctx, json, sizeof(json));
+        if (st == JES_UNEXPECTED_EOF) pass("G7-01 truncated \\u escape at EOF");
+        else {
+            char m[64]; snprintf(m, sizeof(m), "status=%d, expected JES_UNEXPECTED_EOF", (int)st);
+            fail("G7-01 truncated \\u escape at EOF", m);
+        }
+    }
+
+    /* G7-02: Same as G7-01 but truncated one byte earlier (mid-hex-digit,
+     * only one hex digit present). */
+    {
+        const char json[] = { '"', '\\', 'u', 'D' };
+        struct jes_context *ctx = fresh_ctx();
+        jes_status st = run_exact_load(ctx, json, sizeof(json));
+        if (st == JES_UNEXPECTED_EOF) pass("G7-02 truncated \\u escape, 1 hex digit");
+        else {
+            char m[64]; snprintf(m, sizeof(m), "status=%d, expected JES_UNEXPECTED_EOF", (int)st);
+            fail("G7-02 truncated \\u escape, 1 hex digit", m);
+        }
+    }
+
+    /* G7-03: Truncated immediately after "\u", zero hex digits present. */
+    {
+        const char json[] = { '"', '\\', 'u' };
+        struct jes_context *ctx = fresh_ctx();
+        jes_status st = run_exact_load(ctx, json, sizeof(json));
+        if (st == JES_UNEXPECTED_EOF) pass("G7-03 truncated \\u escape, 0 hex digits");
+        else {
+            char m[64]; snprintf(m, sizeof(m), "status=%d, expected JES_UNEXPECTED_EOF", (int)st);
+            fail("G7-03 truncated \\u escape, 0 hex digits", m);
+        }
+    }
+
+    /* G7-04: Complete high surrogate, truncated mid-way through the
+     * mandatory low surrogate ("\uD83D\uDE" — needs "00\"" to be valid).
+     * Exercises the escaped_utf_16[4]/[5]/[6..9] direct indexing path
+     * specifically, not just the first \uXXXX. */
+    {
+        const char json[] = "\"\\uD83D\\uDE";
+        struct jes_context *ctx = fresh_ctx();
+        jes_status st = run_exact_load(ctx, json, sizeof(json) - 1);
+        if (st == JES_UNEXPECTED_EOF) pass("G7-04 truncated low surrogate");
+        else {
+            char m[64]; snprintf(m, sizeof(m), "status=%d, expected JES_UNEXPECTED_EOF", (int)st);
+            fail("G7-04 truncated low surrogate", m);
+        }
+    }
+
+    /* G7-05: Fuzz every possible truncation point of a complete surrogate
+     * pair. Only the full string may succeed; every prefix must fail
+     * cleanly, and none may read past its own (exact-size) buffer. */
+    {
+        const char *full = "\"\\uD83D\\uDE00\""; /* U+1F600 GRINNING FACE */
+        size_t full_len = strlen(full);
+        int all_ok = 1;
+
+        for (size_t cut = 1; cut <= full_len; cut++) {
+            struct jes_context *ctx = fresh_ctx();
+            jes_status st = run_exact_load(ctx, full, cut);
+            if (cut < full_len) {
+                if (st == JES_NO_ERROR) { all_ok = 0; break; }
+            } else {
+                if (st != JES_NO_ERROR) { all_ok = 0; break; }
+            }
+        }
+        if (all_ok) pass("G7-05 every truncation of a surrogate pair");
+        else fail("G7-05 every truncation of a surrogate pair",
+                  "wrong status at some cut point (see -fsanitize=address for OOB reads)");
     }
 }
 
@@ -457,6 +592,7 @@ int main(void)
     test_group_structural_errors();
     test_group_token_errors();
     test_group_truncated_input();
+    test_group_memory_safety_regressions();
 
     printf("\n=== Results: %d passed, %d failed ===\n", g_passed, g_failed);
     return g_failed == 0 ? 0 : 1;
