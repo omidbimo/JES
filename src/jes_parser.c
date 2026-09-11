@@ -50,7 +50,6 @@ static inline void jes_parser_process_closing_brace(struct jes_context* ctx)
   /* If current node is not an OBJECT type, navigate up to find the parent OBJECT */
   if (NODE_TYPE(ctx->serdes.iter) != JES_OBJECT) {
     ctx->serdes.iter = jes_tree_get_parent_node_by_type(ctx, ctx->serdes.iter, JES_OBJECT);
-    assert(ctx->serdes.iter != NULL);
   }
 
   if (ctx->serdes.iter != NULL) {
