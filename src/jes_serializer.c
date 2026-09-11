@@ -8,7 +8,7 @@
 #include "jes_logger.h"
 #include "jes_serializer.h"
 
-#ifndef NDEBUG
+#ifdef JES_ENABLE_STDOUT_LOGGING
   #define JES_LOG_NODE  jes_log_node
   #define JES_LOG_STATE jes_log_state
 #else

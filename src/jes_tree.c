@@ -9,7 +9,7 @@
 #include "jes_private.h"
 #include "jes_logger.h"
 
-#ifndef NDEBUG
+#ifdef JES_ENABLE_STDOUT_LOGGING
   #define JES_LOG_NODE  jes_log_node
   #define JES_LOG(...) printf(__VA_ARGS__)
 #else

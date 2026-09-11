@@ -71,15 +71,19 @@
  */
 #define JES_TAB_SIZE 2
 
-/* Logging output control in debug mode */
-#define JES_ENABLE_TOKEN_LOG
-#define JES_ENABLE_PARSER_NODE_LOG
-//#define JES_ENABLE_PARSER_STATE_LOG
-//#define JES_ENABLE_SERIALIZER_NODE_LOG
-//#define JES_ENABLE_SERIALIZER_STATE_LOG
-
 /* Maximum nesting depth when streaming JSON elements */
 #define JES_STREAMING_SERIALIZER_MAX_DEPTH  10
+
+/* Logging output control */
+//#define JES_ENABLE_STDOUT_LOGGING
+
+#ifdef JES_ENABLE_STDOUT_LOGGING
+  #define JES_ENABLE_TOKEN_LOG
+  #define JES_ENABLE_PARSER_NODE_LOG
+  //#define JES_ENABLE_PARSER_STATE_LOG
+  //#define JES_ENABLE_SERIALIZER_NODE_LOG
+  //#define JES_ENABLE_SERIALIZER_STATE_LOG
+#endif
 
 /* =========================================================================
  * Internal size constants (platform-dependent)

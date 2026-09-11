@@ -9,7 +9,7 @@
 #include "jes_tokenizer.h"
 #include "jes_tree.h"
 
-#ifndef NDEBUG
+#ifdef JES_ENABLE_STDOUT_LOGGING
   #define JES_LOG_STATE jes_log_state
 #else
   #define JES_LOG_STATE(...)

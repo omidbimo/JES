@@ -12,7 +12,7 @@
 #define JES_FNV_PRIME_32BIT         16777619
 #define JES_FNV_OFFSET_BASIS_32BIT  2166136261
 
-#ifndef NDEBUG
+#ifdef JES_ENABLE_STDOUT_LOGGING
   #define JES_LOG(...)  printf(__VA_ARGS__)
 #else
   #define JES_LOG(...) //printf(__VA_ARGS__)
