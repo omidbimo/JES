@@ -691,10 +691,11 @@ size_t jes_get_array_size(struct jes_context* ctx, struct jes_element* array);
  *
  * @param ctx   JES context.
  * @param array A JES_ARRAY element.
- * @param index Zero-based index.
+ * @param member index. Negative indices are valid and provide array member access
+          from the end of the array.
  * @return Element at index, or NULL if out of range.
  */
-struct jes_element* jes_get_array_value(struct jes_context* ctx, struct jes_element* array, int32_t index);
+struct jes_element* jes_get_array_value(struct jes_context* ctx, struct jes_element* array, int64_t index);
 
 /**
  * Appends a new value at the end of an array.
@@ -713,26 +714,28 @@ struct jes_element* jes_append_array_value(struct jes_context* ctx, struct jes_e
  *
  * @param ctx          JES context.
  * @param array        Target JES_ARRAY element.
- * @param index        Insertion index (0-based).
+ * @param index        Insertion index. Negative indices are valid and provide array member
+                       access from the end of the array.
  * @param type         Value type.
  * @param value        Value data.
  * @param value_length Length of value in bytes.
  * @return New element, or NULL on failure.
  */
-struct jes_element* jes_add_array_value(struct jes_context* ctx, struct jes_element* array, int32_t index, enum jes_type type, const char *value, size_t value_length);
+struct jes_element* jes_add_array_value(struct jes_context* ctx, struct jes_element* array, int64_t index, enum jes_type type, const char *value, size_t value_length);
 
 /**
  * Replaces the value at the given index in an array.
  *
  * @param ctx          JES context.
  * @param array        Target JES_ARRAY element.
- * @param index        Zero-based index of the element to update.
+ * @param index        index of the element to update. Negative indices are valid and provide
+                       array member access from the end of the array.
  * @param type         New value type.
  * @param value        New value data.
  * @param value_length Length of value in bytes.
  * @return Updated element, or NULL on failure.
  */
-struct jes_element* jes_update_array_value(struct jes_context* ctx, struct jes_element* array, int32_t index, enum jes_type type, const char* value, size_t value_length);
+struct jes_element* jes_update_array_value(struct jes_context* ctx, struct jes_element* array, int64_t index, enum jes_type type, const char* value, size_t value_length);
 
 /* =========================================================================
  * Generic element operations
