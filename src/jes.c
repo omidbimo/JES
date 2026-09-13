@@ -686,7 +686,7 @@ struct jes_element* jes_append_array_value(struct jes_context* ctx, struct jes_e
 struct jes_element* jes_add_array_value(struct jes_context* ctx, struct jes_element* array, int64_t index, enum jes_type type, const char* value, size_t value_length)
 {
   struct jes_node* anchor_node = NULL;
-  struct jes_node* prev_node = NULL;
+  struct jes_node* iter_node = NULL;
   struct jes_node* new_node = NULL;
   size_t array_size;
 
@@ -714,20 +714,22 @@ struct jes_element* jes_add_array_value(struct jes_context* ctx, struct jes_elem
   }
 
   /* Handling out of the bound indices as prepend or append */
-  if (index < 0) { index = 0; }
-  if (index >= (int64_t)array_size) {
+  if (index < 0) {
+      index = 0;
+  }
+  else if (index >= (int64_t)array_size) {
     return jes_append_array_value(ctx, array, type, value, value_length);
   }
 
-  for (anchor_node = GET_FIRST_CHILD(ctx->node_mng, (struct jes_node*)array); anchor_node != NULL; anchor_node = GET_SIBLING(ctx->node_mng, anchor_node)) {
+  for (iter_node = GET_FIRST_CHILD(ctx->node_mng, (struct jes_node*)array); iter_node != NULL; iter_node = GET_SIBLING(ctx->node_mng, iter_node)) {
     if (index == 0) {
       break;
     }
-    prev_node = anchor_node;
+    anchor_node = iter_node;
     index--;
   }
 
-  if ((anchor_node == NULL) && (array_size != 0)) {
+  if ((anchor_node == NULL) && (index != 0)) {
     ctx->status = JES_BROKEN_TREE;
     assert(0);
     return NULL;
