@@ -50,7 +50,7 @@ static jes_status jes_partition_workspace(struct jes_context* ctx)
   return status;
 }
 
-struct jes_context* jes_init(void* buffer, size_t buffer_size, enum jes_search_mode mode)
+struct jes_context* jes_init_ex(void* buffer, size_t buffer_size, enum jes_search_mode mode)
 {
   struct jes_context* ctx = buffer;
 
@@ -79,6 +79,12 @@ struct jes_context* jes_init(void* buffer, size_t buffer_size, enum jes_search_m
   ctx->path_separator = JES_DEFAULT_PATH_SEPARATOR;
   return ctx;
 }
+
+struct jes_context* jes_init(void* buffer, size_t buffer_size)
+{
+  return jes_init_ex(buffer, buffer_size, JES_SEARCH_LINEAR);
+}
+
 
 jes_status jes_reset(struct jes_context* ctx)
 {

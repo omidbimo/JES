@@ -286,6 +286,22 @@ struct jes_status_block {
  * ========================================================================= */
 
 /**
+ * Initializes a JES context within the provided workspace buffer. (Search mode is linear)
+ *
+ * The buffer is partitioned to hold the context and the node pool.
+ *
+ * @param buffer      Pointer to caller-owned workspace memory. Must be properly aligned.
+ * @param buffer_size Size of the buffer in bytes.
+ *                    Minimum: JES_REQUIRED_SIZE(expected_node_count).
+ * @return Initialized context pointer on success, NULL if the buffer is NULL,
+ *         too small, or initialization fails.
+ *
+ * @note Buffer ownership stays with the caller. Keep the buffer alive and
+ *       unmodified for the entire lifetime of the context.
+ */
+struct jes_context* jes_init(void* buffer, size_t buffer_size);
+
+/**
  * Initializes a JES context within the provided workspace buffer.
  *
  * The buffer is partitioned to hold the context, node pool, and optionally
@@ -304,7 +320,7 @@ struct jes_status_block {
  * @note Buffer ownership stays with the caller. Keep the buffer alive and
  *       unmodified for the entire lifetime of the context.
  */
-struct jes_context* jes_init(void* buffer, size_t buffer_size, enum jes_search_mode mode);
+struct jes_context* jes_init_ex(void* buffer, size_t buffer_size, enum jes_search_mode mode);
 
 /**
  * Initializes a streaming serializer context.
