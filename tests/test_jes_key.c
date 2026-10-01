@@ -86,7 +86,7 @@ static uint8_t g_ws[JES_REQUIRED_SIZE(64)];
 
 static struct jes_context *make_ctx(void)
 {
-    return jes_init(g_ws, sizeof(g_ws), JES_SEARCH_LINEAR);
+    return jes_init_ex(g_ws, sizeof(g_ws), JES_SEARCH_LINEAR);
 }
 
 static struct jes_context *load(const char *json)
@@ -520,7 +520,7 @@ static void test_hashed_search(void)
 
     /* Use a larger workspace for the hash table partition */
     static uint8_t ws_hashed[JES_REQUIRED_SIZE(64)];
-    struct jes_context *ctx = jes_init(ws_hashed, sizeof(ws_hashed), JES_SEARCH_HASHED);
+    struct jes_context *ctx = jes_init_ex(ws_hashed, sizeof(ws_hashed), JES_SEARCH_HASHED);
     if (!ctx) { fail("G8-setup", "ctx init failed"); return; }
 
     const char *json =
@@ -548,7 +548,7 @@ static void test_hashed_search(void)
 
     /* Results must match linear mode */
     static uint8_t ws_linear[JES_REQUIRED_SIZE(64)];
-    struct jes_context *ctx_lin = jes_init(ws_linear, sizeof(ws_linear), JES_SEARCH_LINEAR);
+    struct jes_context *ctx_lin = jes_init_ex(ws_linear, sizeof(ws_linear), JES_SEARCH_LINEAR);
     jes_load(ctx_lin, json, strlen(json));
     struct jes_element *root_lin = jes_get_root(ctx_lin);
 

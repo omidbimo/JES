@@ -79,7 +79,7 @@ static struct jes_context *g_ctx = NULL;
 static int setup(const char *json)
 {
     memset(g_workspace, 0, sizeof(g_workspace));
-    g_ctx = jes_init(g_workspace, sizeof(g_workspace), JES_SEARCH_LINEAR);
+    g_ctx = jes_init(g_workspace, sizeof(g_workspace));
     if (!g_ctx) return -1;
     /* Reset path separator to default before each group */
     jes_set_path_separator(g_ctx, JES_DEFAULT_PATH_SEPARATOR);

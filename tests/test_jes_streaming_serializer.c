@@ -358,7 +358,7 @@ static void test_group_roundtrip(void)
 
     /* Parse the output with the tree API */
     uint8_t ws[JES_REQUIRED_SIZE(20)];
-    struct jes_context *ctx = jes_init(ws, sizeof(ws), JES_SEARCH_LINEAR);
+    struct jes_context *ctx = jes_init(ws, sizeof(ws));
     if (!ctx) { fail("G6-02 tree ctx init", "jes_init returned NULL"); return; }
 
     CHECK("G6-02 tree parse succeeds",

@@ -81,7 +81,7 @@ static struct jes_element *g_root = NULL;
 static int setup(const char *json)
 {
     memset(g_workspace, 0, sizeof(g_workspace));
-    g_ctx = jes_init(g_workspace, sizeof(g_workspace), JES_SEARCH_LINEAR);
+    g_ctx = jes_init(g_workspace, sizeof(g_workspace));
     if (!g_ctx) return -1;
     if (jes_load(g_ctx, json, strlen(json)) != JES_NO_ERROR) return -1;
     g_root = jes_get_root(g_ctx);

@@ -254,7 +254,7 @@ static int is_acceptable_error(jes_status actual, jes_status s1, jes_status s2)
  */
 static jes_status run_exact_load(const char *json, size_t len)
 {
-    struct jes_context *ctx = jes_init(g_ws, sizeof(g_ws), JES_SEARCH_LINEAR);
+    struct jes_context *ctx = jes_init(g_ws, sizeof(g_ws));
     jes_status st;
     char *buf;
 
@@ -288,7 +288,7 @@ static void test_group_valid_numbers(void)
          * to jes_load() — JES does not copy input data — so `buf` must
          * stay alive for as long as we read from the parsed tree below,
          * and is only freed once, right before this iteration ends. */
-        struct jes_context *ctx = jes_init(g_ws, sizeof(g_ws), JES_SEARCH_LINEAR);
+        struct jes_context *ctx = jes_init(g_ws, sizeof(g_ws));
         if (!ctx) { fail(label, "ctx init"); continue; }
 
         size_t json_len = strlen(tc->json);
@@ -357,7 +357,7 @@ static void test_group_invalid_numbers(void)
         const negative_case *tc = &NEGATIVE[i];
         snprintf(label, sizeof(label), "G2-%02zu  %s", i + 1, tc->description);
 
-        struct jes_context *ctx = jes_init(g_ws, sizeof(g_ws), JES_SEARCH_LINEAR);
+        struct jes_context *ctx = jes_init(g_ws, sizeof(g_ws));
         if (!ctx) { fail(label, "ctx init"); continue; }
 
         /* Exact-size heap buffer: any OOB read past the JSON text is an

@@ -90,7 +90,7 @@ static uint8_t g_ws[JES_REQUIRED_SIZE(64)];
 
 static struct jes_context *fresh_ctx(void)
 {
-    return jes_init(g_ws, sizeof(g_ws), JES_SEARCH_LINEAR);
+    return jes_init(g_ws, sizeof(g_ws));
 }
 
 /* =========================================================================
