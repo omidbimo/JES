@@ -965,7 +965,7 @@ struct jes_streaming_serializer_context* jes_init_streaming(
   ctx = (struct jes_streaming_serializer_context*)workspace;
   ctx->out_buffer = output;
   ctx->out_buffer_size = output_size;
-  ctx->stack_size = JES_STREAMING_SERIALIZER_MAX_DEPTH * sizeof(struct jes_streaming_container);
+  ctx->stack_size = JES_STREAMING_SERIALIZER_MAX_DEPTH;
   ctx->stack = (struct jes_streaming_container*)(workspace + sizeof(*ctx));
   ctx->stack_top = -1;
   ctx->state = JES_START;

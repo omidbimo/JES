@@ -19,7 +19,7 @@ struct jes_streaming_serializer_context {
   char*               out_buffer;         /* Output buffer for rendered JSON */
   size_t              out_buffer_size;    /* Size of out_buffer in bytes */
   struct jes_streaming_container* stack;  /* User-provided stack memory */
-  size_t              stack_size;         /* Stack size in bytes */
+  size_t              stack_size;         /* Max number of jes_streaming_container entries */
   int                 stack_top;          /* Current stack depth */
   enum jes_status     sticky_error;
   unsigned int        state;
