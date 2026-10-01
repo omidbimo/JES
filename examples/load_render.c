@@ -40,7 +40,7 @@ int main(void)
   fclose(fp);
 
   /* Initialize context */
-  struct jes_context *ctx = jes_init(workspace, sizeof(workspace), JES_SEARCH_LINEAR);
+  struct jes_context *ctx = jes_init(workspace, sizeof(workspace));
   if (!ctx) {
     fprintf(stderr, "Failed to initialize JES context\n");
     return -1;
