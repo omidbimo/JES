@@ -32,6 +32,8 @@
 #include <string.h>
 #include <stdint.h>
 #include <stddef.h>
+#include <stdlib.h>
+#include <math.h>
 #include "../src/jes.h"
 
 /* =========================================================================
@@ -538,6 +540,105 @@ static void test_group_invalid_sequences(void)
     }
 }
 
+static void test_group_init_regressions(void)
+{
+    struct jes_streaming_serializer_context *ss;
+
+    /* Initialization must accept caller memory with arbitrary prior contents. */
+    memset(g_workspace, 0xA5, sizeof(g_workspace));
+    ss = jes_init_streaming(g_workspace, sizeof(g_workspace), g_out, sizeof(g_out));
+    if (!ss) { fail("G9 dirty workspace", "init failed"); return; }
+    CHECK_OK("G9 dirty workspace starts with clear status", ss);
+    (void)jes_render_array_start(ss);
+    (void)jes_render_array_end(ss);
+    CHECK_OK("G9 dirty workspace renders successfully", ss);
+    CHECK("G9 dirty workspace output", strcmp(g_out, "[]") == 0);
+
+    ss = fresh_ss();
+    if (!ss) { fail("G9 reuse setup", "init failed"); return; }
+    CHECK("G9 provoke error before reinit", jes_render_key(ss, "k", 1) != JES_NO_ERROR);
+    /* Leave the error pending so init itself must clear it. */
+    ss = jes_init_streaming(g_workspace, sizeof(g_workspace), g_out, sizeof(g_out));
+    if (!ss) { fail("G9 reuse workspace", "init failed"); return; }
+    (void)jes_render_array_start(ss);
+    (void)jes_render_array_end(ss);
+    CHECK_OK("G9 reinit clears pending error", ss);
+    CHECK("G9 reused workspace output", strcmp(g_out, "[]") == 0);
+}
+
+static void test_group_escaping_regressions(void)
+{
+    static const struct {
+        const char *input;
+        size_t length;
+        const char *escaped;
+    } cases[] = {
+        { "a\"b", 3, "a\\\"b" },
+        { "a\\b", 3, "a\\\\b" },
+        { "\b\f\n\r\t", 5, "\\b\\f\\n\\r\\t" },
+        { "a\0b", 3, "a\\u0000b" },
+        { "\x01\x1f", 2, "\\u0001\\u001f" }
+    };
+    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        char label[100];
+        char expected[128];
+        struct jes_streaming_serializer_context *ss = fresh_ss();
+        if (!ss) { fail("G10 string setup", "init failed"); continue; }
+        (void)jes_render_array_start(ss);
+        (void)jes_render_string(ss, cases[i].input, cases[i].length);
+        (void)jes_render_array_end(ss);
+        snprintf(label, sizeof(label), "G10 string case %zu status", i);
+        CHECK_OK(label, ss);
+        snprintf(expected, sizeof(expected), "[\"%s\"]", cases[i].escaped);
+        snprintf(label, sizeof(label), "G10 string case %zu escaped output", i);
+        CHECK(label, strcmp(g_out, expected) == 0);
+
+        ss = fresh_ss();
+        if (!ss) { fail("G10 key setup", "init failed"); continue; }
+        (void)jes_render_object_start(ss);
+        (void)jes_render_key(ss, cases[i].input, cases[i].length);
+        (void)jes_render_null(ss);
+        (void)jes_render_object_end(ss);
+        snprintf(label, sizeof(label), "G10 key case %zu status", i);
+        CHECK_OK(label, ss);
+        snprintf(expected, sizeof(expected), "{\"%s\":null}", cases[i].escaped);
+        snprintf(label, sizeof(label), "G10 key case %zu escaped output", i);
+        CHECK(label, strcmp(g_out, expected) == 0);
+    }
+}
+
+static void test_group_double_regressions(void)
+{
+    static const double finite_values[] = { 1e-9, -1e-9, 1.2345678901234567 };
+    static const double invalid_values[] = { INFINITY, -INFINITY, NAN };
+    for (size_t i = 0; i < sizeof(finite_values) / sizeof(finite_values[0]); i++) {
+        char label[100];
+        char *end;
+        struct jes_streaming_serializer_context *ss = fresh_ss();
+        if (!ss) { fail("G11 finite setup", "init failed"); continue; }
+        (void)jes_render_array_start(ss);
+        (void)jes_render_double(ss, finite_values[i]);
+        (void)jes_render_array_end(ss);
+        snprintf(label, sizeof(label), "G11 finite case %zu status", i);
+        CHECK_OK(label, ss);
+        /* Compare values, allowing any equivalent decimal/exponent spelling. */
+        double actual = strtod(g_out + 1, &end);
+        snprintf(label, sizeof(label), "G11 finite case %zu round trips", i);
+        CHECK(label, g_out[0] == '[' && end != g_out + 1 &&
+              strcmp(end, "]") == 0 && actual == finite_values[i]);
+    }
+    for (size_t i = 0; i < sizeof(invalid_values) / sizeof(invalid_values[0]); i++) {
+        char label[100];
+        struct jes_streaming_serializer_context *ss = fresh_ss();
+        if (!ss) { fail("G11 nonfinite setup", "init failed"); continue; }
+        (void)jes_render_array_start(ss);
+        snprintf(label, sizeof(label), "G11 nonfinite case %zu rejected", i);
+        CHECK(label, jes_render_double(ss, invalid_values[i]) != JES_NO_ERROR);
+        snprintf(label, sizeof(label), "G11 nonfinite case %zu sticky error", i);
+        CHECK_ERR(label, ss);
+    }
+}
+
 /* =========================================================================
  * main
  * ========================================================================= */
@@ -554,6 +655,9 @@ int main(void)
     test_group_roundtrip();
     test_group_sticky_error();
     test_group_invalid_sequences();
+    test_group_init_regressions();
+    test_group_escaping_regressions();
+    test_group_double_regressions();
 
     printf("\n=== Results: %d passed, %d failed ===\n", g_passed, g_failed);
     return g_failed == 0 ? 0 : 1;

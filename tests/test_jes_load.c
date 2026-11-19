@@ -188,6 +188,10 @@ static const valid_case VALID[] = {
     { "[1, null, true, false, \"string\", [], {}]",
       "mixed-type array",                                           JES_ARRAY  },
 
+    { "[1]", "single-element array", JES_ARRAY },
+    { "[{\"x\":1}]", "closed object inside array", JES_ARRAY },
+    { "{\"x\":[1]}", "closed array inside object", JES_OBJECT },
+
     /* ── standalone scalars ───────────────────────────────────────────── */
     { "null",                    "standalone null",                 JES_NULL   },
     { "false",                   "standalone false",                JES_FALSE  },
@@ -315,6 +319,12 @@ typedef struct {
 } invalid_case;
 
 static const invalid_case STRUCTURAL[] = {
+    { "{\"x\":]", "closing delimiter regression 1", JES_UNEXPECTED_TOKEN, (jes_status)-1 },
+    { "{\"x\":1]", "closing delimiter regression 2", JES_UNEXPECTED_TOKEN, (jes_status)-1 },
+    { "[{\"x\":1]", "closing delimiter regression 3", JES_UNEXPECTED_TOKEN, (jes_status)-1 },
+    { "[{\"x\":]", "closing delimiter regression 4", JES_UNEXPECTED_TOKEN, (jes_status)-1 },
+    { "[1,]", "closing delimiter regression 5", JES_UNEXPECTED_TOKEN, (jes_status)-1 },
+    { "{\"x\":[1}", "closing delimiter regression 6", JES_UNEXPECTED_TOKEN, (jes_status)-1 },
     { "{",                 "lone opening brace",          JES_UNEXPECTED_EOF,   (jes_status)-1 },
     { "}",                 "lone closing brace",          JES_UNEXPECTED_TOKEN, (jes_status)-1 },
     { "[",                 "lone opening bracket",        JES_UNEXPECTED_EOF,   (jes_status)-1 },
@@ -578,6 +588,41 @@ static void test_group_memory_safety_regressions(void)
     }
 }
 
+/* Explicit lengths keep embedded NUL bytes inside the input under test. */
+static void test_group_input_bytes(void)
+{
+    static const struct {
+        const char *json;
+        size_t length;
+        const char *label;
+    } cases[] = {
+        { "{}\0x", 4, "G8 NUL hides trailing input" },
+        { "[]\0", 3, "G8 NUL after complete array" },
+        { "true\0false", 10, "G8 NUL separates root values" },
+        { "\f{}", 3, "G8 form feed before root" },
+        { "[1,\f2]", 6, "G8 form feed between array values" }
+    };
+    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        struct jes_context *ctx = fresh_ctx();
+        if (!ctx) { fail(cases[i].label, "ctx init"); continue; }
+        if (run_exact_load(ctx, cases[i].json, cases[i].length) != JES_NO_ERROR)
+            pass(cases[i].label);
+        else
+            fail(cases[i].label, "invalid input accepted");
+    }
+    for (unsigned int byte = 0; byte < 0x20; byte++) {
+        char json[] = { '"', (char)byte, '"' };
+        char label[80];
+        snprintf(label, sizeof(label), "G8 raw control byte 0x%02X in string", byte);
+        struct jes_context *ctx = fresh_ctx();
+        if (!ctx) { fail(label, "ctx init"); continue; }
+        if (run_exact_load(ctx, json, sizeof(json)) != JES_NO_ERROR)
+            pass(label);
+        else
+            fail(label, "unescaped control byte accepted");
+    }
+}
+
 /* =========================================================================
  * main
  * ========================================================================= */
@@ -593,6 +638,7 @@ int main(void)
     test_group_token_errors();
     test_group_truncated_input();
     test_group_memory_safety_regressions();
+    test_group_input_bytes();
 
     printf("\n=== Results: %d passed, %d failed ===\n", g_passed, g_failed);
     return g_failed == 0 ? 0 : 1;
