@@ -527,7 +527,12 @@ enum jes_status jes_tokenizer_get_token(struct jes_tokenizer_context* ctx)
   char ch = jes_tokenizer_get_char(&ctx->cursor);
 
   if (ch == '\0') {
-    jes_tokenizer_update_token(&token, JES_TOKEN_EOF, 1, ctx->cursor.pos);
+    if (ctx->cursor.pos == ctx->cursor.end) {
+      jes_tokenizer_update_token(&token, JES_TOKEN_EOF, 1, ctx->cursor.pos);
+    }
+    else {
+      status = JES_UNEXPECTED_SYMBOL;
+    }
   }
   else {
     jes_tokenizer_process_spaces(&ctx->cursor);
