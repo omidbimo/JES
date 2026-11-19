@@ -85,34 +85,50 @@ static inline void jes_parser_process_opening_bracket(struct jes_context* ctx)
  */
 static inline void jes_parser_process_closing_bracket(struct jes_context* ctx)
 {
-  /* Handle special case: empty array "[]" */
-  if ((NODE_TYPE(ctx->serdes.iter) == JES_ARRAY) && (ctx->serdes.state == JES_EXPECT_VALUE)) {
-    /* An array in expecting state, can only be an empty and must have no values */
-    if (HAS_CHILD(ctx->serdes.iter)) {
-      ctx->status = JES_UNEXPECTED_TOKEN;
-      return;
+  switch (ctx->serdes.state){
+    case JES_EXPECT_VALUE:
+      if (NODE_TYPE(ctx->serdes.iter) != JES_ARRAY) {
+          ctx->status = JES_UNEXPECTED_TOKEN;
+          break;
+      }
+      /* An array in expecting state, can only be an empty and must have no values */
+      if (HAS_CHILD(ctx->serdes.iter)) {
+        /* Handle special case: empty array "[]" */
+        ctx->status = JES_UNEXPECTED_TOKEN;
+      }
+      break;
+
+    case JES_HAVE_VALUE:
+      if (NODE_TYPE(ctx->serdes.iter) != JES_ARRAY) {
+        ctx->serdes.iter = jes_tree_get_container_parent_node(ctx, ctx->serdes.iter);
+      }
+
+      if (ctx->serdes.iter == NULL) {
+        ctx->status = JES_UNEXPECTED_EOF;
+      }
+      else if (NODE_TYPE(ctx->serdes.iter) != JES_ARRAY) {
+        ctx->status = JES_UNEXPECTED_TOKEN;
+      }
+      break;
+
+    default:
+      ctx->serdes.state = JES_UNEXPECTED_STATE;
+      break;
+  }
+
+  if (ctx->status == JES_NO_ERROR) {
+    /* Now that we've found the array being closed, move up one more level
+    * to the parent container (either an object or array) to continue parsing */
+    ctx->serdes.iter = jes_tree_get_container_parent_node(ctx, ctx->serdes.iter);
+    if (ctx->serdes.iter != NULL) {
+      assert(NODE_TYPE(ctx->serdes.iter) == JES_ARRAY || NODE_TYPE(ctx->serdes.iter) == JES_OBJECT);
+      ctx->serdes.state = JES_HAVE_VALUE;
+    }
+    else {
+      /* We've reached the root level, expect end of file */
+      ctx->serdes.state = JES_EXPECT_EOF;
     }
   }
-
-  /* If current node is not an ARRAY type, navigate up to find the parent ARRAY */
-  if (NODE_TYPE(ctx->serdes.iter) != JES_ARRAY) {
-    ctx->serdes.iter = jes_tree_get_parent_node_by_type(ctx, ctx->serdes.iter, JES_ARRAY);
-  }
-
-  if (ctx->serdes.iter != NULL) {
-    /* Now that we've found the array being closed, move up one more level
-     * to the parent container (either an object or array) to continue parsing */
-    ctx->serdes.iter = jes_tree_get_container_parent_node(ctx, ctx->serdes.iter);
-  }
-
-  if (ctx->serdes.iter == NULL) {
-    /* We've reached the root level, expect end of file */
-    ctx->serdes.state = JES_EXPECT_EOF;
-    return;
-  }
-
-  assert(NODE_TYPE(ctx->serdes.iter) == JES_ARRAY || NODE_TYPE(ctx->serdes.iter) == JES_OBJECT);
-  ctx->serdes.state = JES_HAVE_VALUE;
 }
 
 static inline void jes_parser_process_comma(struct jes_context* ctx)
