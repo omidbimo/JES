@@ -7,7 +7,7 @@
 #include "jes_private.h"
 #include "jes_logger.h"
 
-#define IS_SPACE(c) ((c) ==' ' || (c) =='\t' || (c) =='\r' || (c) =='\n' || (c) =='\f')
+#define IS_SPACE(c) ((c) ==' ' || (c) =='\t' || (c) =='\r' || (c) =='\n')
 #define IS_DIGIT(c) ((c) >= '0' && (c) <= '9')
 
 #ifdef JES_ENABLE_STDOUT_LOGGING
